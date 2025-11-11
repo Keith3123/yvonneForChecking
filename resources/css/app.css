@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================
+   Independent Scroll Layout
+============================= */
+html, body {
+    height: 100%;
+    overflow: hidden; /* prevents the full page from scrolling */
+}
+
+aside {
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+}
+
+/* Sidebar scroll area */
+#category-list {
+    /* Allow smooth scrolling and prevent overlap with cart */
+    height: calc(100vh - 180px); /* adjusts for top header + bottom cart height */
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding-bottom: 80px; /* keeps last category visible above cart bar */
+}
+
+/* Optional: make the scroll feel nicer */
+#category-list::-webkit-scrollbar {
+    width: 8px;
+}
+#category-list::-webkit-scrollbar-track {
+    background: #fff;
+    border-radius: 4px;
+}
+#category-list::-webkit-scrollbar-thumb {
+    background-color: #f9b3b0;
+    border-radius: 4px;
+}
+#category-list::-webkit-scrollbar-thumb:hover {
+    background-color: #f69491;
+}
+
+/* Make product section scroll independently */
+#catalog-section {
+    height: 100vh;
+    overflow-y: auto;
+    padding-bottom: 100px;
+}
+
+
+
