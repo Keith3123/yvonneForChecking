@@ -3,60 +3,40 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class LoginPageController extends Controller
 {
-    /**
-     * Show the login page.
-     */
+    // Show login page
     public function index()
     {
-        return view('user.LoginPage'); // matches your LoginPage.blade.php
+        // Clear any previous dummy session for clean frontend testing
+        session()->forget('logged_in_user');
+
+        return view('user.LoginPage');
     }
 
-    /**
-     * Handle login submission.
-     */
+    // Handle login submission (frontend simulation only)
     public function store(Request $request)
     {
-        // ✅ Validate required fields
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
-        ], [
-            'username.required' => 'Please enter your username.',
-            'password.required' => 'Please enter your password.',
         ]);
 
-        // ✅ Attempt to authenticate using Laravel Auth
-        $credentials = $request->only('username', 'password');
+        // Simulate a successful login without checking real password
+        $dummyUser = [
+            'firstname' => $request->username
+        ];
 
-        if (Auth::attempt($credentials)) {
-            // Regenerate session to prevent fixation
-            $request->session()->regenerate();
+        session(['logged_in_user' => $dummyUser]);
 
-            // Redirect to intended route or catalog
-            return redirect()->intended(route('catalog'))
-                ->with('success', 'Welcome back, ' . Auth::user()->username . '!');
-        }
-
-        // If login fails
-        return back()->withErrors([
-            'loginError' => 'Invalid username or password. Please try again.',
-        ])->onlyInput('username');
+        return redirect()->route('catalog')->with('success', 'Welcome back, ' . $dummyUser['firstname'] . '!');
     }
 
-    /**
-     * Log out the current user.
-     */
+    // Handle logout
     public function logout(Request $request)
     {
-        Auth::logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
+        session()->forget('logged_in_user');
         return redirect()->route('login')->with('status', 'You have been logged out.');
     }
 }

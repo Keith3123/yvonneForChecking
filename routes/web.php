@@ -9,46 +9,57 @@ use App\Http\Controllers\{
     ProductDetailsPageController,
     CartPageController,
     CheckoutPageController,
-    MyOrdersPageController,
+    OrdersPageController,
     ProfilePageController,
-    PaluwaganPageController,
-    AdminDashboardController,
-    AdminOrdersController,
-    AdminSalesReportController,
-    AdminUsersController,
-    AdminPaluwaganController,
-    AdminInventoryController
+    PaluwaganPageController
 };
 
 // ------------------- USER PAGES -------------------
+
+// Home
 Route::get('/', [HomePageController::class, 'index'])->name('home');
 
-// Registration Routes
-Route::get('/register', function () {
-    return view('user.RegisterPage');
-})->name('register');
+// Register
+Route::get('/register', [RegisterPageController::class, 'show'])->name('register');
 Route::post('/register', [RegisterPageController::class, 'store'])->name('register.store');
 
-// Login Routes
+// Login
 Route::get('/login', [LoginPageController::class, 'index'])->name('login');
 Route::post('/login', [LoginPageController::class, 'store'])->name('login.store');
 Route::post('/logout', [LoginPageController::class, 'logout'])->name('logout');
 
-
+// Catalog - requires login
 Route::get('/catalog', [CatalogPageController::class, 'index'])->name('catalog');
-Route::get('/product/{id}', [ProductDetailsPageController::class, 'show'])->name('product.details');
+
+// Cart routes
 Route::get('/cart', [CartPageController::class, 'index'])->name('cart');
+Route::post('/cart/add', [CartPageController::class, 'add'])->name('cart.add');
+Route::post('/cart/remove', [CartPageController::class, 'remove'])->name('cart.remove'); // optional
+Route::post('/cart/clear', [CartPageController::class, 'clear'])->name('cart.clear');
+
+
+// Checkout
 Route::get('/checkout', [CheckoutPageController::class, 'index'])->name('checkout');
-Route::resource('orders', MyOrdersPageController::class);
-Route::get('/profile', [ProfilePageController::class, 'index'])->name('profile');
+Route::post('/checkout/place-order', [CheckoutPageController::class, 'placeOrder'])->name('checkout.placeOrder');
+
+
+// Other user routes
+Route::get('/product/{id}', [ProductDetailsPageController::class, 'show'])->name('product.details');
+
+// Orders
+Route::resource('orders', OrdersPageController::class);
+
+// Profile
+Route::get('/profile', function () {
+    return view('user.ProfilePage');
+})->name('profile');
+
+
+// Paluwagan
 Route::get('/paluwagan', [PaluwaganPageController::class, 'index'])->name('paluwagan');
 
-// ------------------- ADMIN PAGES -------------------
-Route::prefix('admin')->group(function() {
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-    Route::resource('aorders', AdminOrdersController::class);
-    Route::get('sales-report', [AdminSalesReportController::class, 'index'])->name('admin.sales-report');
-    Route::resource('users', AdminUsersController::class);
-    Route::resource('paluwagan', AdminPaluwaganController::class);
-    Route::resource('inventory', AdminInventoryController::class);
-});
+ 
+
+
+
+

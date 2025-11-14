@@ -6,5 +6,8 @@ use Illuminate\Http\Request;
 
 class OrdersPageController extends Controller
 {
-    //
+    public function index()
+    {
+        return view('user.OrdersPage');
+    }
 }

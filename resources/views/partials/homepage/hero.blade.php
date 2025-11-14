@@ -6,7 +6,7 @@
     <div class="absolute inset-0 bg-black/40 z-10"></div>
 
     <div class="relative z-20 text-white px-4">
-        <h1 class="text-4xl md:text-6xl font-extrabold mb-6">
+        <h1 class="text-4xl md:text-6xl font-bold mb-6">
             Welcome to <span class="text-pink-300">Yvonne's Cakes & Pastries</span>
         </h1>
 
@@ -14,12 +14,12 @@
 
         @if(!$user)
             <a href="{{ route('register') }}" 
-               class="bg-pink-400 hover:bg-pink-500 text-white font-bold px-8 py-3 rounded-lg text-lg transition">
+               class="bg-pink-400 hover:bg-pink-500 text-white font-semibold px-8 py-3 rounded-lg text-lg transition">
                Register
             </a>
         @else
             <a href="{{ route('catalog') }}" 
-               class="bg-yellow-400 hover:bg-yellow-500 text-black font-bold px-8 py-3 rounded-lg text-lg transition">
+               class="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 rounded-lg text-lg transition">
                Browse More
             </a>
         @endif

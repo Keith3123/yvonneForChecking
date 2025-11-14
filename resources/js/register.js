@@ -25,48 +25,48 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProgressBar(index);
     };
 
-    // ✅ Validate current step using browser’s native validation
+    showStep(currentStep);
+
+    // Validate current step
     const validateStep = (index) => {
         const currentInputs = steps[index].querySelectorAll('input[required]');
-        for (let input of currentInputs) {
+        let valid = true;
+
+        currentInputs.forEach(input => {
+            input.classList.remove('border-red-500');
             if (!input.checkValidity()) {
-                input.reportValidity(); // native "Please fill out this field"
-                return false;
+                input.reportValidity();
+                valid = false;
             }
-        }
+        });
 
         // Step 3 extra password validation
         if (index === 2) {
             const password = steps[index].querySelector('input[name="password"]');
             const confirmPassword = steps[index].querySelector('input[name="password_confirmation"]');
-            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+            const errorMsg = confirmPassword.parentElement.querySelector('.password-error');
 
-            if (!regex.test(password.value)) {
-                alert("Password must be at least 8 characters long and include uppercase, lowercase, and a number.");
-                password.focus();
-                return false;
-            }
+            errorMsg.classList.add('hidden');
+            password.classList.remove('border-red-500');
+            confirmPassword.classList.remove('border-red-500');
 
             if (password.value !== confirmPassword.value) {
-                alert("Confirm Password does not match the Password!");
-                confirmPassword.focus();
-                return false;
+                password.classList.add('border-red-500');
+                confirmPassword.classList.add('border-red-500');
+                errorMsg.classList.remove('hidden');
+                valid = false;
             }
         }
 
-        return true;
+        return valid;
     };
-
-    showStep(currentStep);
 
     // Next buttons
     document.querySelectorAll('.next-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            if (currentStep < steps.length - 1) {
-                if (validateStep(currentStep)) {
-                    currentStep++;
-                    showStep(currentStep);
-                }
+            if (currentStep < steps.length - 1 && validateStep(currentStep)) {
+                currentStep++;
+                showStep(currentStep);
             }
         });
     });
@@ -79,5 +79,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 showStep(currentStep);
             }
         });
+    });
+
+    // Toggle password visibility (eye icon)
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = btn.previousElementSibling;
+            input.type = input.type === 'password' ? 'text' : 'password';
+        });
+    });
+
+    // Live password confirmation check (Step 3)
+    const step3 = steps[2];
+    if (step3) {
+        const password = step3.querySelector('input[name="password"]');
+        const confirmPassword = step3.querySelector('input[name="password_confirmation"]');
+        const errorMsg = confirmPassword.parentElement.querySelector('.password-error');
+
+        const checkMatch = () => {
+            if (confirmPassword.value === "") {
+                confirmPassword.classList.remove('border-red-500');
+                errorMsg.classList.add('hidden');
+                return;
+            }
+
+            if (password.value !== confirmPassword.value) {
+                password.classList.add('border-red-500');
+                confirmPassword.classList.add('border-red-500');
+                errorMsg.classList.remove('hidden');
+            } else {
+                password.classList.remove('border-red-500');
+                confirmPassword.classList.remove('border-red-500');
+                errorMsg.classList.add('hidden');
+            }
+        };
+
+        password.addEventListener('input', checkMatch);
+        confirmPassword.addEventListener('input', checkMatch);
+    }
+
+    // Step 3 submit
+    const form = document.getElementById('registerForm');
+    form.addEventListener('submit', (e) => {
+        if (!validateStep(2)) {
+            e.preventDefault();
+            const confirmPassword = step3.querySelector('input[name="password_confirmation"]');
+            confirmPassword.focus();
+        }
     });
 });

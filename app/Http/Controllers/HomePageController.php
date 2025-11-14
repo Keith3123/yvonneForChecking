@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 class HomePageController extends Controller
 {
     public function index()
     {
-        return view('user.HomePage'); 
+        // Load all products
+        $allProducts = include(resource_path('data/products.php'));
+
+        // Pick first 3 for featured/best sellers
+        $featuredProducts = array_slice($allProducts, 0, 3);
+
+        return view('user.HomePage', compact('featuredProducts'));
     }
 }
