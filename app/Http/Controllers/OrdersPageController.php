@@ -16,7 +16,6 @@ class OrdersPageController extends Controller
     {
         $userID = Auth::id();
 
-        // Get all orders of the logged-in user with their items & products
         $orders = Order::where('customerID', $userID)
             ->with(['orderItems.product'])
             ->orderBy('orderDate', 'desc')

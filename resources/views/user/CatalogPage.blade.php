@@ -46,17 +46,18 @@
 
                 {{-- Loop regular + paluwagan products --}}
                 @foreach ($products as $product)
-                    <div class="product-card bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
-                        data-category="{{ $product['productType'] }}"
-                        data-name="{{ $product['name'] }}"
-                        data-description="{{ $product['description'] }}"
-                        data-image="{{ asset($product['imageURL']) }}"
-                        data-servings='@json($product['servings'])'
-                        data-price="{{ $product['servings'][0]['price'] ?? 0 }}"
-                        data-total="{{ $product['totalAmount'] ?? '' }}"
-                        data-monthly="{{ $product['monthlyPayment'] ?? '' }}"
-                        data-duration="{{ $product['durationMonths'] ?? '' }}"
-                    >
+                   <div class="product-card bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
+    data-id="{{ $product['id'] }}"
+    data-category="{{ strtolower(preg_replace('/[^a-z]/', '', $product['productType'])) }}"
+    data-name="{{ $product['name'] }}"
+    data-description="{{ $product['description'] ?? '' }}"
+    data-image="{{ asset($product['imageURL']) }}"
+    data-servings='@json($product['servings'])'
+    data-price="{{ $product['servings'][0]['price'] ?? 0 }}"
+
+
+>
+
                         
                         <img src="{{ asset($product['imageURL']) }}" alt="{{ $product['name'] }}" class="rounded-lg mb-4 w-full h-40 object-cover">
                         <h3 class="text-lg font-semibold mb-1">{{ $product['name'] }}</h3>
@@ -76,6 +77,7 @@
 
                 {{-- Customization-only Cake Card --}}
                 <div class="product-card bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
+                    data-id="0"
                     data-category="cake"
                     data-customization="true"
                     data-name="Cake Customization"
@@ -90,6 +92,7 @@
 
                 {{-- Customization-only Cupcake Card --}}
                 <div class="product-card bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
+                    data-category="0"
                     data-category="cupcake"
                     data-customization="true"
                     data-name="Cupcake Customization"

@@ -22,11 +22,14 @@ class CheckoutPageController extends Controller
 
     public function placeOrder(Request $request)
     {
-        $userID = Auth::id(); // Ensure user is logged in
+       $user = session('logged_in_user');
 
-        // if (!$userID) {
-        //     return redirect()->route('login')->with('error', 'You must be logged in to place an order.');
-        // }
+$userID = $user['customerID'] ?? null;
+
+if (!$userID) {
+    return back()->with('error', 'You must be logged in to place an order.');
+}
+
 
         $cart = session('cart', []);
 
@@ -58,14 +61,18 @@ class CheckoutPageController extends Controller
             ]);
 
             foreach ($cart as $item) {
-                OrderItem::create([
-                    'orderID' => $order->orderID,
-                    'productID' => $item['id'],
-                    'price' => $item['price'],
-                    'qty' => $item['quantity'],
-                    'subtotal' => $item['price'] * $item['quantity'],
-                ]);
-            }
+    // Skip items without a valid product ID (customization items)
+    $productID = isset($item['id']) && $item['id'] > 0 ? $item['id'] : null;
+
+    OrderItem::create([
+        'orderID' => $order->orderID,
+        'productID' => $productID,
+        'price' => $item['price'],
+        'qty' => $item['quantity'],
+        'subtotal' => $item['price'] * $item['quantity'],
+    ]);
+}
+
         });
 
         session()->forget('cart');

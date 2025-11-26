@@ -13,13 +13,8 @@
             <!-- Package Includes -->
             <div class="bg-[#FFF1F0] p-3 rounded-lg mb-4 text-sm text-gray-800">
                 <p class="font-semibold mb-1">Package Includes:</p>
-                <ul id="foodpackage-includes" class="list-disc ml-6 text-gray-700">
-                    @if(!empty($product['descriptionList']))
-                        @foreach($product['descriptionList'] as $item)
-                            <li>{{ $item }}</li>
-                        @endforeach
-                    @endif
-                </ul>
+                <ul id="foodpackage-includes" class="list-disc ml-6 text-gray-700"></ul>
+
             </div>
 
 
