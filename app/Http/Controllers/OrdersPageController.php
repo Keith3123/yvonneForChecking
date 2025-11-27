@@ -7,11 +7,6 @@ use App\Models\Order;
 
 class OrdersPageController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
     public function index()
     {
         $userID = Auth::id();

@@ -46,18 +46,15 @@
 
                 {{-- Loop regular + paluwagan products --}}
                 @foreach ($products as $product)
-                   <div class="product-card bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
+                   <div class="product-card {{ $product['productType'] == 'paluwagan' ? 'paluwagan-card' : '' }} bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
     data-id="{{ $product['id'] }}"
+      data-packageid="{{ $product['packageID'] ?? '' }}"
     data-category="{{ strtolower(preg_replace('/[^a-z]/', '', $product['productType'])) }}"
     data-name="{{ $product['name'] }}"
-    data-description="{{ $product['description'] ?? '' }}"
+    data-description='@json($product["descriptionList"])'
     data-image="{{ asset($product['imageURL']) }}"
     data-servings='@json($product['servings'])'
-    data-price="{{ $product['servings'][0]['price'] ?? 0 }}"
-
-
->
-
+    data-price="{{ $product['servings'][0]['price'] ?? 0 }}">
                         
                         <img src="{{ asset($product['imageURL']) }}" alt="{{ $product['name'] }}" class="rounded-lg mb-4 w-full h-40 object-cover">
                         <h3 class="text-lg font-semibold mb-1">{{ $product['name'] }}</h3>
@@ -75,6 +72,8 @@
                     </div>
                 @endforeach
 
+
+                
                 {{-- Customization-only Cake Card --}}
                 <div class="product-card bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
                     data-id="0"

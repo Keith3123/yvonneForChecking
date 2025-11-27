@@ -18,14 +18,15 @@ class PaluwaganRepository implements PaluwaganRepositoryInterface
             ->join('paluwaganpackage', 'paluwaganentry.packageID', '=', 'paluwaganpackage.packageID')
             ->where('paluwaganentry.customerID', $customerID)
             ->select(
+                'paluwaganentry.paluwaganEntryID as entryID',
                 'paluwaganpackage.packageID as id',
                 'paluwaganpackage.packageName as name',
                 'paluwaganpackage.description as desc',
                 'paluwaganentry.joinDate as joinDate',
                 'paluwaganentry.status as status',
                 'paluwaganpackage.totalAmount as package_amount',
-                'paluwaganpackage.monthlyPayment as monthly',
                 'paluwaganpackage.durationMonths as total_months',
+                'paluwaganpackage.monthlyPayment',
                 'paluwaganpackage.image as image'
             )->get();
     }

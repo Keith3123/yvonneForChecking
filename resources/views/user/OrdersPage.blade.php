@@ -104,6 +104,5 @@
     </div>
 </div>
 
-{{-- Modals and JS (keep existing modal code here unchanged) --}}
-@include('user.partials.orders-modals')
+
 @endsection

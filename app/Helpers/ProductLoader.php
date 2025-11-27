@@ -60,6 +60,7 @@ class ProductLoader
             ->map(function ($pkg) {
                 return [
                     'id' => $pkg->id,
+                    'packageID' => $pkg->id, 
                     'name' => $pkg->name,
                     'description' => $pkg->description ?? '',
                     'descriptionList' => $pkg->description

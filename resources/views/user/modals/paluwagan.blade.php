@@ -44,7 +44,7 @@
             <div class="bg-[#FFF1F0] p-3 rounded-lg mb-4 text-sm text-gray-800">
                 <p class="font-semibold mb-1">Important Reminders</p>
                 <ul class="list-disc list-inside text-gray-700 space-y-1">
-                    <li>Due date is every last day of the month.</li>
+                    <li>Payments are due on the 15th of each month.</li>
                     <li>5-day extension for late payment, then penalty per day.</li>
                     <li>No cancellation or refund once payment starts.</li>
                     <li>All payments are non-refundable.</li>
@@ -85,14 +85,15 @@ function openPaluwaganModal(packageData) {
     });
 
     if (packageData.servings && packageData.servings.length > 0) {
-        const serving = packageData.servings[0];
-        const duration = parseInt(serving.size) || 1;
-        const price = parseFloat(serving.price) || 0;
+    const serving = packageData.servings[0];
+    const duration = parseInt(serving.size) || packageData.total_months || 1;
+    const price = parseFloat(serving.price) || packageData.package_amount || 0;
 
-        document.getElementById('paluwagan-total').textContent = price.toFixed(2);
-        document.getElementById('paluwagan-monthly').textContent = (price / duration).toFixed(2);
-        document.getElementById('paluwagan-duration').textContent = duration + ' months';
-    }
+    document.getElementById('paluwagan-total').textContent = price.toFixed(2);
+    document.getElementById('paluwagan-monthly').textContent = (price / duration).toFixed(2);
+    document.getElementById('paluwagan-duration').textContent = duration + ' months';
+}
+
 
     // Step 1 visible initially
     modal.querySelector('#paluwagan-step1').classList.remove('hidden');
@@ -108,6 +109,8 @@ document.querySelectorAll('.paluwagan-card').forEach(card => {
             name: card.dataset.name,
             imageURL: card.dataset.image,
             descriptionList: JSON.parse(card.dataset.description || '[]'),
+            package_amount: parseFloat(card.dataset.total) || 0,
+            total_months: parseInt(card.dataset.duration) || 1,
             servings: JSON.parse(card.dataset.servings || '[]')
         };
         openPaluwaganModal(packageData);

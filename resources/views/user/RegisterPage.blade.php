@@ -102,34 +102,37 @@
             <p class="text-sm text-gray-500 mb-4">Create an account to start ordering</p>
 
             <div class="flex flex-col gap-3 mb-6 text-sm">
+                {{-- Username --}}
                 <label class="flex flex-col relative">
                     <span class="mb-1">Username</span>
                     <input type="text" name="username" value="{{ old('username') }}" required
                         class="w-full border border-gray-300 rounded-lg p-2" id="username">
-
                     <span class="text-red-500 text-sm mt-1 hidden" id="username-error">Username already exists</span>
                 </label>
 
+                {{-- Password --}}
                 <label class="flex flex-col relative">
                     <span class="mb-1">Password 
                         <span class="text-gray-400 text-xs">(Min 8 chars, 1 uppercase, 1 lowercase, 1 number)</span>
                     </span>
                     <input type="password" name="password" required
                         class="w-full border border-gray-300 rounded-lg p-2 password-input">
-                    <button type="button" class="absolute right-2 top-8 text-gray-500 toggle-password">
-                        <i class="far fa-eye"></i>
+                    <button type="button" class="absolute right-2 top-9 text-gray-500 toggle-password">
+                        <i class="far fa-eye-slash"></i>
                     </button>
                 </label>
 
+                {{-- Confirm Password --}}
                 <label class="flex flex-col relative">
                     <span class="mb-1">Confirm Password</span>
                     <input type="password" name="password_confirmation" required
                         class="w-full border border-gray-300 rounded-lg p-2 password-input">
-                    <button type="button" class="absolute right-2 top-8 text-gray-500 toggle-password">
-                        <i class="far fa-eye"></i>
+                    <button type="button" class="absolute right-2 top-9 text-gray-500 toggle-password">
+                        <i class="far fa-eye-slash"></i>
                     </button>
                     <p class="text-red-500 text-xs mt-1 hidden password-error">The password confirmation does not match.</p>
                 </label>
+
             </div>
 
             <div class="flex justify-between gap-3">
@@ -147,3 +150,4 @@
 
 @vite('resources/js/register.js')
 @endsection
+

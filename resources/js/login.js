@@ -29,13 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (input.type === 'password') {
                 // Show password
                 input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
             } else {
                 // Hide password
                 input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
             }
         });
     }); 
