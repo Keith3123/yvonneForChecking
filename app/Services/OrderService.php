@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\DTO\CreateOrderDTO;
 use App\Repositories\OrderRepositoryInterface;
+use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
@@ -14,32 +15,18 @@ class OrderService
         $this->repo = $repo;
     }
 
-    public function createOrder(CreateOrderDTO $dto)
+   public function createOrder(CreateOrderDTO $dto)
+{
+    return DB::transaction(function () use ($dto) {
+        $orderID = $this->repo->create($dto);
+        $this->repo->addItems($orderID, $dto->items);
+        $this->repo->addPayment($orderID, $dto);
+        return $orderID;
+    });
+}
+
+    public function getCustomerOrders(int $customerID)
     {
-        $total = 0;
-
-        foreach ($dto->items as $item) {
-            $total += $item['price'] * $item['qty'];
-        }
-
-        $order = $this->repo->create([
-            'customerID'      => $dto->customerID,
-            'status'          => 'Pending',
-            'orderDate'       => now(),
-            'totalAmount'     => $total,
-            'remarks'         => $dto->remarks,
-            'deliveryAddress' => $dto->deliveryAddress,
-            'paymentStatus'   => 'Unpaid',
-            'deliveryDate'    => null
-        ]);
-
-        $this->repo->addItems($order->orderID, $dto->items);
-
-        return $order;
-    }
-
-    public function getCustomerOrders(int $id)
-    {
-        return $this->repo->getByCustomer($id);
+        return $this->repo->getByCustomer($customerID);
     }
 }

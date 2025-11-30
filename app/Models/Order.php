@@ -18,14 +18,29 @@ class Order extends Model
         'remarks',
         'deliveryAddress',
         'paymentStatus',
-        'deliveryDate'
+        'deliveryDate',
+        'deliveryTime',
+
     ];
 
-    
+    protected $casts = [
+        'orderDate' => 'datetime',
+        'deliveryDate' => 'datetime',
+    ];
+
 
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class, 'orderID', 'orderID');
     }
-    
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class, 'orderID', 'orderID');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customerID', 'customerID');
+    }
 }

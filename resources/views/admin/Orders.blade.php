@@ -40,13 +40,14 @@
     {{-- Orders Table --}}
     <div class="mt-6 bg-white border border-pink-200 rounded-xl p-6">
         <h2 class="text-lg sm:text-xl font-semibold text-gray-700">Orders</h2>
-        <p class="text-gray-500 text-sm sm:text-base">0 orders found</p>
+        <p class="text-gray-500 text-sm sm:text-base">{{$orders->count() }} orders found</p>
 
         <div class="mt-4 overflow-x-auto">
             <table class="min-w-full border-collapse text-sm sm:text-base">
                 <thead>
                     <tr class="border-b text-left text-gray-600">
                         <th class="py-3 px-4 whitespace-nowrap">Order ID</th>
+                        <th class="py-3 px-4 whitespace-nowrap">Name</th>
                         <th class="py-3 px-4 whitespace-nowrap">Date</th>
                         <th class="py-3 px-4 whitespace-nowrap">Quantity</th>
                         <th class="py-3 px-4 whitespace-nowrap">Delivery Date</th>
@@ -57,17 +58,33 @@
                     </tr>
                 </thead>
 
-                <tbody class="text-gray-700">
-                    {{-- Empty State --}}
-                    <tr>
-                        <td colspan="8" class="py-10 text-center text-gray-400">
-                            <div class="flex flex-col items-center">
-                                <span class="text-4xl mb-2">📄</span>
-                                No orders found
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
+               <tbody class="text-gray-700">
+    @forelse($orders as $order)
+        <tr class="border-b">
+            <td class="py-3 px-4">{{ $order->orderID }}</td>
+            <td class="py-3 px-4">{{ $order->customer ? $order->customer->firstName . ' ' .($order->customer->mi ? $order->customer->mi . '. ' : '') .$order->customer->lastName: 'Unknown'}}</td>
+            <td class="py-3 px-4">{{ $order->orderDate->format('Y-m-d H:i') }}</td>
+            <td class="py-3 px-4">{{ $order->orderItems->sum('qty') }}</td>
+            <td class="py-3 px-4">{{ $order->deliveryDate ? $order->deliveryDate->format('Y-m-d') : 'N/A' }}</td>
+            <td class="py-3 px-4">{{ $order->paymentStatus }}</td>
+            <td class="py-3 px-4">{{ $order->status }}</td>
+            <td class="py-3 px-4">₱{{ number_format($order->totalAmount, 2) }}</td>
+            <td class="py-3 px-4 flex gap-2">
+                <a href="#" class="text-blue-600 hover:underline">View</a>
+                <a href="#" class="text-red-600 hover:underline">Cancel</a>
+            </td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="8" class="py-10 text-center text-gray-400">
+                <div class="flex flex-col items-center">
+                    <span class="text-4xl mb-2">📄</span>
+                    No orders found
+                </div>
+            </td>
+        </tr>
+    @endforelse
+</tbody>
             </table>
         </div>
     </div>

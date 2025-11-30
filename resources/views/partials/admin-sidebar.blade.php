@@ -33,6 +33,12 @@
                 <span class="hidden group-hover:inline">Orders</span>
             </a>
 
+            <a href="{{ route('admin.products') }}"
+                class="flex items-center space-x-3 text-gray-700 hover:text-pink-500 pl-2">
+                <span>🧺</span>
+                <span class="hidden group-hover:inline">Products</span>
+            </a>
+
             <a href="{{ route('admin.salesreport') }}"
                class="flex items-center space-x-3 text-gray-700 hover:text-pink-500 pl-2">
                 <span class="text-lg">📄</span>

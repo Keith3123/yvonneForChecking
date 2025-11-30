@@ -63,7 +63,7 @@
             </div>
 
 
-             <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+             <button class="bg-pink-500 hover:bg-pink-300 text-white px-3 py-1 rounded text-sm">
             Make Payment
             </button>
 
@@ -73,7 +73,7 @@
                 View Schedule
             </button>
 
-            <button class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-sm">
+            <button class="bg-red-500 hover:bg-pink-300 text-white px-3 py-1 rounded text-sm">
             Cancel Subscription
         </button>
         

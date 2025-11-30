@@ -58,3 +58,4 @@ class PaluwaganRepository implements PaluwaganRepositoryInterface
 }
 
 }
+

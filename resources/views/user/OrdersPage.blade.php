@@ -35,7 +35,7 @@
                             </p>
                         </div>
                         <span class="text-xs font-semibold 
-                                     {{ $order->status == 'DELIVERED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }} 
+                                     {{ $order->status == 'Done' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }} 
                                      px-3 py-1 rounded-full">
                             {{ $order->status }}
                         </span>
@@ -44,7 +44,7 @@
                     {{-- Progress Bar --}}
                     <div class="w-full bg-gray-200 h-2 rounded-full mb-3">
                         @php
-                            $progress = $order->status == 'DELIVERED' ? 100 : 50;
+                            $progress = $order->status == 'Done' ? 100 : 50;
                         @endphp
                         <div class="h-2 bg-green-500 rounded-full" style="width: {{ $progress }}%;"></div>
                     </div>
@@ -79,9 +79,10 @@
                             <h4 class="font-semibold text-gray-700 mb-2">Payment Information</h4>
                             <div class="text-sm text-gray-700 space-y-1">
                                 <p>Subtotal: <span class="float-right font-semibold">₱{{ $order->totalAmount }}</span></p>
-                                <p>Downpayment (50%): <span class="float-right text-blue-600 font-medium">₱{{ $order->totalAmount / 2 }}</span></p>
-                                <p>Remaining Balance: <span class="float-right">₱{{ $order->totalAmount / 2 }}</span></p>
-                                <p>Payment Method: <span class="float-right font-medium">{{ $order->paymentStatus == 'PENDING' ? 'COD/GCASH' : $order->paymentStatus }}</span></p>
+                                <p>Total Amount: <span class="float-right font-semibold">₱{{ $order->totalAmount }}</span></p>
+<p>Payment Method: <span class="float-right font-medium">
+    {{ $order->paymentStatus == 'Pending' ? 'COD / GCASH' : $order->paymentStatus }}
+</span></p>
                             </div>
                         </div>
                     </div>

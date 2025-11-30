@@ -4,6 +4,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Repositories\PaluwaganRepositoryInterface;
 use App\Repositories\PaluwaganRepository;
+use App\Repositories\OrderRepositoryInterface;
+use App\Repositories\OrderRepository;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +18,7 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind(PaluwaganRepositoryInterface::class, PaluwaganRepository::class);
-
+         $this->app->bind(OrderRepositoryInterface::class, OrderRepository::class);
         $this->app->bind(
         \App\Services\UserManagementServiceInterface::class,
         \App\Services\UserManagementService::class

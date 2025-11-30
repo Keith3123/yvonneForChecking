@@ -9,9 +9,12 @@ class OrdersPageController extends Controller
 {
     public function index()
     {
-        $userID = Auth::id();
+       $customerID = session('logged_in_user.customerID');
 
-        $orders = Order::where('customerID', $userID)
+        if (!$customerID) {
+        return redirect()->route('catalog')->with('error', 'Please log in to view your orders.');
+    }
+        $orders = Order::where('customerID', $customerID)
             ->with(['orderItems.product'])
             ->orderBy('orderDate', 'desc')
             ->get();

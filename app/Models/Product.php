@@ -15,6 +15,9 @@ class Product extends Model
         'name',
         'imageURL',
         'description',
+        'price',
+        'stock',
+        'isAvailable'
     ];
 
     // Relationships
@@ -26,5 +29,10 @@ class Product extends Model
     public function ingredients()
     {
         return $this->hasMany(Ingredient::class, 'productID', 'productID');
+    }
+
+      public function type()
+    {
+        return $this->belongsTo(ProductType::class, 'productTypeID');
     }
 }

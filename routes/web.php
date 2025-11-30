@@ -17,7 +17,8 @@
         AdminSalesReportController,
         AdminUsersController,
         AdminPaluwaganController,
-        AdminInventoryController
+        AdminInventoryController,
+        AdminProductController
     };
 
     // ------------------- USER PAGES -------------------
@@ -41,7 +42,7 @@
     Route::post('/cart/update', [CartPageController::class, 'update'])->name('cart.update');
 
     Route::get('/checkout', [CheckoutPageController::class, 'index'])->name('checkout');
-    Route::post('/checkout/place-order', [CheckoutPageController::class, 'placeOrder'])->name('checkout.placeOrder');
+Route::post('/checkout/place-order', [CheckoutPageController::class, 'placeOrder'])->name('checkout.placeOrder');
 
     Route::get('/orders', [OrdersPageController::class, 'index'])->name('orders.index');
 
@@ -61,7 +62,13 @@ Route::post('/password/update', [ProfilePageController::class, 'updatePassword']
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
         Route::patch('/admin/users/toggle-status/{userID}', [AdminUsersController::class, 'toggleStatus'])->name('admin.users.toggleStatus');
 
-
+// Product Management Routes
+    Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products');
+    Route::get('/products/create', [AdminProductController::class, 'create'])->name('admin.products.create');
+    Route::post('/products/store', [AdminProductController::class, 'store'])->name('admin.products.store');
+    Route::get('/products/{id}/edit', [AdminProductController::class, 'edit'])->name('admin.products.edit');
+    Route::post('/products/{id}/update', [AdminProductController::class, 'update'])->name('admin.products.update');
+    Route::delete('/products/{id}/delete', [AdminProductController::class, 'destroy'])->name('admin.products.delete');
 
         Route::get('/orders', [AdminOrdersController::class, 'index'])->name('admin.orders');
         Route::get('/salesreport', [AdminSalesReportController::class, 'index'])->name('admin.salesreport');

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Order;
 
 class AdminOrdersController extends Controller
 {
     public function index()
     {
-        return view('admin.orders');
+        $orders = Order::with('orderItems.product', 'customer')->orderBy('orderDate', 'asc')->get();
+        return view('admin.orders', compact('orders'));
     }
 }

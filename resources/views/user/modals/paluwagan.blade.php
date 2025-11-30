@@ -1,3 +1,4 @@
+
 <div id="paluwagan-modal"
     class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
     <div class="bg-white rounded-2xl p-6 max-w-lg w-full relative overflow-y-auto max-h-[90vh]">
@@ -10,7 +11,7 @@
             
             <div class="mt-4">
                 <h3 class="font-semibold text-gray-800 mb-1">What's Included</h3>
-                <ul id="paluwagan-desc" class="list-disc ml-6 text-gray-700"></ul>
+                <ul id="paluwagan-desc" class="list-disc ml-6 text-gray-500 mb-2 space-y-1"></ul>
             </div>
 
             <div class="bg-[#FFF1F0] p-3 rounded-lg mb-4 text-sm text-gray-800 mt-4">
@@ -76,61 +77,75 @@ function openPaluwaganModal(packageData) {
     document.getElementById('paluwagan-name').textContent = packageData.name;
     document.getElementById('paluwagan-image').src = packageData.imageURL;
 
+    // ---------------------------
+    // FIXED DESCRIPTION LIST
+    // ---------------------------
     const descEl = document.getElementById('paluwagan-desc');
     descEl.innerHTML = '';
-    (packageData.descriptionList || []).forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        descEl.appendChild(li);
-    });
 
+    // Split description by newline (same as product card)
+    (packageData.description || "")
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line !== "")
+        .forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            descEl.appendChild(li);
+        });
+
+    // ---------------------------
+    // PRICE / DURATION
+    // ---------------------------
     if (packageData.servings && packageData.servings.length > 0) {
-    const serving = packageData.servings[0];
-    const duration = parseInt(serving.size) || packageData.total_months || 1;
-    const price = parseFloat(serving.price) || packageData.package_amount || 0;
+        const serving = packageData.servings[0];
+        const duration = parseInt(serving.size) || 1;
+        const price = parseFloat(serving.price) || 0;
 
-    document.getElementById('paluwagan-total').textContent = price.toFixed(2);
-    document.getElementById('paluwagan-monthly').textContent = (price / duration).toFixed(2);
-    document.getElementById('paluwagan-duration').textContent = duration + ' months';
-}
+        document.getElementById('paluwagan-total').textContent = price.toFixed(2);
+        document.getElementById('paluwagan-monthly').textContent = (price / duration).toFixed(2);
+        document.getElementById('paluwagan-duration').textContent = duration + ' months';
+    }
 
-
-    // Step 1 visible initially
+    // Show step 1
     modal.querySelector('#paluwagan-step1').classList.remove('hidden');
     modal.querySelector('#paluwagan-step2').classList.add('hidden');
     modal.classList.remove('hidden');
 }
 
-// Open modal when clicking a Paluwagan package
+// ---------------------------
+// OPEN MODAL (PALUWAGAN ONLY)
+// ---------------------------
 document.querySelectorAll('.paluwagan-card').forEach(card => {
     card.addEventListener('click', () => {
         const packageData = {
             id: card.dataset.id,
             name: card.dataset.name,
             imageURL: card.dataset.image,
-            descriptionList: JSON.parse(card.dataset.description || '[]'),
-            package_amount: parseFloat(card.dataset.total) || 0,
-            total_months: parseInt(card.dataset.duration) || 1,
+            description: card.dataset.description, // FIXED
             servings: JSON.parse(card.dataset.servings || '[]')
         };
         openPaluwaganModal(packageData);
     });
 });
 
-// Join button: move to step 2
+// ---------------------------
+// STEP SWITCH
+// ---------------------------
 document.getElementById('join-paluwagan').addEventListener('click', () => {
     document.getElementById('paluwagan-step1').classList.add('hidden');
     document.getElementById('paluwagan-step2').classList.remove('hidden');
     document.getElementById('paluwagan-image2').src = document.getElementById('paluwagan-image').src;
 });
 
-// Back button: return to step 1
 document.getElementById('back-paluwagan').addEventListener('click', () => {
     document.getElementById('paluwagan-step2').classList.add('hidden');
     document.getElementById('paluwagan-step1').classList.remove('hidden');
 });
 
-// Confirm enrollment (AJAX request)
+// ---------------------------
+// CONFIRM ENROLLMENT
+// ---------------------------
 document.getElementById('confirmEnrollmentBtn').addEventListener('click', async () => {
     const startMonth = document.getElementById('start-month').value;
 
@@ -167,13 +182,14 @@ document.getElementById('confirmEnrollmentBtn').addEventListener('click', async 
     }
 });
 
-// Close modal
+// ---------------------------
+// CLOSE MODAL
+// ---------------------------
 document.getElementById('close-modal-paluwagan').addEventListener('click', () => {
     document.getElementById('paluwagan-modal').classList.add('hidden');
 });
-
-
 </script>
+
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {

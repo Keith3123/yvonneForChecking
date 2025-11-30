@@ -3,80 +3,113 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use App\Models\Order; 
-use App\Models\OrderItem; 
+use App\Services\OrderService;
+use App\DTO\CreateOrderDTO;
+use Carbon\Carbon;
 
 class CheckoutPageController extends Controller
 {
+    protected OrderService $orderService;
+
+    public function __construct(OrderService $orderService)
+    {
+        $this->orderService = $orderService;
+    }
+
     public function index()
     {
         $cart = session('cart', []);
         $subtotal = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
-        $downpayment = $subtotal * 0.5;
-        $balance = $subtotal - $downpayment;
-
-        return view('user.CheckoutPage', compact('cart', 'subtotal', 'downpayment', 'balance'));
+        $total = $subtotal;
+        return view('user.CheckoutPage', compact('cart', 'subtotal', 'total'));
     }
 
-    public function placeOrder(Request $request)
-    {
-       $user = session('logged_in_user');
+public function placeOrder(Request $request)
+{
+    $isAjax = $request->expectsJson() || $request->wantsJson();
 
-$userID = $user['customerID'] ?? null;
+    $customer = session('logged_in_user');
+    $customerID = $customer['customerID'] ?? null;
 
-if (!$userID) {
-    return back()->with('error', 'You must be logged in to place an order.');
-}
+    if (!$customerID) {
+        return $isAjax
+            ? response()->json(['error' => 'You must be logged in as a customer to place an order.'])
+            : back()->with('error', 'You must be logged in as a customer to place an order.');
+    }
 
+    $cart = session('cart', []);
+    if (empty($cart)) {
+        return $isAjax
+            ? response()->json(['error' => 'Your cart is empty.'])
+            : redirect()->route('cart')->with('error', 'Your cart is empty.');
+    }
 
-        $cart = session('cart', []);
-
-        if (empty($cart)) {
-            return redirect()->route('cart')->with('error', 'Your cart is empty.');
-        }
-
-        // Validate delivery info
-        $validated = $request->validate([
+    try {
+        $rules = [
             'deliveryAddress' => 'required|string|max:255',
             'remarks' => 'nullable|string|max:200',
-            'deliveryDate' => 'nullable|date',
+            'deliveryDate' => 'required|date',
+            'deliveryTime' => 'required|string',
             'payment' => 'required|string|in:gcash,cod',
-            'paymentProof' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+        ];
+
+        if ($request->payment === 'gcash') {
+            $rules['paymentProof'] = 'required|file|mimes:jpg,jpeg,png,pdf|max:10240'; // max 10MB
+        } else {
+            $rules['paymentProof'] = 'nullable';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Handle file upload if GCash
+        $paymentProof = $request->hasFile('paymentProof') 
+    ? $request->file('paymentProof')->store('payment_proofs', 'public')
+    : null;
+
+        // Prepare items for DTO
+        $items = array_map(fn($item) => [
+            'productID' => $item['productID'] ?? null,
+            'qty'       => $item['quantity'],
+            'price'     => $item['price'],
+        ], $cart);
+
+        // Combine deliveryDate and deliveryTime
+        $timeParts = explode('-', $validated['deliveryTime']);
+        $startTime = trim($timeParts[0]);
+        $deliveryDateTime = Carbon::parse($validated['deliveryDate'] . ' ' . $startTime);
+
+        // Create DTO
+        $orderDTO = new CreateOrderDTO([
+            'customerID'      => $customerID,
+            'deliveryAddress' => $validated['deliveryAddress'],
+            'remarks'         => $validated['remarks'] ?? '',
+            'items'           => $items,
+            'deliveryDate'    => $deliveryDateTime->format('Y-m-d H:i:s'),
+            'deliveryTime'    => $validated['deliveryTime'],
+            'payment'         => $validated['payment'],
+            'paymentProof'    => $paymentProof, 
         ]);
 
-        DB::transaction(function () use ($userID, $cart, $validated) {
-            $totalAmount = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
-
-            $order = Order::create([
-                'customerID' => $userID,
-                'status' => 'PENDING',
-                'orderDate' => now(),
-                'totalAmount' => $totalAmount,
-                'remarks' => $validated['remarks'] ?? '',
-                'deliveryAddress' => $validated['deliveryAddress'],
-                'paymentStatus' => 'PENDING',
-                'deliveryDate' => $validated['deliveryDate'] ?? now(),
-            ]);
-
-            foreach ($cart as $item) {
-    // Skip items without a valid product ID (customization items)
-    $productID = isset($item['id']) && $item['id'] > 0 ? $item['id'] : null;
-
-    OrderItem::create([
-        'orderID' => $order->orderID,
-        'productID' => $productID,
-        'price' => $item['price'],
-        'qty' => $item['quantity'],
-        'subtotal' => $item['price'] * $item['quantity'],
-    ]);
-}
-
-        });
+        // Place order via service
+        $this->orderService->createOrder($orderDTO);
 
         session()->forget('cart');
 
-        return redirect()->route('catalog')->with('success', 'Your order has been placed successfully!');
+        return $isAjax
+            ? response()->json(['success' => true, 'message' => 'Order placed successfully!', 'redirect' => route('orders.index')])
+            : redirect()->route('catalog')->with('success', 'Your order has been placed successfully!');
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        if ($isAjax) {
+            return response()->json(['error' => 'Validation failed', 'errors' => $e->errors()]);
+        }
+        throw $e;
+    } catch (\Exception $e) {
+        if ($isAjax) {
+            return response()->json(['error' => 'Failed to place order. Please try again.', 'exception' => $e->getMessage()]);
+        }
+        return back()->with('error', 'Failed to place order. Please try again.');
     }
+}
+
 }

@@ -9,13 +9,9 @@
         <h2 id="foodtray-name" class="text-xl font-bold mb-2"></h2>
         <img id="foodtray-image" class="rounded-lg w-full h-56 object-cover mb-5">
 
-
-        <!-- Short Description (optional paragraph) -->
-        <p id="foodtray-short-desc" class="text-gray-600 mb-4"></p>
-
         <!-- What's Included -->
         <div class="mb-4">
-            <h3 class="font-semibold text-gray-800 mb-1">What's Included</h3>
+            <h3 class="font-semibold text-gray-800 mb-1"></h3>
             <ul id="foodtray-includes" class="list-disc ml-6 text-gray-700">
                 <!-- Populated dynamically via JS -->
             </ul>

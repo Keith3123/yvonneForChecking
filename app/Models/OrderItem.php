@@ -17,7 +17,7 @@ class OrderItem extends Model
         'qty',
         'subtotal'
     ];
-    // app/Models/OrderItem.php
+    
     public function product()
 {
     return $this->belongsTo(Product::class, 'productID', 'id');

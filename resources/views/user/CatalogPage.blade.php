@@ -46,30 +46,33 @@
 
                 {{-- Loop regular + paluwagan products --}}
                 @foreach ($products as $product)
-                   <div class="product-card {{ $product['productType'] == 'paluwagan' ? 'paluwagan-card' : '' }} bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
-    data-id="{{ $product['id'] }}"
-      data-packageid="{{ $product['packageID'] ?? '' }}"
-    data-category="{{ strtolower(preg_replace('/[^a-z]/', '', $product['productType'])) }}"
-    data-name="{{ $product['name'] }}"
-    data-description='@json($product["descriptionList"])'
-    data-image="{{ asset($product['imageURL']) }}"
-    data-servings='@json($product['servings'])'
-    data-price="{{ $product['servings'][0]['price'] ?? 0 }}">
-                        
-                        <img src="{{ asset($product['imageURL']) }}" alt="{{ $product['name'] }}" class="rounded-lg mb-4 w-full h-40 object-cover">
-                        <h3 class="text-lg font-semibold mb-1">{{ $product['name'] }}</h3>
-                        <ul class="list-disc ml-6 text-gray-500 mb-2">
-                            @foreach(explode("\n", $product['description']) as $item)
-                                @if(trim($item) !== '')
-                                    <li>{{ $item }}</li>
-                                @endif
-                            @endforeach
-                        </ul>
+                <div class="product-card {{ $product['productType'] == 'paluwagan' ? 'paluwagan-card' : '' }} bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer"
+                    data-id="{{ $product['id'] }}"
+                    data-packageid="{{ $product['packageID'] ?? '' }}"
+                    data-category="{{ strtolower(preg_replace('/[^a-z]/', '', $product['productType'])) }}"
+                    data-name="{{ $product['name'] }}"
+                    data-description="{{ $product['description'] }}"
+                    data-image="{{ asset($product['imageURL']) }}"
+                    data-servings='@json($product['servings'])'
+                    data-price="{{ $product['servings'][0]['price'] ?? 0 }}">
 
-                        <p class="text-gray-800 font-semibold">
-                            ₱ {{ number_format($product['servings'][0]['price'] ?? 0, 2) }}
-                        </p>
-                    </div>
+                    <img src="{{ asset($product['imageURL']) }}" alt="{{ $product['name'] }}" class="rounded-lg mb-4 w-full h-40 object-cover">
+                    <h3 class="text-lg font-semibold mb-1">{{ $product['name'] }}</h3>
+
+                    <ul class="list-disc ml-6 text-gray-500 mb-2">
+                        @foreach(explode("\n", $product['description']) as $item)
+                            @if(trim($item) !== '')
+                                <li>{{ $item }}</li>
+                            @endif
+                        @endforeach
+                    </ul>
+
+                    <p class="text-gray-800 font-semibold">
+                        ₱ {{ number_format($product['servings'][0]['price'] ?? 0, 2) }}
+                    </p>
+                </div>
+
+
                 @endforeach
 
 
