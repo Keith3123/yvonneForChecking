@@ -48,5 +48,36 @@ aside {
     padding-bottom: 100px;
 }
 
+.modal-show {
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
+.modal-hide {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.category-btn.active-category {
+    @apply text-pink-500;
+}
+
+.category-btn.active-category::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s ease-out both;
+}
 
 

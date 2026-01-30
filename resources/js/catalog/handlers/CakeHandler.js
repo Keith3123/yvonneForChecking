@@ -1,10 +1,18 @@
-// resources/js/catalog/handlers/CakeHandler.js 
 export default class CakeHandler {
     constructor(cartService) {
         this.cartService = cartService;
     }
 
     populateModal(card, modal) {
+        let idInput = modal.querySelector('#cake-id');
+        if (!idInput) {
+            idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.id = 'cake-id';
+            modal.appendChild(idInput);
+        }
+        idInput.value = card.dataset.id;
+
         const customizationCard = modal.querySelector('#cake-customization');
         const imageEl = modal.querySelector('#cake-image');
         const isCustomization = card.dataset.customization === 'true';
@@ -43,6 +51,8 @@ export default class CakeHandler {
             modal.querySelector('#cake-price').textContent = `₱${price.toFixed(2)}`;
             this.setupQuantity(modal, { value: price }, '#cake-price', '#cake-total', '#quantity-cake');
         }
+
+        this.bindAddToCart(modal);
     }
 
     setupQuantity(modal, priceSource, priceSelector, totalSelector, qtySelector) {
@@ -52,44 +62,47 @@ export default class CakeHandler {
         const totalEl = modal.querySelector(totalSelector);
 
         const updateTotal = () => {
-            qtyEl.textContent = qty;
             const price = parseFloat(priceSource.value || priceSource) || 0;
+            qtyEl.textContent = qty;
             priceEl.textContent = `₱${price.toFixed(2)}`;
             totalEl.textContent = `₱${(price * qty).toFixed(2)}`;
         };
 
-        if (priceSource.addEventListener) {
-            priceSource.addEventListener('change', updateTotal);
-        } else if (priceSource.onchange !== undefined) {
-            priceSource.onchange = updateTotal;
-        }
+        priceSource.addEventListener?.('change', updateTotal);
 
         modal.querySelector('#increase-qty-cake').onclick = () => { qty++; updateTotal(); };
         modal.querySelector('#decrease-qty-cake').onclick = () => { if (qty > 1) qty--; updateTotal(); };
+
         updateTotal();
     }
 
-    openModal(modal) {
-        modal.classList.remove('hidden');
-        modal.querySelector('#add-to-cart-cake').onclick = () => {
-            const price = parseFloat(modal.querySelector('#cake-price').textContent.replace('₱', '')) || 0;
+    bindAddToCart(modal) {
+        const btn = modal.querySelector('#add-to-cart-cake');
+        btn.onclick = e => {
+            e.stopPropagation();
+
             const isCustomization = !modal.querySelector('#cake-customization').classList.contains('hidden');
-            const flavor = isCustomization ? modal.querySelector('#cake-flavor option:checked')?.textContent : null;
-            const shape = isCustomization ? modal.querySelector('#cake-shape option:checked')?.textContent : null;
-            const icing = isCustomization ? modal.querySelector('#cake-icing option:checked')?.textContent : null;
-            const message = modal.querySelector('#cake-message')?.value || null;
 
             this.cartService.sendToCart({
-                id: modal.querySelector('#cake-name').textContent,
+                id: parseInt(modal.querySelector('#cake-id').value),
                 name: modal.querySelector('#cake-name').textContent,
                 image: modal.querySelector('#cake-image')?.src ?? null,
-                price: price,
+                price: parseFloat(modal.querySelector('#cake-price').textContent.replace('₱', '')),
                 quantity: parseInt(modal.querySelector('#quantity-cake').textContent),
                 productType: 'Cake',
-                customization: isCustomization ? { flavor, shape, icing, message } : null
+                customization: isCustomization ? {
+                    flavor: modal.querySelector('#cake-flavor option:checked')?.textContent,
+                    shape: modal.querySelector('#cake-shape option:checked')?.textContent,
+                    icing: modal.querySelector('#cake-icing option:checked')?.textContent,
+                    message: modal.querySelector('#cake-message')?.value || null
+                } : null
             });
 
             modal.classList.add('hidden');
         };
+    }
+
+    openModal(modal) {
+        modal.classList.remove('hidden');
     }
 }

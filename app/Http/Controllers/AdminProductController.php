@@ -2,22 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductType;
 use Illuminate\Http\Request;
 
 class AdminProductController extends Controller
 {
-    // ------------------------------------------
-    // INDEX PAGE
-    // ------------------------------------------
-    public function index(Request $request)
+    public function index()
     {
         $products = Product::with('type')->orderBy('name')->get();
         $types    = ProductType::all();
 
-        // Stats
         $stats = [
             'total'      => Product::count(),
             'cakes'      => Product::where('productTypeID', 1)->count(),
@@ -26,12 +21,9 @@ class AdminProductController extends Controller
             'paluwagan'  => Product::where('productTypeID', 4)->count(),
         ];
 
-        return view('admin.products.index', compact('products', 'types', 'stats'));
+        return view('admin.Product', compact('products', 'types', 'stats'));
     }
 
-    // ------------------------------------------
-    // AJAX FILTER + SEARCH
-    // ------------------------------------------
     public function ajaxFetch(Request $request)
     {
         $search   = $request->search;
@@ -54,18 +46,12 @@ class AdminProductController extends Controller
         return response()->json(['html' => $html]);
     }
 
-    // ------------------------------------------
-    // CREATE PAGE
-    // ------------------------------------------
-    public function create()
+    public function modalEdit($id)
     {
-        $types = ProductType::all();
-        return view('admin.products.add-product-modal', compact('types'));
+        $product = Product::findOrFail($id);
+        return response()->json(['product' => $product]);
     }
 
-    // ------------------------------------------
-    // STORE PRODUCT
-    // ------------------------------------------
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -88,20 +74,6 @@ class AdminProductController extends Controller
             ->with('success', 'Product created successfully!');
     }
 
-    // ------------------------------------------
-    // EDIT PAGE
-    // ------------------------------------------
-    public function edit($id)
-    {
-        $product = Product::findOrFail($id);
-        $types   = ProductType::all();
-
-        return view('admin.products.edit-product-modal', compact('product', 'types'));
-    }
-
-    // ------------------------------------------
-    // UPDATE PRODUCT
-    // ------------------------------------------
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
@@ -126,9 +98,6 @@ class AdminProductController extends Controller
             ->with('success', 'Product updated successfully!');
     }
 
-    // ------------------------------------------
-    // DELETE PRODUCT
-    // ------------------------------------------
     public function destroy($id)
     {
         Product::destroy($id);
@@ -137,4 +106,3 @@ class AdminProductController extends Controller
             ->with('success', 'Product deleted successfully!');
     }
 }
-

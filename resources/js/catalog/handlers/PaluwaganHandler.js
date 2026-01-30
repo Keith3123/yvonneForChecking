@@ -1,84 +1,133 @@
-// resources/js/catalog/handlers/PaluwaganHandler.js
 export default class PaluwaganHandler {
     constructor(cartService) {
         this.cartService = cartService;
+        this.modal = null;
+        this.packageId = null;
     }
 
     populateModal(card, modal) {
+        this.modal = modal;
+        this.packageId = card.dataset.id;
+
+        // Populate info
         modal.querySelector('#paluwagan-name').textContent = card.dataset.name;
         modal.querySelector('#paluwagan-image').src = card.dataset.image;
-        modal.querySelector('#paluwagan-desc').innerHTML = '';
 
-        const description = card.dataset.description || '';
-        description.split('\n').forEach(line => {
-            if (line.trim()) {
+        const descEl = modal.querySelector('#paluwagan-desc');
+        descEl.innerHTML = '';
+        (card.dataset.description || '').split('\n')
+            .map(line => line.trim())
+            .filter(line => line !== '')
+            .forEach(line => {
                 const li = document.createElement('li');
-                li.textContent = line.trim();
-                modal.querySelector('#paluwagan-desc').appendChild(li);
-            }
-        });
+                li.textContent = line;
+                descEl.appendChild(li);
+            });
 
-        // Populate Total Package, Monthly Payment, Duration for Paluwagan packages
+        // Price/duration
         if (card.dataset.servings) {
             const servings = JSON.parse(card.dataset.servings);
             if (servings.length > 0) {
-                modal.querySelector('#paluwagan-total').textContent = servings[0].price;
-                modal.querySelector('#paluwagan-monthly').textContent = card.dataset.monthly || servings[0].price;
-                modal.querySelector('#paluwagan-duration').textContent = card.dataset.duration || servings[0].size;
+                const serving = servings[0];
+                modal.querySelector('#paluwagan-total').textContent = parseFloat(serving.price).toFixed(2);
+                modal.querySelector('#paluwagan-monthly').textContent = 
+                    parseFloat(serving.price / (parseInt(serving.size) || 1)).toFixed(2);
+                modal.querySelector('#paluwagan-duration').textContent = (serving.size || 1) + ' months';
             }
         }
 
-        // Ensure Step 1 is visible initially
+        // Step 1 visible initially
         modal.querySelector('#paluwagan-step1').classList.remove('hidden');
         modal.querySelector('#paluwagan-step2').classList.add('hidden');
 
-        // Set up Join and Back buttons
-        const joinBtn = modal.querySelector('#join-paluwagan');
-        const backBtn = modal.querySelector('#back-paluwagan');
-
-        joinBtn.addEventListener('click', () => {
-            modal.querySelector('#paluwagan-step1').classList.add('hidden');
-            modal.querySelector('#paluwagan-step2').classList.remove('hidden');
-        });
-
-        backBtn.addEventListener('click', () => {
-            modal.querySelector('#paluwagan-step2').classList.add('hidden');
-            modal.querySelector('#paluwagan-step1').classList.remove('hidden');
-        });
+        // Only attach listeners once
+        this.attachListeners();
     }
 
-    openModal(modal) {
-        modal.classList.remove('hidden');
+    attachListeners() {
+        if (!this.modal) return;
+
+        // Join button
+        const joinBtn = this.modal.querySelector('#join-paluwagan');
+        if (!joinBtn.dataset.listener) {
+            joinBtn.addEventListener('click', () => {
+                this.modal.querySelector('#paluwagan-step1').classList.add('hidden');
+                this.modal.querySelector('#paluwagan-step2').classList.remove('hidden');
+                this.modal.querySelector('#paluwagan-image2').src =
+                    this.modal.querySelector('#paluwagan-image').src;
+            });
+            joinBtn.dataset.listener = true; // mark as attached
+        }
+
+        // Back button
+        const backBtn = this.modal.querySelector('#back-paluwagan');
+        if (!backBtn.dataset.listener) {
+            backBtn.addEventListener('click', () => {
+                this.modal.querySelector('#paluwagan-step2').classList.add('hidden');
+                this.modal.querySelector('#paluwagan-step1').classList.remove('hidden');
+            });
+            backBtn.dataset.listener = true;
+        }
+
+        // Confirm enrollment
+        const confirmBtn = this.modal.querySelector('#confirmEnrollmentBtn');
+        if (!confirmBtn.dataset.listener) {
+            confirmBtn.addEventListener('click', () => this.handleConfirmEnrollment());
+            confirmBtn.dataset.listener = true;
+        }
+
+        // Close button (X)
+        const closeBtn = this.modal.querySelector('#close-modal-paluwagan');
+        if (!closeBtn.dataset.listener) {
+            closeBtn.addEventListener('click', () => this.modal.classList.add('hidden'));
+            closeBtn.dataset.listener = true;
+        }
+
+        // Overlay click
+        const overlay = this.modal.querySelector('.modal-overlay');
+        if (!overlay.dataset.listener) {
+            overlay.addEventListener('click', () => this.modal.classList.add('hidden'));
+            overlay.dataset.listener = true;
+        }
     }
 
-    handleConfirmEnrollment(modal) {
-        const packageId = modal.dataset.packageId; // set this when opening modal
-        const startMonth = modal.querySelector('#start-month').value;
+    openModal() {
+        if (!this.modal) return;
+        this.modal.classList.remove('hidden');
+    }
 
-        if (!packageId) {
+    handleConfirmEnrollment() {
+        if (!this.modal || !this.packageId) {
             alert('Package not selected!');
             return;
         }
 
-        fetch('/paluwagan/enroll', {
+        const startMonth = this.modal.querySelector('#start-month').value;
+
+        fetch('/paluwagan/join', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({
-                packageID: packageId,
+                packageID: this.packageId,
                 startMonth: startMonth
             })
-        }).then(res => res.json())
-          .then(data => {
-              if (data.success) {
-                  alert('Enrollment successful!');
-                  modal.classList.add('hidden');
-                  // Optionally reload paluwagan page or update frontend
-              } else {
-                  alert(data.message || 'Failed to enroll');
-              }
-          });
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Successfully joined Paluwagan!');
+                this.modal.classList.add('hidden');
+                window.location.href = '/paluwagan';
+            } else {
+                alert(data.error || 'Failed to join Paluwagan');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Network error while joining Paluwagan.');
+        });
     }
 }

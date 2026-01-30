@@ -47,16 +47,25 @@ class ProfilePageController extends Controller
         $sessionUser = session('logged_in_user');
         $customer = Customer::find($sessionUser['customerID']);
 
+        if (!$customer) {
+            return redirect()->back()->with('error', 'User not found.');
+        }
+
         // Update user information
         $customer->firstName = $request->firstName;
         $customer->lastName = $request->lastName;
         $customer->email = $request->email;
         $customer->phone = $request->phone;
         $customer->address = $request->address;
+
         $customer->save();
+
+        // Update session data so it reflects changes immediately
+        session(['logged_in_user' => $customer->toArray()]);
 
         return redirect()->back()->with('success', 'Profile updated successfully!');
     }
+
 
     // Update the user's password
     public function updatePassword(Request $request)
@@ -88,5 +97,37 @@ class ProfilePageController extends Controller
         // Redirect to the login page with a success message
         return redirect()->route('login')->with('status', 'Password updated successfully! Please log in again.');
     }
-}
 
+    public function saveAddress(Request $request)
+    {
+        $request->validate([
+            'address' => 'required|string|max:255',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+
+        $sessionUser = session('logged_in_user');
+        $customer = Customer::find($sessionUser['customerID']);
+
+        $customer->address = $request->address;
+
+        // optional if you have lat/lng columns
+        if (Schema::hasColumn('customers', 'latitude')) {
+            $customer->latitude = $request->latitude;
+        }
+        if (Schema::hasColumn('customers', 'longitude')) {
+            $customer->longitude = $request->longitude;
+        }
+
+        $customer->save();
+
+        // UPDATE SESSION DATA
+        session(['logged_in_user' => $customer->toArray()]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Address saved to your profile.'
+        ]);
+    }
+
+}

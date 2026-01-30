@@ -1,89 +1,61 @@
-// resources/js/catalog/handlers/CupcakeHandler.js
 export default class CupcakeHandler {
-    constructor(cartService) {
-        this.cartService = cartService;
-    }
+    constructor(cartService) { this.cartService = cartService; }
 
     populateModal(card, modal) {
-        const customizationCard = modal.querySelector('#cupcake-customization');
-        const imageEl = modal.querySelector('#cupcake-image');
-        const isCustomization = card.dataset.customization === 'true';
+        let id = modal.querySelector('#cupcake-id') || Object.assign(document.createElement('input'), { type:'hidden', id:'cupcake-id' });
+        modal.appendChild(id);
+        id.value = card.dataset.id;
 
         modal.querySelector('#cupcake-name').textContent = card.dataset.name;
 
-        if (isCustomization) {
-            customizationCard.classList.remove('hidden');
-            imageEl.classList.add('hidden');
+        const customization = card.dataset.customization === 'true';
+        modal.querySelector('#cupcake-customization').classList.toggle('hidden', !customization);
+        modal.querySelector('#cupcake-image').classList.toggle('hidden', customization);
 
-            const flavorSelect = modal.querySelector('#cupcake-flavor');
-            const icingSelect = modal.querySelector('#cupcake-icing');
-
-            flavorSelect.innerHTML = '';
-            icingSelect.innerHTML = '';
-
-            const servings = JSON.parse(card.dataset.servings || '[]');
-            servings.forEach(s => {
-                if (s.flavor) flavorSelect.innerHTML += `<option value="${s.flavor}">${s.flavor}</option>`;
-                if (s.icing) icingSelect.innerHTML += `<option value="${s.icing}">${s.icing}</option>`;
-            });
-
-            this.setupQuantity(modal, { value: servings[0]?.price || 0 }, '#cupcake-price', '#cupcake-total', '#quantity-cupcake');
-
-        } else {
-            customizationCard.classList.add('hidden');
-            imageEl.classList.remove('hidden');
-            imageEl.src = card.dataset.image;
-
-            const price = parseFloat(card.dataset.price || 0);
-            modal.querySelector('#cupcake-price').textContent = `₱${price.toFixed(2)}`;
-            this.setupQuantity(modal, { value: price }, '#cupcake-price', '#cupcake-total', '#quantity-cupcake');
+        if (!customization) {
+            modal.querySelector('#cupcake-image').src = card.dataset.image;
         }
+
+        this.setupQuantity(modal, parseFloat(card.dataset.price || 0));
+        this.bindAddToCart(modal);
     }
 
-    setupQuantity(modal, priceSource, priceSelector, totalSelector, qtySelector) {
+    setupQuantity(modal, price) {
         let qty = 1;
-        const qtyEl = modal.querySelector(qtySelector);
-        const priceEl = modal.querySelector(priceSelector);
-        const totalEl = modal.querySelector(totalSelector);
+        const qtyEl = modal.querySelector('#quantity-cupcake');
+        const totalEl = modal.querySelector('#cupcake-total');
+        const priceEl = modal.querySelector('#cupcake-price');
 
-        const updateTotal = () => {
+        const update = () => {
             qtyEl.textContent = qty;
-            const price = parseFloat(priceSource.value || priceSource) || 0;
             priceEl.textContent = `₱${price.toFixed(2)}`;
             totalEl.textContent = `₱${(price * qty).toFixed(2)}`;
         };
 
-        if (priceSource.addEventListener) {
-            priceSource.addEventListener('change', updateTotal);
-        } else if (priceSource.onchange !== undefined) {
-            priceSource.onchange = updateTotal;
-        }
+        modal.querySelector('#increase-qty-cupcake').onclick = () => { qty++; update(); };
+        modal.querySelector('#decrease-qty-cupcake').onclick = () => { if (qty > 1) qty--; update(); };
 
-        modal.querySelector('#increase-qty-cupcake').onclick = () => { qty++; updateTotal(); };
-        modal.querySelector('#decrease-qty-cupcake').onclick = () => { if (qty > 1) qty--; updateTotal(); };
-        updateTotal();
+        update();
     }
 
-    openModal(modal) {
-        modal.classList.remove('hidden');
-        modal.querySelector('#add-to-cart-cupcake').onclick = () => {
-            const price = parseFloat(modal.querySelector('#cupcake-price').textContent.replace('₱', '')) || 0;
-            const isCustomization = !modal.querySelector('#cupcake-customization').classList.contains('hidden');
-            const flavor = isCustomization ? modal.querySelector('#cupcake-flavor option:checked')?.textContent : null;
-            const icing = isCustomization ? modal.querySelector('#cupcake-icing option:checked')?.textContent : null;
-            const message = modal.querySelector('#cupcake-message')?.value || null;
+    bindAddToCart(modal) {
+        modal.querySelector('#add-to-cart-cupcake').onclick = e => {
+            e.stopPropagation();
 
             this.cartService.sendToCart({
-                id: modal.querySelector('#cupcake-name').textContent,
+                id: parseInt(modal.querySelector('#cupcake-id').value),
                 name: modal.querySelector('#cupcake-name').textContent,
                 image: modal.querySelector('#cupcake-image')?.src ?? null,
-                price: price,
+                price: parseFloat(modal.querySelector('#cupcake-price').textContent.replace('₱', '')),
                 quantity: parseInt(modal.querySelector('#quantity-cupcake').textContent),
-                productType: 'Cupcake',
-                customization: isCustomization ? { flavor, icing, message } : null
+                productType: 'Cupcake'
             });
 
             modal.classList.add('hidden');
         };
+    }
+
+    openModal(modal) {
+        modal.classList.remove('hidden');
     }
 }

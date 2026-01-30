@@ -26,7 +26,9 @@
             <p class="text-gray-600 font-semibold text-xs sm:text-sm md:text-base">Available Ingredients</p>
             <div class="flex items-center justify-between mt-2">
                 <p class="text-lg sm:text-xl md:text-3xl font-bold">{{ $ingredients->where('currentStock', '>', 0)->count() }}</p>
-                <img src="{{ asset('icons/up-arrow.svg') }}" class="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 opacity-70">
+
+                {{-- FONT AWESOME ICON --}}
+                <i class="fas fa-box-open text-pink-500 text-xl sm:text-2xl md:text-3xl"></i>
             </div>
         </div>
 
@@ -37,7 +39,9 @@
                 <p class="text-lg sm:text-xl md:text-3xl font-bold text-yellow-500">
                     {{ $ingredients->filter(fn($i) => $i->currentStock > 0 && $i->currentStock <= $i->minStockLevel)->count() }}
                 </p>
-                <img src="{{ asset('icons/warning.svg') }}" class="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 opacity-70">
+
+                {{-- FONT AWESOME ICON --}}
+                <i class="fas fa-exclamation-triangle text-yellow-500 text-xl sm:text-2xl md:text-3xl"></i>
             </div>
         </div>
 
@@ -48,7 +52,9 @@
                 <p class="text-lg sm:text-xl md:text-3xl font-bold text-red-500">
                     {{ $ingredients->where('currentStock', 0)->count() }}
                 </p>
-                <img src="{{ asset('icons/down-arrow.svg') }}" class="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 opacity-70">
+
+                {{-- FONT AWESOME ICON --}}
+                <i class="fas fa-ban text-red-500 text-xl sm:text-2xl md:text-3xl"></i>
             </div>
         </div>
     </div>
@@ -77,10 +83,7 @@
                 @click="showAddModal = true"
                 class="flex items-center justify-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg shadow text-xs sm:text-sm md:text-base"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" 
-                     stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
+                <i class="fas fa-plus"></i>
                 <span>Add Ingredient</span>
             </button>
         </div>
@@ -140,7 +143,7 @@
                 <tr>
                     <td colspan="7" class="py-10 text-center text-gray-400">
                         <div class="flex flex-col items-center">
-                            <img src="{{ asset('icons/empty.svg') }}" class="w-8 h-8 md:w-10 md:h-10 mb-2 opacity-50">
+                            <i class="fas fa-box-open text-3xl opacity-50"></i>
                             No ingredient found
                         </div>
                     </td>

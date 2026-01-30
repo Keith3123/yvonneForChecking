@@ -1,7 +1,5 @@
 @foreach ($products as $p)
 <tr class="border-b hover:bg-gray-50 transition">
-
-    {{-- IMAGE + NAME --}}
     <td class="p-4">
         <div class="flex items-center gap-3">
             <img src="{{ asset('storage/' . $p->imageURL) }}"
@@ -13,26 +11,21 @@
         </div>
     </td>
 
-    {{-- CATEGORY --}}
     <td class="p-4">
-        <span class="
-            px-3 py-1 rounded-full text-xs font-medium
+        <span class="px-3 py-1 rounded-full text-xs font-medium
             @if($p->productTypeID == 1) bg-pink-100 text-pink-700
             @elseif($p->productTypeID == 2) bg-purple-100 text-purple-700
             @elseif($p->productTypeID == 3) bg-yellow-100 text-yellow-700
             @elseif($p->productTypeID == 4) bg-green-100 text-green-700
-            @endif
-        ">
+            @endif">
             {{ $p->type->productType }}
         </span>
     </td>
 
-    {{-- PRICE --}}
     <td class="p-4 font-semibold text-gray-800">
         ₱{{ number_format($p->price, 2) }}
     </td>
 
-    {{-- STOCK --}}
     <td class="p-4">
         <span class="px-3 py-1 text-xs font-medium rounded-full
             @if ($p->stock > 20)
@@ -41,13 +34,11 @@
                 bg-yellow-100 text-yellow-700
             @else
                 bg-red-100 text-red-700
-            @endif
-        ">
+            @endif">
             {{ $p->stock }} in stock
         </span>
     </td>
 
-    {{-- OPTIONS --}}
     <td class="p-4">
         <div class="flex gap-2 flex-wrap">
             @if($p->sizes)
@@ -64,21 +55,11 @@
         </div>
     </td>
 
-    {{-- ACTIONS --}}
     <td class="p-4 text-center">
         <div class="flex gap-4 justify-center">
+            <button onclick="openEditModal({{ $p->productID }})"
+                    class="text-blue-600 text-xl">✏️</button>
 
-            {{-- View --}}
-            <button onclick="openProductModal({{ $p->productID }})"
-                    class="text-gray-700 text-xl hover:text-blue-600">
-                👁️
-            </button>
-
-            {{-- Edit --}}
-            <a href="{{ route('admin.products.edit', $p->productID) }}"
-               class="text-blue-600 text-xl">✏️</a>
-
-            {{-- Delete --}}
             <form method="POST"
                   action="{{ route('admin.products.delete', $p->productID) }}"
                   onsubmit="return confirm('Delete this product?');">
@@ -86,9 +67,7 @@
                 @method('DELETE')
                 <button class="text-red-600 text-xl">🗑️</button>
             </form>
-
         </div>
     </td>
-
 </tr>
 @endforeach

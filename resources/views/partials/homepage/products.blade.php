@@ -1,6 +1,8 @@
 <section id="products" class="py-16 bg-gray-100">
-  <div class="max-w-6xl mx-auto px-6">
-    <h2 class="text-3xl font-bold text-center mb-10">Menu</h2>
+  <div class="max-w-6xl mx-auto px-6 animate-fade-up">
+    <h2 class="text-3xl font-bold text-center mb-10">
+        Menu
+    </h2>
 
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
 
@@ -12,20 +14,21 @@
 
         @foreach ($featuredProducts as $product)
 
-            {{-- PALUWAGAN PRODUCT --}}
             @if (strtolower($product['productType']) === 'paluwagan')
 
-                <div class="paluwagan-card bg-white rounded-lg shadow hover:shadow-lg cursor-pointer overflow-hidden transition"
-                    data-id="{{ $product['id'] }}"
-                    data-name="{{ $product['name'] }}"
-                    data-image="{{ $product['imageURL'] }}"
-                    data-description='@json($product["descriptionList"] ?? [])'
-                    data-servings='@json($product["servings"] ?? [])'>
+                <div class="paluwagan-card bg-white rounded-lg shadow
+                            transition-all duration-300
+                            hover:-translate-y-2 hover:shadow-2xl
+                            cursor-pointer overflow-hidden">
 
-                    <img src="{{ asset($product['imageURL']) }}" class="w-full h-40 object-cover">
+                    <img src="{{ asset($product['imageURL']) }}"
+                         class="w-full h-40 object-cover
+                                transition-transform duration-500 hover:scale-105">
 
                     <div class="p-4">
-                        <h3 class="font-semibold text-lg text-center">{{ $product['name'] }}</h3>
+                        <h3 class="font-semibold text-lg text-center">
+                            {{ $product['name'] }}
+                        </h3>
                         <p class="text-pink-600 font-semibold">
                           {{ $product['price'] ?? ($product['servings'][0]['price'] ?? 'N/A') }}
                         </p>
@@ -33,20 +36,28 @@
                 </div>
 
             @else
-            {{-- OTHER PRODUCTS (unchanged) --}}
+
                 <div 
                     onclick="window.location.href='{{ session('logged_in_user') ? route('catalog') : route('register') }}'"
-                    class="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer overflow-hidden transition">
+                    class="bg-white rounded-lg shadow
+                           transition-all duration-300
+                           hover:-translate-y-2 hover:shadow-2xl
+                           cursor-pointer overflow-hidden">
 
-                    <img src="{{ asset($product['imageURL']) }}" class="w-full h-40 object-cover">
+                    <img src="{{ asset($product['imageURL']) }}"
+                         class="w-full h-40 object-cover
+                                transition-transform duration-500 hover:scale-105">
 
                     <div class="p-4">
-                        <h3 class="font-semibold text-lg text-center">{{ $product['name'] }}</h3>
+                        <h3 class="font-semibold text-lg text-center">
+                            {{ $product['name'] }}
+                        </h3>
                         <p class="text-pink-600 font-semibold">
                           {{ $product['price'] ?? ($product['servings'][0]['price'] ?? 'N/A') }}
                         </p>
                     </div>
                 </div>
+
             @endif
 
         @endforeach

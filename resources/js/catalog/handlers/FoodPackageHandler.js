@@ -1,10 +1,16 @@
-// resources/js/catalog/handlers/FoodPackageHandler.js
 export default class FoodPackageHandler {
-    constructor(cartService) {
-        this.cartService = cartService;
-    }
+    constructor(cartService) { this.cartService = cartService; }
 
     populateModal(card, modal) {
+        let idInput = modal.querySelector('#foodpackage-id');
+        if (!idInput) {
+            idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.id = 'foodpackage-id';
+            modal.appendChild(idInput);
+        }
+        idInput.value = card.dataset.id;
+
         modal.querySelector('#foodpackage-name').textContent = card.dataset.name;
         modal.querySelector('#foodpackage-image').src = card.dataset.image;
         this.populateDescription(modal.querySelector('#foodpackage-includes'), card.dataset.description);
@@ -48,9 +54,12 @@ export default class FoodPackageHandler {
     openModal(modal) {
         modal.classList.remove('hidden');
         modal.querySelector('#add-to-cart-foodpackage').onclick = () => {
+            const productID = parseInt(modal.querySelector('#foodpackage-id').value);
+            if (!productID) { console.error('Invalid productID for food package'); return; }
+
             const price = parseFloat(modal.querySelector('#foodpackage-price').textContent.replace('₱', ''));
             this.cartService.sendToCart({
-                id: modal.querySelector('#foodpackage-name').textContent,
+                id: productID,
                 name: modal.querySelector('#foodpackage-name').textContent,
                 image: modal.querySelector('#foodpackage-image').src,
                 price: price,

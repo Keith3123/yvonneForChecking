@@ -68,6 +68,8 @@ class LoginPageController extends Controller
     public function logout(Request $request)
     {
         session()->forget('logged_in_user');
+        session()->forget('admin_logged_in');
+
         return redirect()->route('login')->with('status', 'You have been logged out.');
     }
 }

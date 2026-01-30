@@ -4,35 +4,38 @@
 @endsection
 
 @section('content')
-<div class="bg-[#FFF8F5] min-h-screen flex justify-center py-10 px-4 overflow-y-auto">
-    <div class="w-full max-w-5xl">
+<div class="bg-gradient-to-b from-[#FFF8F5] to-[#FFEDE8] min-h-screen py-12 px-4">
+    <div class="max-w-5xl mx-auto">
 
         {{-- Header --}}
-        <div class="mb-8 flex justify-between items-center">
+        <div class="mb-10 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">My Paluwagan</h2>
+                <h2 class="text-3xl font-bold text-gray-900">My Paluwagan</h2>
                 <p class="text-gray-600 text-sm">
                     Manage your installment plans and payment schedules
                 </p>
             </div>
-            <a href="/catalog" class="bg-orange-200 hover:bg-orange-300 px-4 py-2 rounded font-semibold text-sm">
+
+            <a href="/catalog"
+               class="inline-flex items-center justify-center bg-orange-300 hover:bg-orange-400 text-gray-900 px-5 py-2.5 rounded-lg font-semibold text-sm shadow transition">
                 Go to Catalog
             </a>
         </div>
 
+        
         {{-- Features --}}
         @php
             $features = [
-                ['icon' => '💸', 'title' => 'Fixed Monthly Payment', 'desc' => 'Pay required amount on every due date', 'color' => 'text-green-600'],
-                ['icon' => '📅', 'title' => 'Flexible Entry', 'desc' => 'Join at any month available in paluwagan', 'color' => 'text-purple-600'],
-                ['icon' => '✅', 'title' => 'Premium Quality', 'desc' => 'High quality and trusted food', 'color' => 'text-green-700'],
+                ['icon' => '💸', 'title' => 'Fixed Monthly Payment', 'desc' => 'Pay required amount on every due date'],
+                ['icon' => '📅', 'title' => 'Flexible Entry', 'desc' => 'Join at any available month'],
+                ['icon' => '✅', 'title' => 'Premium Quality', 'desc' => 'High quality and trusted food'],
             ];
         @endphp
 
-        <div class="bg-blue-50 border border-blue-100 rounded-md shadow-sm p-6 grid md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 grid md:grid-cols-3 gap-6 mb-10 shadow-sm">
             @foreach ($features as $feature)
                 <div class="text-center">
-                    <div class="{{ $feature['color'] }} text-xl mb-2">{{ $feature['icon'] }}</div>
+                    <div class="text-2xl mb-2">{{ $feature['icon'] }}</div>
                     <h3 class="font-semibold text-gray-900">{{ $feature['title'] }}</h3>
                     <p class="text-sm text-gray-500">{{ $feature['desc'] }}</p>
                 </div>
@@ -41,52 +44,88 @@
 
         {{-- Orders --}}
         @forelse ($orders as $order)
-        <div class="border border-red-200 bg-white rounded-md shadow-sm p-6 relative mb-6">
-            <div class="flex justify-between items-start mb-2">
+        <div class="bg-white rounded-xl shadow-md border border-red-100 p-6 mb-8">
+
+            {{-- Header --}}
+            <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="font-bold text-lg text-gray-900 flex items-center gap-2">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                         <span class="text-green-600">✔</span> {{ $order->name }}
                     </h3>
-
                     <p class="text-sm text-gray-600">{{ $order->desc }}</p>
-
                     <p class="text-sm text-gray-600 mt-1">
-                        <span class="font-semibold">Started:</span>
-                        {{ $order->startDate ?? 'N/A' }} • Monthly:
+                        Started: {{ $order->startDate ?? 'N/A' }} • Monthly:
                         <span class="font-semibold">₱{{ $order->monthlyPayment }}</span>
                     </p>
+                </div>
 
-                    <span class="bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-medium">
-                        {{ $order->status }}
-                    </span>
+                <span class="bg-green-100 text-green-700 text-xs px-4 py-1.5 rounded-full font-semibold">
+                    {{ $order->status }}
+                </span>
+            </div>
+
+            {{-- Progress --}}
+            <div class="mb-6">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>0 of 10 months paid</span>
+                    <span>₱5,000 remaining</span>
+                </div>
+                <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                    <div class="h-2 bg-gradient-to-r from-green-400 to-green-600 rounded-full w-[10%]"></div>
                 </div>
             </div>
 
+            {{-- Metrics --}}
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="border rounded-lg p-4 text-center bg-gray-50">
+                    <p class="text-lg font-bold">₱5,000</p>
+                    <p class="text-xs text-gray-500">Package Amount</p>
+                </div>
+                <div class="border rounded-lg p-4 text-center bg-gray-50">
+                    <p class="text-lg font-bold">₱0</p>
+                    <p class="text-xs text-gray-500">Total Paid</p>
+                </div>
+                <div class="border rounded-lg p-4 text-center bg-gray-50">
+                    <p class="text-lg font-bold">0</p>
+                    <p class="text-xs text-gray-500">Months Paid</p>
+                </div>
+                <div class="border rounded-lg p-4 text-center bg-gray-50">
+                    <p class="text-lg font-bold">10</p>
+                    <p class="text-xs text-gray-500">Months Left</p>
+                </div>
+            </div>
 
-             <button class="bg-pink-500 hover:bg-pink-300 text-white px-3 py-1 rounded text-sm">
-            Make Payment
-            </button>
+            {{-- Next Payment --}}
+            <div class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm mb-6">
+                📅 <span>Next payment due: <strong>11/11/2025 – ₱500</strong></span>
+            </div>
 
+            {{-- Actions --}}
+            <div class="flex flex-wrap gap-3">
+                <button class="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition">
+                    Make Payment
+                </button>
 
-            <button onclick="openScheduleModal('{{ $order->entryID }}')"
-                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm mt-3">
-                View Schedule
-            </button>
+                <button onclick="openScheduleModal('{{ $order->entryID }}')"
+                    class="border px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 transition">
+                    View Schedule
+                </button>
 
-            <button class="bg-red-500 hover:bg-pink-300 text-white px-3 py-1 rounded text-sm">
-            Cancel Subscription
-        </button>
-        
+                <button class="text-red-600 border border-red-300 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-50 transition">
+                    Cancel Subscription
+                </button>
+            </div>
         </div>
+
         @empty
-        <p class="text-gray-500 text-center py-10">
-            You have no active paluwagan orders. 
-            <a href="/catalog" class="text-orange-500 underline">Go to Catalog</a> to place an order.
+        <p class="text-gray-500 text-center py-16">
+            You have no active paluwagan orders.
+            <a href="/catalog" class="text-orange-500 underline">Go to Catalog</a>
         </p>
         @endforelse
-
     </div>
 </div>
+
 
 {{-- Include Schedule Modal --}}
 @include('user.modals.paluwaganSchedule')

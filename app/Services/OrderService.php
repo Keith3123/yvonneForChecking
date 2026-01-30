@@ -15,15 +15,37 @@ class OrderService
         $this->repo = $repo;
     }
 
-   public function createOrder(CreateOrderDTO $dto)
+    public function createOrder(CreateOrderDTO $dto)
 {
-    return DB::transaction(function () use ($dto) {
+    \Log::info('Starting createOrder');
+
+    try {
         $orderID = $this->repo->create($dto);
+        \Log::info("Order created: {$orderID}");
+    } catch (\Exception $e) {
+        \Log::error("Failed to create order: " . $e->getMessage());
+        throw $e;
+    }
+
+    try {
         $this->repo->addItems($orderID, $dto->items);
+        \Log::info("Order items added");
+    } catch (\Exception $e) {
+        \Log::error("Failed to add order items: " . $e->getMessage());
+        throw $e;
+    }
+
+    try {
         $this->repo->addPayment($orderID, $dto);
-        return $orderID;
-    });
+        \Log::info("Payment added");
+    } catch (\Exception $e) {
+        \Log::error("Failed to add payment: " . $e->getMessage());
+        throw $e;
+    }
+
+    return $orderID;
 }
+
 
     public function getCustomerOrders(int $customerID)
     {

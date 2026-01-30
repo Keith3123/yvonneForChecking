@@ -16,9 +16,9 @@ class OrderRepository implements OrderRepositoryInterface
             'deliveryAddress' => $orderDTO->deliveryAddress,
             'remarks'         => $orderDTO->remarks,
             'totalAmount'     => collect($orderDTO->items)->sum(fn($i) => $i['price'] * $i['qty']),
-            'status'          => 'Pending', 
+            'status'          => 'Pending',
             'orderDate'       => now(),
-            'paymentStatus'   => 'Pending', 
+            'paymentStatus'   => 'Pending',
             'deliveryDate'    => $orderDTO->deliveryDate,
             'deliveryTime'    => $orderDTO->deliveryTime,
         ]);
@@ -29,12 +29,21 @@ class OrderRepository implements OrderRepositoryInterface
     public function addItems(int $orderID, array $items): void
     {
         foreach ($items as $item) {
+
+            // Ensure productID exists and is numeric
+            $productID = $item['productID'] ?? $item['id'] ?? null;
+
+            if (!is_numeric($productID)) {
+                \Log::error('Invalid productID for order item', $item);
+                continue; // skip invalid product
+            }
+
             OrderItem::create([
                 'orderID'   => $orderID,
-                'productID' => $item['productID'],
+                'productID' => (int)$productID,
                 'price'     => $item['price'],
                 'qty'       => $item['qty'],
-                'subtotal'  => $item['price'] * $item['qty'],
+                // subtotal is auto-calculated in DB
             ]);
         }
     }
@@ -42,14 +51,14 @@ class OrderRepository implements OrderRepositoryInterface
     public function addPayment(int $orderID, CreateOrderDTO $dto): void
     {
         Payment::create([
-            'orderID'      => $orderID,
+            'orderID'          => $orderID,
             'paluwaganEntryID' => null,
-            'contextType'  => 'order', 
-            'paymentType'  => 'fullpayment', 
-            'amount'       => collect($dto->items)->sum(fn($i) => $i['price'] * $i['qty']),
-            'paymentDate' => now(),
-            'method'       => $dto->payment === 'GCASH' ? 'GCash' : 'COD',
-            'proofURL'     => $dto->paymentProof,
+            'contextType'      => 'order',
+            'paymentType'      => 'fullpayment',
+            'amount'           => collect($dto->items)->sum(fn($i) => $i['price'] * $i['qty']),
+            'paymentDate'      => now(),
+            'method'           => strtolower($dto->payment) === 'gcash' ? 'GCash' : 'COD',
+            'proofURL'         => $dto->paymentProof ?? '',
         ]);
     }
 

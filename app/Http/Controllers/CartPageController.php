@@ -17,78 +17,87 @@ class CartPageController extends Controller
     public function add(Request $request)
     {
         $cart = session('cart', []);
+        $id = $request->id;
+
+        if (!is_numeric($id)) {
+            return response()->json(['error' => 'Invalid product ID.'], 400);
+        }
 
         $product = [
-            'id' => $request->id,
+            'id' => (int)$id,
             'name' => $request->name,
             'price' => $request->price,
             'quantity' => $request->quantity ?? 1,
             'image' => $request->image,
             'customization' => $request->customization ?? null,
+            'productType' => $request->productType ?? '',
         ];
 
-        // If product already in cart
-        if (isset($cart[$product['id']])) {
-            // If customization differs, treat as new item
-            if ($cart[$product['id']]['customization'] !== $product['customization']) {
-                $uniqueKey = $product['id'] . '-' . md5(json_encode($product['customization']));
-                $cart[$uniqueKey] = $product;
-            } else {
-                $cart[$product['id']]['quantity'] += $product['quantity'];
-            }
+        // Unique key if customization exists
+        $key = $product['id'];
+        if (!empty($product['customization'])) {
+            $key = $product['id'] . '-' . md5(json_encode($product['customization']));
+        }
+
+        if (isset($cart[$key])) {
+            $cart[$key]['quantity'] += $product['quantity'];
         } else {
-            $cart[$product['id']] = $product;
+            $cart[$key] = $product;
         }
 
         session(['cart' => $cart]);
 
-        // Return total quantity in cart
-        $cartCount = array_sum(array_column($cart, 'quantity'));
+        if ($request->ajax()) {
+            return view('partials.cart-sidebar')->render();
+        }
 
-        return response()->json(['success' => true, 'cartCount' => $cartCount]);
+        return response()->json([
+            'success' => true,
+            'cartCount' => array_sum(array_column($cart, 'quantity'))
+        ]);
     }
 
     // Update quantity (+ / -)
     public function update(Request $request)
-    {
-        $cart = session('cart', []);
-        $id = $request->id;
+{
+    $cart = session('cart', []);
+    $id = $request->id;
 
-        if (!isset($cart[$id])) {
-            return redirect()->back()->with('error', 'Product not found in cart.');
-        }
-
-        // Update the quantity based on action
-        if ($request->action === 'increase') {
-            $cart[$id]['quantity'] += 1;
-        } elseif ($request->action === 'decrease' && $cart[$id]['quantity'] > 1) {
-            $cart[$id]['quantity'] -= 1;
-        }
-
-        session(['cart' => $cart]);
-
-        return redirect()->back();
+    if (!isset($cart[$id])) {
+        return view('partials.cart-sidebar')->render();
     }
 
-    // Remove a product
-    public function remove(Request $request)
-    {
-        $cart = session('cart', []);
-        $id = $request->id;
-
-        // If product exists in the cart, remove it
-        if (isset($cart[$id])) {
-            unset($cart[$id]);
-            session(['cart' => $cart]);
-        }
-
-        return redirect()->back();
+    if ($request->action === 'increase') {
+        $cart[$id]['quantity']++;
+    } elseif ($request->action === 'decrease' && $cart[$id]['quantity'] > 1) {
+        $cart[$id]['quantity']--;
     }
 
-    // Clear entire cart
-    public function clear()
-    {
-        session()->forget('cart');
-        return redirect()->back()->with('success', 'Cart cleared successfully!');
-    }
+    session(['cart' => $cart]);
+
+    return view('partials.cart-sidebar')->render();
+}
+
+
+    // Remove product
+   public function remove(Request $request)
+{
+    $cart = session('cart', []);
+    unset($cart[$request->id]);
+    session(['cart' => $cart]);
+
+    return view('partials.cart-sidebar')->render();
+}
+
+
+    // Clear cart
+   public function clear(Request $request)
+{
+    session()->forget('cart');
+
+    // ALWAYS return sidebar HTML
+    return view('partials.cart-sidebar')->render();
+}
+
+
 }

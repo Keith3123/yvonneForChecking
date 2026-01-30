@@ -1,37 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-<script src="//unpkg.com/alpinejs" defer></script>
 <head>
     <meta charset="UTF-8">
-<meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', "Yvonne's Cakes & Pastries")</title>
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- ✅ Vite CSS -->
     @vite('resources/css/app.css')
-    <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    <!-- ✅ Vite JS (THIS WAS MISSING – CAUSE OF YOUR PROBLEM) -->
+    @vite('resources/js/app.js')
+
+    <!-- Alpine.js (optional, kept as-is) -->
+    <script src="//unpkg.com/alpinejs" defer></script>
 </head>
-
-
-
 <body class="bg-gray-50 text-gray-900 overflow-y-auto min-h-screen flex flex-col">
 
-
-    {{-- ✅ Global Navbar --}}
+    {{-- ✅ Navbar --}}
     @include('partials.navbar')
 
-    {{-- ✅ Main Page Content --}}
-    <main class="flex-1 w-full">
+    {{-- ✅ Main Content --}}
+    <main class="flex-1 w-full flex flex-col">
         @yield('content')
     </main>
 
-    {{-- ✅ Conditional Footer (auto-hides if @section('no-footer') is declared) --}}
+    {{-- ✅ Conditional Footer --}}
     @if (!View::hasSection('no-footer'))
         @include('partials.footer')
     @endif
 
-    {{-- ✅ Scripts pushed from child views --}}
+    {{-- ✅ Global Scripts --}}
     @stack('scripts')
+
+    {{-- ✅ Page-specific JS --}}
+    @yield('scripts')
 
 </body>
 </html>

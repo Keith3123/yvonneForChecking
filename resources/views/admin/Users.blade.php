@@ -21,45 +21,94 @@
 
         <button 
             @click="showAdd = true"
-            class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 w-full md:w-auto">
+            class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 w-full md:w-auto transition"
+        >
             Add Admin
         </button>
     </div>
 
-    {{-- Search Bar --}}
-    <div class="mt-6">
-        <input 
-            type="text"
-            placeholder="Search users by name, email, or username..."
-            class="w-full border border-pink-200 rounded-lg py-2 px-4 focus:ring-pink-300 focus:outline-none"
-        >
+    {{-- Search + Filters --}}
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="relative md:col-span-2">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <input 
+                type="text"
+                placeholder="Search users by name, email, or username..."
+                class="w-full border border-gray-200 rounded-xl py-3 px-12 focus:ring-pink-300 focus:outline-none shadow-sm"
+            >
+        </div>
+
+        <div class="flex gap-2">
+            <button class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 hover:bg-pink-100 transition">
+                All
+            </button>
+            <button class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 hover:bg-pink-100 transition">
+                Active
+            </button>
+            <button class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 hover:bg-pink-100 transition">
+                Inactive
+            </button>
+        </div>
     </div>
 
-    {{-- Users List --}}
-    <div class="mt-6 space-y-4">
-        @forelse($users as $u)
-            <div class="bg-white border border-pink-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <p class="font-semibold text-gray-800">{{ $u->username }}</p>
-                    <p class="text-gray-600">User ID: {{ $u->userID }}</p>
-                    <p class="text-gray-600">Role ID: {{ $u->roleID }}</p>
-                    <p class="text-gray-600">Status: {{ $u->status == 1 ? 'Active' : 'Inactive' }}</p>
-                </div>
-
-                <button 
-                    @click="showDetails = true; user = {{ $u->toJson() }}"
-                    class="px-4 py-2 border border-gray-400 rounded-lg hover:bg-gray-100 w-full md:w-auto">
-                    View Details
-                </button>
-            </div>
-        @empty
-            <p class="text-gray-500">No users yet.</p>
-        @endforelse
-
-        {{-- Pagination --}}
-        <div class="mt-4">
-            {{ $users->links() }}
+    {{-- User Table --}}
+    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="font-bold text-gray-800">Users List</h2>
+            <p class="text-gray-500 text-sm">Manage all registered users</p>
         </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-4 text-gray-500 text-sm font-medium">Username</th>
+                        <th class="px-6 py-4 text-gray-500 text-sm font-medium">User ID</th>
+                        <th class="px-6 py-4 text-gray-500 text-sm font-medium">Role ID</th>
+                        <th class="px-6 py-4 text-gray-500 text-sm font-medium">Status</th>
+                        <th class="px-6 py-4 text-gray-500 text-sm font-medium text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($users as $u)
+                        <tr class="border-b hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 font-semibold text-gray-800">{{ $u->username }}</td>
+                            <td class="px-6 py-4 text-gray-600">{{ $u->userID }}</td>
+                            <td class="px-6 py-4 text-gray-600">{{ $u->roleID }}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 rounded-full text-sm"
+                                      :class="{
+                                          'bg-green-100 text-green-700': {{ $u->status }} == 1,
+                                          'bg-gray-200 text-gray-600': {{ $u->status }} == 0
+                                      }"
+                                >
+                                    {{ $u->status == 1 ? 'Active' : 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button 
+                                    @click="showDetails = true; user = {{ $u->toJson() }}"
+                                    class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-pink-100 transition"
+                                >
+                                    View Details
+                                </button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-6 py-6 text-center text-gray-500">
+                                No users yet.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- Pagination --}}
+    <div class="mt-4">
+        {{ $users->links() }}
     </div>
 
     {{-- USER DETAILS MODAL --}}
@@ -68,10 +117,11 @@
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3"
         x-cloak
     >
-        <div class="bg-white rounded-xl w-full md:w-[600px] p-6 relative">
+        <div class="bg-white rounded-2xl w-full md:w-[600px] p-6 relative shadow-xl">
             <button 
                 @click="showDetails = false"
-                class="absolute top-3 right-3 text-gray-500 hover:text-black">
+                class="absolute top-3 right-3 text-gray-500 hover:text-black"
+            >
                 ✕
             </button>
 
@@ -120,7 +170,7 @@
                         .then(res => res.json())
                         .then(data => { user.status = data.status; })
                     "
-                    class="px-4 py-2 rounded-lg text-white"
+                    class="px-4 py-2 rounded-lg text-white transition"
                     :class="user.status == 1 ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-400 cursor-not-allowed'"
                 >
                     <span x-text="user.status == 1 ? 'Deactivate User' : 'Inactive'"></span>
@@ -135,10 +185,11 @@
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3"
         x-cloak
     >
-        <div class="bg-white rounded-xl w-full md:w-[700px] p-6 relative">
+        <div class="bg-white rounded-2xl w-full md:w-[700px] p-6 relative shadow-xl">
             <button 
                 @click="showAdd = false"
-                class="absolute top-3 right-3 text-gray-500 hover:text-black">
+                class="absolute top-3 right-3 text-gray-500 hover:text-black"
+            >
                 ✕
             </button>
 
@@ -160,12 +211,12 @@
 
                 <div>
                     <label class="font-medium">Username</label>
-                    <input name="username" type="text" value="{{ old('username') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                    <input name="username" type="text" value="{{ old('username') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-pink-300" required>
                 </div>
 
                 <div class="col-span-2">
                     <label class="font-medium">Select Role</label>
-                    <select name="roleID" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                    <select name="roleID" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-pink-300" required>
                         @foreach($roles as $role)
                             <option value="{{ $role->roleID }}" {{ old('roleID') == $role->roleID ? 'selected' : '' }}>{{ $role->roleName }}</option>
                         @endforeach
@@ -174,25 +225,27 @@
 
                 <div>
                     <label class="font-medium">Password</label>
-                    <input name="password" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                    <input name="password" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-pink-300" required>
                 </div>
 
                 <div>
                     <label class="font-medium">Confirm Password</label>
-                    <input name="password_confirmation" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                    <input name="password_confirmation" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-pink-300" required>
                 </div>
 
                 <div class="col-span-2 flex justify-end gap-2 mt-4">
                     <button 
                         type="button"
                         @click="showAdd = false"
-                        class="px-5 py-2 bg-red-500 text-white rounded-lg">
+                        class="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                    >
                         Cancel
                     </button>
 
                     <button 
                         type="submit"
-                        class="px-5 py-2 bg-yellow-500 text-white rounded-lg">
+                        class="px-5 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
+                    >
                         Create Account
                     </button>
                 </div>

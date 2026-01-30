@@ -22,6 +22,6 @@ class CreateOrderDTO
         $this->deliveryDate    = $data['deliveryDate'] ?? null;
         $this->deliveryTime    = $data['deliveryTime'] ?? '';
         $this->payment         = $data['payment'];
-        $this->paymentProof    = $data['paymentProof'] ?? null;
+        $this->paymentProof    = $data['paymentProof'] ?? '';
     }
 }

@@ -1,18 +1,24 @@
-<!-- CAKE MODAL -->
-<div id="cake-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
-    <div class="bg-white rounded-2xl p-6 max-w-2xl w-full relative overflow-y-auto max-h-[90vh]">
+<div id="cake-modal" class="fixed inset-0 hidden z-50 flex items-center justify-center">
+    <!-- Overlay -->
+    <div class="modal-overlay absolute inset-0 bg-black/50"></div>
+
+    <!-- Modal content -->
+    <div class="bg-white rounded-2xl p-6 max-w-2xl w-full relative overflow-y-auto max-h-[90vh] z-10">
 
         <!-- Close Button -->
         <button id="close-modal-cake" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
 
-        <!-- REGULAR PRODUCT INFO -->
+        <!-- Hidden Product ID -->
+        <input type="hidden" id="cake-id" value="">
+
+        <!-- Product Info -->
         <div id="cake-product-info">
             <h2 id="cake-name" class="text-2xl font-bold mb-1"></h2>
             <p id="cake-desc" class="text-gray-600 mb-4"></p>
             <img id="cake-image" class="rounded-lg w-full h-60 object-cover mb-5">
         </div>
 
-        <!-- CUSTOMIZATION CARD -->
+        <!-- Customization Card -->
         <div id="cake-customization" class="hidden mb-4">
             <h3 class="text-xl font-semibold mb-3">Customize Your Cake</h3>
             <div class="mb-3">
@@ -33,7 +39,7 @@
             </div>
         </div>
 
-        <!-- PERSONALIZED MESSAGE + QUANTITY + TOTAL -->
+        <!-- Message + Qty + Total -->
         <div class="flex flex-col gap-5">
             <div id="cake-message-wrapper">
                 <label class="font-semibold text-gray-700">Personalized Message</label>
@@ -61,6 +67,5 @@
         <div class="flex justify-end gap-3 mt-4">
             <button id="add-to-cart-cake" class="bg-[#FF1493] hover:bg-[#FF69B4] text-white px-5 py-2 rounded-lg font-semibold transition">Add to Cart</button>
         </div>
-
     </div>
 </div>
