@@ -9,12 +9,12 @@
 
         {{-- Back Button --}}
         <a href="{{ route('catalog') }}"
-           class="inline-flex items-center gap-2 mb-8 text-sm font-medium text-gray-600
+            class="inline-flex items-center gap-2 mb-8 text-sm font-medium text-gray-600
                   hover:text-pink-500 transition">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
-                 viewBox="0 0 24 24" stroke="currentColor">
+                viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 19l-7-7 7-7" />
+                    d="M15 19l-7-7 7-7" />
             </svg>
             Back to Catalog
         </a>
@@ -45,7 +45,7 @@
 
         {{-- PROFILE TAB --}}
         <div id="profile-tab"
-             class="bg-white rounded-2xl shadow-sm border p-8 mb-10">
+            class="bg-white rounded-2xl shadow-sm border p-8 mb-10">
 
             <h2 class="text-xl font-semibold text-gray-800 mb-1">
                 Personal Information
@@ -63,7 +63,7 @@
                     <div>
                         <label class="font-medium text-gray-700 mb-1 block">Username</label>
                         <input type="text" value="{{ $user['username'] }}" readonly
-                          class="w-full rounded-lg bg-gray-100 px-3 py-2 text-gray-700
+                            class="w-full rounded-lg bg-gray-100 px-3 py-2 text-gray-700
                             border-0 outline-none focus:outline-none focus:ring-0 focus:border-transparent
                             cursor-not-allowed">
                         <p class="text-xs text-gray-400 mt-1">Username cannot be changed</p>
@@ -73,36 +73,36 @@
                         <div>
                             <label class="font-medium text-gray-700 mb-1 block">First Name</label>
                             <input name="firstName" value="{{ $user['firstName'] }}" readonly
-                                class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2">
+                                class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                         </div>
                         <div>
                             <label class="font-medium text-gray-700 mb-1 block">M.I.</label>
                             <input name="mi" value="{{ $user['mi'] ?? '' }}" readonly maxlength="1"
-                                class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2">
+                                class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                         </div>
                         <div>
                             <label class="font-medium text-gray-700 mb-1 block">Last Name</label>
                             <input name="lastName" value="{{ $user['lastName'] }}" readonly
-                                class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2">
+                                class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                         </div>
                     </div>
 
                     <div>
                         <label class="font-medium text-gray-700 mb-1 block">Email Address</label>
                         <input name="email" value="{{ $user['email'] }}" readonly
-                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2">
+                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                     </div>
 
                     <div>
                         <label class="font-medium text-gray-700 mb-1 block">Contact Number</label>
                         <input name="phone" value="{{ $user['phone'] }}" readonly
-                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2">
+                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                     </div>
 
                     <div class="md:col-span-2">
                         <label class="font-medium text-gray-700 mb-1 block">Delivery Address</label>
                         <input name="address" value="{{ $user['address'] }}" readonly
-                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2">
+                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                     </div>
                 </div>
                 @endif
@@ -128,7 +128,7 @@
 
         {{-- SECURITY TAB --}}
         <div id="security-tab"
-             class="hidden bg-white rounded-2xl shadow-sm border p-8">
+            class="hidden bg-white rounded-2xl shadow-sm border p-8">
 
             <h2 class="text-xl font-semibold text-gray-800 mb-1">Password & Security</h2>
             <p class="text-sm text-gray-500 mb-6">
@@ -141,7 +141,7 @@
                     <p class="text-xs text-gray-500">Last changed: Never</p>
                 </div>
                 <button onclick="openPasswordModal()"
-                        class="px-4 py-2 rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition">
+                    class="px-4 py-2 rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition">
                     Change Password
                 </button>
             </div>
@@ -169,7 +169,7 @@
 
         {{-- PASSWORD MODAL --}}
         <div id="passwordModal"
-             class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+            class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
 
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
                 <h2 class="text-xl font-semibold mb-4">Change Password</h2>
@@ -178,21 +178,21 @@
                     @csrf
 
                     <input type="password" name="current_password" placeholder="Current Password"
-                        class="w-full mb-3 rounded-lg border px-3 py-2">
+                        class="w-full mb-3 rounded-lg border px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
 
                     <input type="password" name="new_password" placeholder="New Password"
-                        class="w-full mb-3 rounded-lg border px-3 py-2">
+                        class="w-full mb-3 rounded-lg border px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
 
                     <input type="password" name="new_password_confirmation" placeholder="Confirm New Password"
-                        class="w-full mb-4 rounded-lg border px-3 py-2">
+                        class="w-full mb-4 rounded-lg border px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
 
                     <div class="flex justify-end gap-3">
                         <button type="button" onclick="closePasswordModal()"
-                                class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+                            class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">
                             Cancel
                         </button>
                         <button type="submit"
-                                class="px-4 py-2 rounded-lg bg-pink-500 text-white hover:bg-pink-600">
+                            class="px-4 py-2 rounded-lg bg-pink-500 text-white hover:bg-pink-600">
                             Update Password
                         </button>
                     </div>
@@ -212,7 +212,7 @@
     let original = {};
 
     // Edit button functionality
-    editBtn.onclick = function () {
+    editBtn.onclick = function() {
         fields.forEach(input => {
             original[input.name] = input.value;
             input.readOnly = false;
@@ -225,7 +225,7 @@
     };
 
     // Cancel button functionality
-    cancelBtn.onclick = function () {
+    cancelBtn.onclick = function() {
         fields.forEach(input => {
             input.value = original[input.name];
             input.readOnly = true;
@@ -239,11 +239,11 @@
 
     // Switch between profile and security tabs
     function showTab(tab) {
-    const profileTab = document.getElementById('profile-tab');
-    const securityTab = document.getElementById('security-tab');
+        const profileTab = document.getElementById('profile-tab');
+        const securityTab = document.getElementById('security-tab');
 
-    const profileBtn = document.getElementById('tab-profile');
-    const securityBtn = document.getElementById('tab-security');
+        const profileBtn = document.getElementById('tab-profile');
+        const securityBtn = document.getElementById('tab-security');
 
         if (tab === 'profile') {
             // Show content

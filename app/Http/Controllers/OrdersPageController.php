@@ -22,6 +22,17 @@ class OrdersPageController extends Controller
             ->orderBy('orderDate', 'desc')
             ->get();
 
+        $vatRate = 0.12;
+
+        $orders->each(function ($order) use ($vatRate) {
+            $order->computedSubtotal = $order->totalAmount;
+            $order->computedVat = round($order->totalAmount * $vatRate, 2);
+            $order->computedTotal = round(
+                $order->totalAmount + $order->computedVat,
+                2
+            );
+        });
+
         return view('user.OrdersPage', compact('orders'));
     }
 

@@ -27,52 +27,71 @@
     </div>
 
     @if (session('success'))
-        <div class="mb-4 bg-green-100 text-green-700 text-sm font-medium p-2 rounded-md shadow-sm">
-            {{ session('success') }}
-        </div>
+    <div id="success-message"
+        class="mb-4 bg-green-100 text-green-700 text-sm font-medium p-2 rounded-md shadow-sm
+                transition-opacity duration-500">
+        {{ session('success') }}
+    </div>
     @endif
 
+
     @if ($errors->has('loginError'))
-        <div class="mb-4 text-sm text-red-500 font-medium">
-            {{ $errors->first('loginError') }}
-        </div>
+    <div class="mb-4 text-sm text-red-500 font-medium">
+        {{ $errors->first('loginError') }}
+    </div>
     @endif
 
     {{-- Form --}}
     <form action="{{ route('login.store') }}" method="POST"
-          class="w-full max-w-sm bg-white p-6 rounded-xl shadow-lg text-left"
-          id="loginForm" novalidate>
+        class="w-full max-w-sm bg-white p-6 rounded-xl shadow-lg text-left"
+        id="loginForm" novalidate>
         @csrf
 
         <div class="flex flex-col gap-4 mb-6 text-sm font-medium">
             <label class="flex flex-col">
                 <span class="mb-1">Username</span>
                 <input type="text" name="username" required
-                       placeholder="Enter your username*"
-                       class="w-full border border-gray-300 rounded-lg p-2
+                    placeholder="Enter your username*"
+                    class="w-full border border-gray-300 rounded-lg p-2
                               focus:ring-2 focus:ring-pink-300 focus:border-pink-300 outline-none">
             </label>
 
             <label class="flex flex-col relative">
                 <span class="mb-1">Password</span>
                 <input type="password" name="password" required
-                       placeholder="Enter your password*"
-                       class="w-full border border-gray-300 rounded-lg p-2
+                    placeholder="Enter your password*"
+                    class="w-full border border-gray-300 rounded-lg p-2
                               focus:ring-2 focus:ring-pink-300 focus:border-pink-300
                               outline-none password-input">
                 <button type="button"
-                        class="absolute right-3 top-8 text-gray-500 hover:text-pink-500 toggle-password">
+                    class="absolute right-3 top-8 text-gray-500 hover:text-pink-500 toggle-password">
                     <i class="far fa-eye-slash"></i>
                 </button>
             </label>
         </div>
 
         <button type="submit"
+            id="loginBtn"
             class="w-full bg-pink-500 hover:bg-pink-600
-                   text-white font-semibold py-2 rounded-lg
-                   transition hover:shadow-md">
-            Login
+           text-white font-semibold py-2 rounded-lg
+           transition hover:shadow-md
+           flex items-center justify-center gap-2">
+
+            <span id="loginText">Login</span>
+
+            <!-- Spinner -->
+            <svg id="loginSpinner"
+                class="hidden w-5 h-5 animate-spin text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10"
+                    stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
         </button>
+
+
 
         <div class="mt-4 flex items-start gap-2 text-xs text-gray-500">
             <span class="text-yellow-400 text-base">💡</span>

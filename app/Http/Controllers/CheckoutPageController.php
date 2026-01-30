@@ -21,7 +21,9 @@ class CheckoutPageController extends Controller
     {
         $cart = session('cart', []);
         $subtotal = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
-        $total = $subtotal;
+        $vatRate = 0.12; // 12% VAT
+        $vatAmount = round($subtotal * $vatRate, 2);
+        $total = $subtotal + $vatAmount;
 
         $sessionUser = session('logged_in_user');
         $customer = null;
@@ -30,7 +32,7 @@ class CheckoutPageController extends Controller
             $customer = Customer::find($sessionUser['customerID']);
         }
 
-        return view('user.CheckoutPage', compact('cart', 'subtotal', 'total', 'customer'));
+        return view('user.CheckoutPage', compact('cart', 'subtotal', 'vatAmount', 'total', 'customer'));
     }
 
     public function placeOrder(Request $request)

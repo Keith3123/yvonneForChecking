@@ -107,23 +107,25 @@
                             <h4 class="font-semibold text-gray-700 mb-2">Payment Information</h4>
                             <div class="text-sm text-gray-700 space-y-1">
                                 <p>
-                                    Subtotal
-                                    <span class="float-right font-semibold">
-                                        ₱{{ $order->totalAmount }}
-                                    </span>
-                                </p>
-                                <p>
-                                    Total Amount
-                                    <span class="float-right font-semibold">
-                                        ₱{{ $order->totalAmount }}
-                                    </span>
-                                </p>
-                                <p>
-                                    Payment Method
-                                    <span class="float-right font-medium">
-                                        {{ $order->paymentStatus == 'Pending' ? 'COD / GCash' : $order->paymentStatus }}
-                                    </span>
-                                </p>
+    Subtotal
+    <span class="float-right font-semibold">
+        ₱{{ number_format($order->computedSubtotal, 2) }}
+    </span>
+</p>
+
+<p>
+    VAT (12%)
+    <span class="float-right font-semibold">
+        ₱{{ number_format($order->computedVat, 2) }}
+    </span>
+</p>
+
+<p class="border-t pt-1 mt-1">
+    Total Amount
+    <span class="float-right font-bold">
+        ₱{{ number_format($order->computedTotal, 2) }}
+    </span>
+</p>
                             </div>
                         </div>
                     </div>
@@ -201,18 +203,19 @@
 
                         {{-- Items --}}
                         <div class="text-xs">
-                            <div class="flex justify-between font-semibold">
-                                <span>Item</span>
-                                <span>Qty</span>
-                                <span>Total</span>
-                            </div>
+                            <div class="flex font-semibold text-xs">
+    <span class="w-1/2">Item</span>
+    <span class="w-1/4 justify">Qty</span>
+    <span class="w-1/4 text-right">Total</span>
+</div>
                             <div class="mt-2 space-y-2">
                                 @foreach($order->orderItems as $item)
-                                    <div class="flex justify-between">
-                                        <span class="truncate max-w-[160px]">{{ $item->product->name }}</span>
-                                        <span>{{ $item->qty }}</span>
-                                        <span>₱{{ $item->subtotal }}</span>
-                                    </div>
+                                    <div class="flex text-xs">
+    <span class="w-1/2 truncate">{{ $item->product->name }}</span>
+    <span class="w-1/4 justify">{{ $item->qty }}</span>
+    <span class="w-1/4 text-right">₱{{ number_format($item->subtotal, 2) }}</span>
+</div>
+
                                 @endforeach
                             </div>
                         </div>
@@ -221,19 +224,28 @@
 
                         {{-- Totals --}}
                         <div class="text-sm">
-                            <div class="flex justify-between">
-                                <span>Subtotal</span>
-                                <span class="font-semibold">₱{{ $order->totalAmount }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>VAT</span>
-                                <span class="font-semibold">₱0</span>
-                            </div>
-                            <div class="flex justify-between mt-2 border-t pt-2">
-                                <span class="font-semibold">Grand Total</span>
-                                <span class="font-bold text-lg">₱{{ $order->totalAmount }}</span>
-                            </div>
-                        </div>
+    <div class="flex justify-between">
+        <span>Subtotal</span>
+        <span class="font-semibold">
+            ₱{{ number_format($order->computedSubtotal, 2) }}
+        </span>
+    </div>
+
+    <div class="flex justify-between">
+        <span>VAT (12%)</span>
+        <span class="font-semibold">
+            ₱{{ number_format($order->computedVat, 2) }}
+        </span>
+    </div>
+
+    <div class="flex justify-between mt-2 border-t pt-2">
+        <span class="font-semibold">Grand Total</span>
+        <span class="font-bold text-lg">
+            ₱{{ number_format($order->computedTotal, 2) }}
+        </span>
+    </div>
+</div>
+
 
                         <div class="text-center mt-6 text-xs text-gray-500">
                             Thank you for your order!

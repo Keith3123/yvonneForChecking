@@ -38,12 +38,12 @@
                             <div>
                                 <label class="block text-sm font-medium mb-1">Delivery Date</label>
                                 <input type="date" name="deliveryDate" required
-                                    class="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-[#F9B3B0]">
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Delivery Time</label>
                                 <select name="deliveryTime" required
-                                    class="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-[#F9B3B0]">
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                                     <option>9:30 - 11:00</option>
                                     <option>1:00 - 3:00</option>
                                     <option>3:00 - 5:00</option>
@@ -62,7 +62,7 @@
                                         name="deliveryAddress"
                                         value="{{ old('deliveryAddress', $customer->address ?? '') }}"
                                         placeholder="Enter delivery address"
-                                        class="flex-1 border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-[#F9B3B0]">
+                                        class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
 
                                     <button type="button"
                                         onclick="openMapModal()"
@@ -73,7 +73,7 @@
 
                                 {{-- error message --}}
                                 @error('deliveryAddress')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
 
@@ -83,7 +83,7 @@
                                     name="phone"
                                     value="{{ old('phone', $customer->phone ?? '') }}"
                                     placeholder="Enter phone number"
-                                    class="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-[#F9B3B0]">
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                             </div>
                         </div>
 
@@ -97,7 +97,7 @@
                                 name="remarks"
                                 maxlength="200"
                                 placeholder="Any special instructions or notes for your order..."
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-[#F9B3B0]">
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                             <p class="text-xs text-gray-400 mt-1 text-right">0/200 Characters</p>
                         </div>
                     </div>
@@ -120,7 +120,7 @@
 
                         {{-- error message --}}
                         @error('payment')
-                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
 
                         {{-- Gcash Details --}}
@@ -157,24 +157,31 @@
 
                     <div class="mt-4 text-sm divide-y divide-gray-200">
                         @foreach($cart as $item)
-                            <div class="flex justify-between py-2">
-                                <span>{{ $item['name'] }} ×{{ $item['quantity'] }}</span>
-                                <span>₱{{ number_format($item['price'] * $item['quantity'], 0) }}</span>
-                            </div>
+                        <div class="flex justify-between py-2">
+                            <span>{{ $item['name'] }} ×{{ $item['quantity'] }}</span>
+                            <span>₱{{ number_format($item['price'] * $item['quantity'], 0) }}</span>
+                        </div>
                         @endforeach
                     </div>
 
                     <div class="text-sm mt-3 space-y-2">
                         <div class="flex justify-between">
                             <span>Subtotal</span>
-                            <span>₱<span id="summarySubtotal">{{ number_format($subtotal, 0) }}</span></span>
+                            <span>₱{{ number_format($subtotal, 2) }}</span>
+                        </div>
+
+                        {{-- VAT --}}
+                        <div class="flex justify-between text-gray-600">
+                            <span>VAT (12%)</span>
+                            <span>₱{{ number_format($vatAmount, 2) }}</span>
                         </div>
 
                         <div class="flex justify-between text-lg font-bold border-t pt-3 mt-3">
                             <span>Total</span>
-                            <span>₱<span id="summaryTotal">{{ number_format($subtotal, 0) }}</span></span>
+                            <span>₱{{ number_format($total, 2) }}</span>
                         </div>
                     </div>
+
 
                     <button type="submit" form="checkoutForm"
                         class="w-full mt-4 bg-[#FF1493] hover:bg-[#FF69B4] text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200">
@@ -202,7 +209,7 @@
             Pinpoint your exact location for accurate delivery
         </p>
 
-        <input id="mapAddress" class="w-full border rounded px-3 py-2 mb-3" readonly>
+        <input id="mapAddress" class="w-full border rounded px-3 py-2 mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
 
         <div id="map" class="h-80 rounded-md mb-4"></div>
 
@@ -220,98 +227,100 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-let map, marker;
+    let map, marker;
 
-function openMapModal() {
-    document.getElementById('mapModal').classList.remove('hidden');
+    function openMapModal() {
+        document.getElementById('mapModal').classList.remove('hidden');
 
-    setTimeout(() => {
-        const addressText = document.getElementById('deliveryAddress').value;
+        setTimeout(() => {
+            const addressText = document.getElementById('deliveryAddress').value;
 
-        const defaultLatLng = [7.1907, 125.4553];
+            const defaultLatLng = [7.1907, 125.4553];
 
-        map = L.map('map').setView(defaultLatLng, 15);
+            map = L.map('map').setView(defaultLatLng, 15);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
 
-        marker = L.marker(defaultLatLng, { draggable: true }).addTo(map);
+            marker = L.marker(defaultLatLng, {
+                draggable: true
+            }).addTo(map);
 
-        if (addressText) {
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressText)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        const lat = parseFloat(data[0].lat);
-                        const lon = parseFloat(data[0].lon);
-                        marker.setLatLng([lat, lon]);
-                        map.setView([lat, lon], 16);
-                        reverseGeocode(lat, lon);
-                    }
-                });
-        } else {
-            reverseGeocode(defaultLatLng[0], defaultLatLng[1]);
-        }
-
-        marker.on('dragend', function(e) {
-            const pos = marker.getLatLng();
-            reverseGeocode(pos.lat, pos.lng);
-        });
-
-        map.on('click', function(e) {
-            marker.setLatLng(e.latlng);
-            reverseGeocode(e.latlng.lat, e.latlng.lng);
-        });
-
-    }, 200);
-}
-
-function closeMapModal() {
-    document.getElementById('mapModal').classList.add('hidden');
-    if (map) map.remove();
-}
-
-function reverseGeocode(lat, lng) {
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data && data.display_name) {
-                document.getElementById('mapAddress').value = data.display_name;
+            if (addressText) {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressText)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            const lat = parseFloat(data[0].lat);
+                            const lon = parseFloat(data[0].lon);
+                            marker.setLatLng([lat, lon]);
+                            map.setView([lat, lon], 16);
+                            reverseGeocode(lat, lon);
+                        }
+                    });
+            } else {
+                reverseGeocode(defaultLatLng[0], defaultLatLng[1]);
             }
-        });
-}
 
-function savePinnedLocation() {
-    const pos = marker.getLatLng();
+            marker.on('dragend', function(e) {
+                const pos = marker.getLatLng();
+                reverseGeocode(pos.lat, pos.lng);
+            });
 
-    // Update form address
-    document.getElementById('deliveryAddress').value = document.getElementById('mapAddress').value;
-    document.getElementById('latitude').value = pos.lat;
-    document.getElementById('longitude').value = pos.lng;
+            map.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                reverseGeocode(e.latlng.lat, e.latlng.lng);
+            });
 
-    // ====== SAVE DIRECTLY TO PROFILE ======
-    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        }, 200);
+    }
 
-    fetch("{{ route('profile.saveAddress') }}", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": token
-        },
-        body: JSON.stringify({
-            address: document.getElementById('mapAddress').value,
-            latitude: pos.lat,
-            longitude: pos.lng
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        alert(data.message);
-    });
+    function closeMapModal() {
+        document.getElementById('mapModal').classList.add('hidden');
+        if (map) map.remove();
+    }
 
-    closeMapModal();
-}
+    function reverseGeocode(lat, lng) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.display_name) {
+                    document.getElementById('mapAddress').value = data.display_name;
+                }
+            });
+    }
+
+    function savePinnedLocation() {
+        const pos = marker.getLatLng();
+
+        // Update form address
+        document.getElementById('deliveryAddress').value = document.getElementById('mapAddress').value;
+        document.getElementById('latitude').value = pos.lat;
+        document.getElementById('longitude').value = pos.lng;
+
+        // ====== SAVE DIRECTLY TO PROFILE ======
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch("{{ route('profile.saveAddress') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": token
+                },
+                body: JSON.stringify({
+                    address: document.getElementById('mapAddress').value,
+                    latitude: pos.lat,
+                    longitude: pos.lng
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+            });
+
+        closeMapModal();
+    }
 </script>
 
 {{-- Include Vite JS --}}

@@ -1,5 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginText = document.getElementById('loginText');
+    const spinner = document.getElementById('loginSpinner');
+
 
     form.addEventListener('submit', (e) => {
         const inputs = form.querySelectorAll('input[required]');
@@ -10,14 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }
+
+        loginBtn.disabled = true;
+    loginText.textContent = 'Logging in...';
+    spinner.classList.remove('hidden');
     });
 
     const message = document.getElementById('success-message');
     if (message) {
         setTimeout(() => {
-            message.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+            message.classList.add('opacity-0');
             setTimeout(() => message.remove(), 500);
-        }, 5000);
+        }, 1000);
     }
 
     // Correct toggle logic: fa-eye = hidden, fa-eye-slash = visible

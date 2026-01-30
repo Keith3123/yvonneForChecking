@@ -7,11 +7,11 @@ class CreateOrderDTO
     public int $customerID;
     public string $deliveryAddress;
     public string $remarks;
-    public array $items; // each item: productID, qty, price
-    public ?string $deliveryDate; // Y-m-d H:i:s
-    public string $deliveryTime;  // varchar in DB
-    public string $payment;        // gcash/cod
-    public ?string $paymentProof; // optional file
+    public array $items; 
+    public ?string $deliveryDate; 
+    public string $deliveryTime;  
+    public string $payment;        
+    public ?string $paymentProof; 
 
     public function __construct(array $data)
     {
@@ -22,6 +22,6 @@ class CreateOrderDTO
         $this->deliveryDate    = $data['deliveryDate'] ?? null;
         $this->deliveryTime    = $data['deliveryTime'] ?? '';
         $this->payment         = $data['payment'];
-        $this->paymentProof    = $data['paymentProof'] ?? '';
+        $this->paymentProof    = $data['paymentProof'] ?? null;
     }
 }

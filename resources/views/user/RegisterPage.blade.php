@@ -25,8 +25,8 @@
 
     {{-- Registration Form --}}
     <form action="{{ route('register.store') }}" method="POST"
-          class="w-full max-w-sm bg-white p-6 rounded-xl shadow-lg text-left"
-          id="registerForm">
+        class="w-full max-w-sm bg-white p-6 rounded-xl shadow-lg text-left"
+        id="registerForm">
         @csrf
 
         @include('partials.register.progress')
@@ -38,28 +38,28 @@
             </p>
 
             @if ($errors->any())
-                <div class="text-red-500 text-xs mb-3">
-                    {{ $errors->first() }}
-                </div>
+            <div class="text-red-500 text-xs mb-3">
+                {{ $errors->first() }}
+            </div>
             @endif
 
             <div class="flex flex-col gap-3 mb-6 text-sm">
                 <label class="flex flex-col">
                     <span class="mb-1">Last Name</span>
                     <input type="text" name="lastName" value="{{ old('lastName') }}" required
-                           class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                        class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
 
                 <label class="flex flex-col">
                     <span class="mb-1">First Name</span>
                     <input type="text" name="firstName" value="{{ old('firstName') }}" required
-                           class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                        class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
 
                 <label class="flex flex-col">
                     <span class="mb-1">Middle Name</span>
                     <input type="text" name="mi" value="{{ old('mi') }}"
-                           class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                        class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
             </div>
 
@@ -79,17 +79,17 @@
             <div class="flex flex-col gap-3 mb-6 text-sm">
                 <label>Email Address
                     <input type="email" name="email" value="{{ old('email') }}" required
-                           class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+                        class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
 
                 <label>Address
                     <input type="text" name="address" value="{{ old('address') }}" required
-                           class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+                        class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
 
                 <label>Phone Number
                     <input type="text" name="phone" value="{{ old('phone') }}" required
-                           class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+                        class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
             </div>
 
@@ -113,22 +113,22 @@
                 Create an account to start ordering
             </p>
 
-             <div class="flex flex-col gap-3 mb-6 text-sm">
+            <div class="flex flex-col gap-3 mb-6 text-sm">
                 {{-- Username --}}
                 <label class="flex flex-col relative">
                     <span class="mb-1">Username</span>
                     <input type="text" name="username" value="{{ old('username') }}" required
-                        class="w-full border border-gray-300 rounded-lg p-2" id="username">
+                        class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none" id="username">
                     <span class="text-red-500 text-sm mt-1 hidden" id="username-error">Username already exists</span>
                 </label>
 
                 {{-- Password --}}
                 <label class="flex flex-col relative">
-                    <span class="mb-1">Password 
+                    <span class="mb-1">Password
                         <span class="text-gray-400 text-xs">(Min 8 chars, 1 uppercase, 1 lowercase, 1 number)</span>
                     </span>
                     <input type="password" name="password" required
-                        class="w-full border border-gray-300 rounded-lg p-2 password-input">
+                        class="w-full border border-gray-300 rounded-lg p-2 password-input focus:ring-2 focus:ring-pink-300 outline-none">
                     <button type="button" class="absolute right-2 top-9 text-gray-500 toggle-password">
                         <i class="far fa-eye-slash"></i>
                     </button>
@@ -138,7 +138,7 @@
                 <label class="flex flex-col relative">
                     <span class="mb-1">Confirm Password</span>
                     <input type="password" name="password_confirmation" required
-                        class="w-full border border-gray-300 rounded-lg p-2 password-input">
+                        class="w-full border border-gray-300 rounded-lg p-2 password-input focus:ring-2 focus:ring-pink-300 outline-none">
                     <button type="button" class="absolute right-2 top-9 text-gray-500 toggle-password">
                         <i class="far fa-eye-slash"></i>
                     </button>

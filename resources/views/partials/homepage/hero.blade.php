@@ -24,9 +24,9 @@
             </a>
         @else
             <a href="{{ route('catalog') }}"
-               class="inline-block bg-yellow-400 text-black px-8 py-3 rounded-lg text-lg
+               class="inline-block bg-pink-400 text-white px-8 py-3 rounded-lg text-lg
                       transition-all duration-300
-                      hover:-translate-y-1 hover:shadow-xl hover:shadow-yellow-400/40">
+                      hover:-translate-y-1 hover:shadow-xl hover:shadow-pink-400/40">
                 Order Now
             </a>
         @endif
