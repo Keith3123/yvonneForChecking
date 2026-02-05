@@ -11,8 +11,6 @@
 
     <!-- ✅ Vite CSS -->
     @vite('resources/css/app.css')
-
-    <!-- ✅ Vite JS (THIS WAS MISSING – CAUSE OF YOUR PROBLEM) -->
     @vite('resources/js/app.js')
 
     <!-- Alpine.js (optional, kept as-is) -->

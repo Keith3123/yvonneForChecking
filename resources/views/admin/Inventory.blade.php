@@ -21,56 +21,81 @@
 
     {{-- Summary Cards --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 mt-6 mb-8">
+        
         {{-- Available Ingredients --}}
-        <div class="border border-pink-200 bg-pink-50 p-3 sm:p-4 md:p-6 rounded-xl">
-            <p class="text-gray-600 font-semibold text-xs sm:text-sm md:text-base">Available Ingredients</p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-lg sm:text-xl md:text-3xl font-bold">{{ $ingredients->where('currentStock', '>', 0)->count() }}</p>
-
-                {{-- FONT AWESOME ICON --}}
-                <i class="fas fa-box-open text-pink-500 text-xl sm:text-2xl md:text-3xl"></i>
+    <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 md:p-5">
+        <div class="flex items-start justify-between">
+            <p class="text-gray-600 font-semibold text-xs sm:text-sm md:text-base">
+                Available Ingredients
+            </p>
+            <div class="bg-white/80 rounded-full p-2 border border-pink-100">
+                <i class="fas fa-boxes-stacked text-pink-500"></i>
             </div>
         </div>
 
-        {{-- Low Stock --}}
-        <div class="border border-pink-200 bg-pink-50 p-3 sm:p-4 md:p-6 rounded-xl">
-            <p class="text-gray-600 font-semibold text-xs sm:text-sm md:text-base">Low Stock</p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-lg sm:text-xl md:text-3xl font-bold text-yellow-500">
-                    {{ $ingredients->filter(fn($i) => $i->currentStock > 0 && $i->currentStock <= $i->minStockLevel)->count() }}
-                </p>
+        <h3 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4">
+            {{ $ingredients->where('currentStock', '>', 0)->count() }}
+        </h3>
 
-                {{-- FONT AWESOME ICON --}}
-                <i class="fas fa-exclamation-triangle text-yellow-500 text-xl sm:text-2xl md:text-3xl"></i>
-            </div>
-        </div>
-
-        {{-- Out of Stock --}}
-        <div class="border border-pink-200 bg-pink-50 p-3 sm:p-4 md:p-6 rounded-xl">
-            <p class="text-gray-600 font-semibold text-xs sm:text-sm md:text-base">Out of Stock</p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-lg sm:text-xl md:text-3xl font-bold text-red-500">
-                    {{ $ingredients->where('currentStock', 0)->count() }}
-                </p>
-
-                {{-- FONT AWESOME ICON --}}
-                <i class="fas fa-ban text-red-500 text-xl sm:text-2xl md:text-3xl"></i>
-            </div>
-        </div>
+        <p class="text-gray-400 text-xs mt-1">
+            Ingredients in stock
+        </p>
     </div>
+
+    {{-- Low Stock --}}
+    <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 md:p-5">
+        <div class="flex items-start justify-between">
+            <p class="text-gray-600 font-semibold text-xs sm:text-sm md:text-base">
+                Low Stock
+            </p>
+            <div class="bg-white/80 rounded-full p-2 border border-pink-100">
+                <i class="fas fa-triangle-exclamation text-yellow-500"></i>
+            </div>
+        </div>
+
+        <h3 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4 text-yellow-600">
+            {{ $ingredients->filter(fn($i) => $i->currentStock > 0 && $i->currentStock <= $i->minStockLevel)->count() }}
+        </h3>
+
+        <p class="text-gray-400 text-xs mt-1">
+            Needs restocking
+        </p>
+    </div>
+
+    {{-- Out of Stock --}}
+    <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 md:p-5">
+        <div class="flex items-start justify-between">
+            <p class="text-gray-600 font-semibold text-xs sm:text-sm md:text-base">
+                Out of Stock
+            </p>
+            <div class="bg-white/80 rounded-full p-2 border border-pink-100">
+                <i class="fas fa-ban text-red-500"></i>
+            </div>
+        </div>
+
+        <h3 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4 text-red-500">
+            {{ $ingredients->where('currentStock', 0)->count() }}
+        </h3>
+
+        <p class="text-gray-400 text-xs mt-1">
+            No stock remaining
+        </p>
+    </div>
+
+</div>  
 
     {{-- Search --}}
     <div class="w-full border rounded-xl border-pink-200 p-4 md:p-5 mb-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2 w-full md-full">
-                <span class="mr-2">🔍</span>
-                <input 
-                    type="text" 
-                    x-model="searchQuery" 
-                    class="w-full outline-none text-sm md:text-base" 
-                    placeholder="Search ingredients..."
-                >
-            </div>
+            <div class="relative w-full">
+    <input 
+        type="text"
+        x-model="searchQuery"
+        placeholder="Search ingredients..."
+        class="w-full border rounded-lg pl-10 p-3 focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm md:text-base"
+    >
+    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg"></i>
+</div>
         </div>
     </div>
 
@@ -105,7 +130,7 @@
 
             <tbody>
                 @forelse ($ingredients as $ingredient)
-                <tr class="border-b" 
+                <tr class="border-b hover:bg-pink-50 transition" 
                     x-show="[
                         '{{ strtolower($ingredient->name) }}',
                         '{{ strtolower($ingredient->description) }}',
@@ -121,7 +146,7 @@
                         ) }}'
                     ].some(field => field.includes(searchQuery.toLowerCase()))"
                 >
-                    <td class="py-2">{{ $ingredient->name }}</td>
+                    <td class="py-2 ">{{ $ingredient->name }}</td>
                     <td class="py-2">{{ $ingredient->currentStock }}</td>
                     <td class="py-2">0</td>
                     <td class="py-2">{{ $ingredient->currentStock }}</td>

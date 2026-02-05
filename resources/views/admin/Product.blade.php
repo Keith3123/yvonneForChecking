@@ -42,7 +42,7 @@
             <input id="searchInput" type="text"
                 class="w-full border rounded-lg pl-10 p-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 placeholder="Search for products...">
-            <i class="fas fa-search absolute left-3 top-2.5 text-pink-500 text-xl"></i>
+            <i class="fas fa-search absolute left-3 top-2.5 text-gray-500 text-xl"></i>
         </div>
 
         <button id="openAddModal"

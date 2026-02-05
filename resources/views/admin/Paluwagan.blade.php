@@ -13,10 +13,10 @@
         </div>
 
         <div class="flex gap-2 flex-wrap">
-            <button class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition">
+            <button class="bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 rounded-lg shadow w-full md:w-auto transition">
                 + Add Paluwagan
             </button>
-            <button class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+            <button class="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
                 Export Report
             </button>
         </div>
@@ -25,62 +25,93 @@
     {{-- Summary Cards --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
 
-        <div class="border border-pink-200 bg-white p-5 sm:p-6 rounded-xl shadow-sm">
-            <p class="text-gray-600 font-semibold text-sm sm:text-base">Active Subscription</p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-2xl sm:text-3xl font-bold">0</p>
-                <span class="text-blue-600 text-xl sm:text-2xl">📄</span>
+        {{-- Active Subscription --}}
+    <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 md:p-5">
+        <div class="flex items-start justify-between">
+            <p class="text-gray-600 font-semibold text-sm sm:text-base">
+                Active Subscription
+            </p>
+            <div class="bg-white/80 rounded-full p-2 border border-pink-100">
+                <i class="fas fa-file-contract text-pink-500"></i>
             </div>
-            <p class="text-gray-400 text-xs mt-2">Total active subscriptions</p>
         </div>
 
-        <div class="border border-pink-200 bg-white p-5 sm:p-6 rounded-xl shadow-sm">
-            <p class="text-gray-600 font-semibold text-sm sm:text-base">Collected Revenue</p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-2xl sm:text-3xl font-bold">0</p>
-                <span class="text-green-600 text-xl sm:text-2xl">✔</span>
-            </div>
-            <p class="text-gray-400 text-xs mt-2">Total revenue collected</p>
-        </div>
-
-        <div class="border border-pink-200 bg-white p-5 sm:p-6 rounded-xl shadow-sm">
-            <p class="text-gray-600 font-semibold text-sm sm:text-base">Expected Revenue</p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-2xl sm:text-3xl font-bold">₱0</p>
-                <span class="text-purple-600 text-xl sm:text-2xl">📅</span>
-            </div>
-            <p class="text-gray-400 text-xs mt-2">Revenue expected for the month</p>
-        </div>
-
-        <div class="border border-pink-200 bg-white p-5 sm:p-6 rounded-xl shadow-sm">
-            <p class="text-gray-600 font-semibold text-sm sm:text-base">Late Payments</p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-2xl sm:text-3xl font-bold">0</p>
-                <span class="text-red-600 text-xl sm:text-2xl">⚠️</span>
-            </div>
-            <p class="text-gray-400 text-xs mt-2">Late payments this month</p>
-        </div>
-
+        <h3 class="text-xl sm:text-2xl font-bold mt-4">0</h3>
+        <p class="text-gray-400 text-xs mt-1">
+            Total active subscriptions
+        </p>
     </div>
 
+    {{-- Collected Revenue --}}
+    <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 md:p-5">
+        <div class="flex items-start justify-between">
+            <p class="text-gray-600 font-semibold text-sm sm:text-base">
+                Collected Revenue
+            </p>
+            <div class="bg-white/80 rounded-full p-2 border border-pink-100">
+                <i class="fas fa-circle-check text-pink-500"></i>
+            </div>
+        </div>
+
+        <h3 class="text-xl sm:text-2xl font-bold mt-4">₱0</h3>
+        <p class="text-gray-400 text-xs mt-1">
+            Total revenue collected
+        </p>
+    </div>
+
+    {{-- Expected Revenue --}}
+    <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 md:p-5">
+        <div class="flex items-start justify-between">
+            <p class="text-gray-600 font-semibold text-sm sm:text-base">
+                Expected Revenue
+            </p>
+            <div class="bg-white/80 rounded-full p-2 border border-pink-100">
+                <i class="fas fa-calendar-days text-pink-500"></i>
+            </div>
+        </div>
+
+        <h3 class="text-xl sm:text-2xl font-bold mt-4">₱0</h3>
+        <p class="text-gray-400 text-xs mt-1">
+            Revenue expected for the month
+        </p>
+    </div>
+
+    {{-- Late Payments --}}
+    <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 md:p-5">
+        <div class="flex items-start justify-between">
+            <p class="text-gray-600 font-semibold text-sm sm:text-base">
+                Late Payments
+            </p>
+            <div class="bg-white/80 rounded-full p-2 border border-pink-100">
+                <i class="fas fa-triangle-exclamation text-pink-500"></i>
+            </div>
+        </div>
+
+        <h3 class="text-xl sm:text-2xl font-bold mt-4">0</h3>
+        <p class="text-gray-400 text-xs mt-1">
+            Late payments this month
+        </p>
+    </div>
+
+</div>
     {{-- Search + Filters --}}
     <div class="border rounded-xl border-pink-200 p-5 bg-white shadow-sm">
 
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
             {{-- Search Bar --}}
-            <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2 w-full md:w-1/2">
-                <span class="text-gray-400 mr-2 text-sm sm:text-base">🔍</span>
-                <input 
-                    type="text" 
-                    class="w-full outline-none text-sm sm:text-base" 
-                    placeholder="Search by package name or ID..."
-                >
-            </div>
+           <div class="relative w-full md:w-1/2">
+    <input 
+        type="text"
+        placeholder="Search by package name or ID..."
+        class="w-full border rounded-lg pl-10 p-3 focus:outline-none focus:ring-2 focus:ring-pink-500"
+    >
+    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg"></i>
+</div>
 
             {{-- Filters --}}
             <div class="flex gap-2 flex-wrap">
-                <button class="px-4 py-2 bg-black text-white rounded-lg text-sm sm:text-base transition hover:bg-pink-100">
+                <button class="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm sm:text-base transition hover:bg-pink-700">
                     All (0)
                 </button>
                 <button class="px-4 py-2 border border-pink-300 rounded-lg text-sm sm:text-base hover:bg-pink-100 transition">
@@ -107,10 +138,10 @@
             </div>
 
             <div class="flex gap-2">
-                <button class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                <button class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-pink-50 transition">
                     Refresh
                 </button>
-                <button class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                <button class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-pink-50 transition">
                     Export CSV
                 </button>
             </div>
