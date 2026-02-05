@@ -9,27 +9,27 @@
 
     {{-- STATS CARDS --}}
     <div class="grid grid-cols-5 gap-4 mb-8 mt-6">
-        <div class="bg-white shadow rounded-xl p-4 text-center">
+        <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 text-center">
             <h3 class="text-gray-500 text-sm">Total Products</h3>
             <p class="text-2xl font-bold text-gray-800">{{ $stats['total'] }}</p>
         </div>
 
-        <div class="bg-white shadow rounded-xl p-4 text-center">
+        <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 text-center">
             <h3 class="text-gray-500 text-sm">Cakes</h3>
             <p class="text-2xl font-bold text-pink-600">{{ $stats['cakes'] }}</p>
         </div>
 
-        <div class="bg-white shadow rounded-xl p-4 text-center">
+        <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 text-center">
             <h3 class="text-gray-500 text-sm">Cupcakes</h3>
             <p class="text-2xl font-bold text-purple-600">{{ $stats['cupcakes'] }}</p>
         </div>
 
-        <div class="bg-white shadow rounded-xl p-4 text-center">
+        <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 text-center">
             <h3 class="text-gray-500 text-sm">Food Items</h3>
             <p class="text-2xl font-bold text-yellow-600">{{ $stats['food_items'] }}</p>
         </div>
 
-        <div class="bg-white shadow rounded-xl p-4 text-center">
+        <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 shadow-sm hover:shadow-md transition rounded-xl p-4 text-center">
             <h3 class="text-gray-500 text-sm">Paluwagan</h3>
             <p class="text-2xl font-bold text-green-600">{{ $stats['paluwagan'] }}</p>
         </div>
@@ -40,9 +40,9 @@
 
         <div class="relative w-1/2">
             <input id="searchInput" type="text"
-                class="w-full border rounded-lg pl-10 p-2"
+                class="w-full border rounded-lg pl-10 p-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 placeholder="Search for products...">
-            <span class="absolute left-3 top-2.5 text-gray-400 text-xl">🔍</span>
+            <i class="fas fa-search absolute left-3 top-2.5 text-pink-500 text-xl"></i>
         </div>
 
         <button id="openAddModal"
@@ -53,13 +53,13 @@
 
     {{-- FILTER BUTTONS --}}
     <div class="flex gap-4 mb-5">
-        <button class="categoryBtn active px-5 py-2 rounded-full bg-pink-600 text-white"
+        <button class="categoryBtn active px-5 py-2 rounded-full border hover:bg-pink-200 hover:text-pink-500 focus:bg-pink-600 focus:text-white"
                 data-category="">
             All
         </button>
 
         @foreach ($types as $t)
-            <button class="categoryBtn px-5 py-2 rounded-full border"
+            <button class="categoryBtn px-5 py-2 rounded-full border hover:bg-pink-200 hover:text-pink-500 focus:bg-pink-600 focus:text-white"
                     data-category="{{ $t->productTypeID }}">
                 {{ $t->productType }}
             </button>
@@ -89,37 +89,37 @@
 </div>
 
 {{-- ADD MODAL --}}
-<div id="addModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
-    <div class="bg-white rounded-xl p-6 w-2/3">
+<div id="addModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
         <h2 class="text-xl font-bold mb-4">Add Product</h2>
 
         <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data">
             @csrf
 
             <label class="font-semibold">Product Name</label>
-            <input type="text" name="name" class="w-full border p-3 rounded-lg mb-4" required>
+            <input type="text" name="name" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500" required>
 
             <label class="font-semibold">Product Category</label>
-            <select name="productTypeID" class="w-full border p-3 rounded-lg mb-4" required>
+            <select name="productTypeID" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500" required>
                 @foreach ($types as $t)
                     <option value="{{ $t->productTypeID }}">{{ $t->productType }}</option>
                 @endforeach
             </select>
 
             <label class="font-semibold">Description</label>
-            <textarea name="description" rows="4" class="w-full border p-3 rounded-lg mb-4"></textarea>
+            <textarea name="description" rows="4" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
 
             <label class="font-semibold">Price (₱)</label>
-            <input type="number" name="price" min="1" step="0.01" class="w-full border p-3 rounded-lg mb-4" required>
+            <input type="number" name="price" min="1" step="0.01" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500" required>
 
             <label class="font-semibold">Stock</label>
-            <input type="number" name="stock" min="0" class="w-full border p-3 rounded-lg mb-4" required>
+            <input type="number" name="stock" min="0" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500" required>
 
             <label class="font-semibold">Image</label>
-            <input type="file" name="imageURL" accept="image/*" class="w-full border p-3 rounded-lg mb-4" required>
+            <input type="file" name="imageURL" accept="image/*" class="w-full mb-4" required>
 
             <label class="font-semibold">Status</label>
-            <select name="isAvailable" class="w-full border p-3 rounded-lg mb-6">
+            <select name="isAvailable" class="w-full border p-3 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-pink-500">
                 <option value="1">Available</option>
                 <option value="0">Unavailable</option>
             </select>
@@ -136,37 +136,37 @@
 </div>
 
 {{-- EDIT MODAL --}}
-<div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
-    <div class="bg-white rounded-xl p-6 w-2/3">
+<div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
         <h2 class="text-xl font-bold mb-4">Edit Product</h2>
 
         <form id="editForm" method="POST" enctype="multipart/form-data">
             @csrf
 
             <label class="font-semibold">Product Name</label>
-            <input id="editName" type="text" name="name" class="w-full border p-3 rounded-lg mb-4">
+            <input id="editName" type="text" name="name" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500">
 
             <label class="font-semibold">Product Category</label>
-            <select id="editCategory" name="productTypeID" class="w-full border p-3 rounded-lg mb-4">
+            <select id="editCategory" name="productTypeID" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500">
                 @foreach ($types as $t)
                     <option value="{{ $t->productTypeID }}">{{ $t->productType }}</option>
                 @endforeach
             </select>
 
             <label class="font-semibold">Description</label>
-            <textarea id="editDescription" name="description" rows="4" class="w-full border p-3 rounded-lg mb-4"></textarea>
+            <textarea id="editDescription" name="description" rows="4" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
 
             <label class="font-semibold">Price (₱)</label>
-            <input id="editPrice" type="number" name="price" min="1" step="0.01" class="w-full border p-3 rounded-lg mb-4">
+            <input id="editPrice" type="number" name="price" min="1" step="0.01" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500">
 
             <label class="font-semibold">Stock</label>
-            <input id="editStock" type="number" name="stock" min="0" class="w-full border p-3 rounded-lg mb-4">
+            <input id="editStock" type="number" name="stock" min="0" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-500">
 
             <label class="font-semibold">Image</label>
-            <input type="file" name="imageURL" accept="image/*" class="w-full border p-3 rounded-lg mb-4">
+            <input type="file" name="imageURL" accept="image/*" class="w-full  mb-4">
 
             <label class="font-semibold">Status</label>
-            <select id="editStatus" name="isAvailable" class="w-full border p-3 rounded-lg mb-6">
+            <select id="editStatus" name="isAvailable" class="w-full border p-3 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-pink-500">
                 <option value="1">Available</option>
                 <option value="0">Unavailable</option>
             </select>
@@ -176,7 +176,7 @@
                     class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg">Cancel</button>
 
                 <button type="submit"
-                    class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg">Update</button>
+                    class="bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded-lg">Update</button>
             </div>
         </form>
     </div>

@@ -89,7 +89,7 @@ Route::prefix('admin')->group(function() {
     // Orders Management
     Route::get('/orders', [AdminOrdersController::class, 'index'])->name('admin.orders');
     Route::post('/admin/orders/{orderID}/accept', [AdminOrdersController::class, 'acceptOrder']);
-    Route::post('/admin/orders/{id}/cancel', [OrderController::class, 'cancel'])->name('admin.orders.cancel');
+    Route::post('/admin/orders/{orderID}/cancel', [AdminOrdersController::class, 'cancelOrder']);
     Route::get('/admin/orders/{orderID}/view', [AdminOrdersController::class, 'viewOrder']);
 
     Route::get('/salesreport', [AdminSalesReportController::class, 'index'])->name('admin.salesreport');

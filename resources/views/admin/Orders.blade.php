@@ -11,8 +11,8 @@
             <p class="text-gray-500 mt-1">Manage and track all customer orders</p>
         </div>
         {{-- RELOAD PAGE BUTTON --}}
-        <button onclick="location.reload()" class="text-gray-600 hover:text-gray-800">
-            <i class="fas fa-arrows-rotate fa-lg"></i>
+        <button onclick="location.reload()" class="text-pink-500 hover:text-pink-700">
+            <i class="fas fa-arrows-rotate fa-xl"></i>
         </button>
     </div>
 
@@ -97,13 +97,23 @@
 </div>
 
 {{-- VIEW ORDER MODAL --}}
-<div id="view-order-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
-    <div class="bg-white rounded-2xl p-6 max-w-2xl w-full relative max-h-[90vh] overflow-y-auto shadow-xl">
-        <button onclick="closeViewModal()" class="absolute top-3 right-3 text-gray-500 text-2xl">&times;</button>
+<div id="view-order-modal"
+     class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+
+    <div class="bg-white rounded-2xl p-6 max-w-3xl w-full relative max-h-[90vh] overflow-y-auto shadow-xl">
+
+        <button onclick="closeViewModal()"
+                class="absolute top-3 right-4 text-gray-500 text-2xl hover:text-black">
+            &times;
+        </button>
+
         <h3 class="text-xl font-semibold mb-4">Order Details</h3>
+
         <div id="order-content"></div>
+
     </div>
 </div>
+
 
 {{-- CANCEL CONFIRMATION MODAL --}}
 <div id="cancel-order-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
@@ -121,91 +131,107 @@
 
 @section('scripts')
 <script>
-let cancelOrderID = null;
+document.addEventListener("DOMContentLoaded", () => {
+    let cancelOrderID = null;
 
-/* -------------------------
-   VIEW ORDER
--------------------------- */
-function viewOrder(orderId) {
-    fetch(`/admin/orders/${orderId}/view`)
+    // -------------------------
+    // VIEW ORDER
+    // -------------------------
+    window.viewOrder = function(orderId) {
+        fetch(`/admin/orders/${orderId}/view`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    let order = data.order;
+                    let html = `
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                                <div>
+                                    <p class="text-xs text-gray-500">Order ID</p>
+                                    <p class="font-semibold">#${order.orderID}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Customer</p>
+                                    <p class="font-semibold">
+                                        ${order.customer.firstName} ${order.customer.lastName}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Order Date</p>
+                                    <p class="font-semibold">${order.orderDate}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Delivery Date</p>
+                                    <p class="font-semibold">
+                                        ${order.deliveryDate ? order.deliveryDate.substring(0,10) : 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById("order-content").innerHTML = html;
+                    document.getElementById("view-order-modal").classList.remove("hidden");
+                }
+            });
+    }
+
+    window.closeViewModal = function() {
+        document.getElementById("view-order-modal").classList.add("hidden");
+    }
+
+    // -------------------------
+    // ACCEPT ORDER
+    // -------------------------
+    window.acceptOrder = function(orderId) {
+        fetch(`/admin/orders/${orderId}/accept`, {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                "Content-Type": "application/json"
+            }
+        })
         .then(res => res.json())
         .then(data => {
-            if (data.status === "success") {
-                let order = data.order;
-                let html = `
-                    <p><strong>Order ID:</strong> ${order.orderID}</p>
-                    <p><strong>Customer:</strong> ${order.customer.firstName} ${order.customer.lastName}</p>
-                    <p><strong>Date:</strong> ${order.orderDate}</p>
-                    <p><strong>Status:</strong> ${order.status}</p>
-                    <p><strong>Delivery Date:</strong> ${order.deliveryDate ? order.deliveryDate.substring(0,10) : 'N/A'}</p>
-                    <hr class="my-3">
-
-                    <h4 class="font-semibold">Items:</h4>
-                    <ul>
-                `;
-
-                order.orderItems.forEach(item => {
-                    html += `<li class="my-2">${item.product.name} — Qty: ${item.qty} — ₱${item.subtotal}</li>`;
-                });
-
-                html += `<hr class="my-3"><p><strong>Total Amount:</strong> ₱${order.totalAmount}</p>`;
-
-                document.getElementById("order-content").innerHTML = html;
-                document.getElementById("view-order-modal").classList.remove("hidden");
+            if(data.status === 'success') {
+                document.querySelector(`tr[data-order-id="${orderId}"] td.status`).innerText = 'In Progress';
+                alert("Order accepted!");
+            } else {
+                alert(data.message || "Failed to accept the order.");
             }
         });
-}
+    }
 
-function closeViewModal() {
-    document.getElementById("view-order-modal").classList.add("hidden");
-}
+    // -------------------------
+    // DECLINE ORDER
+    // -------------------------
+    window.showCancelConfirmation = function(orderId) {
+        cancelOrderID = orderId;
+        document.getElementById("cancel-order-modal").classList.remove("hidden");
+    }
 
-/* -------------------------
-   ACCEPT ORDER
--------------------------- */
-function acceptOrder(orderId) {
-    fetch(`/admin/orders/${orderId}/accept`, {
-        method: "POST",
-        headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'success') {
-            document.querySelector(`tr[data-order-id="${orderId}"] td.status`).innerText = 'In Progress';
-            alert("Order accepted!");
-        } else {
-            alert(data.message || "Failed to accept the order.");
-        }
-    });
-}
+    window.closeCancelModal = function() {
+        document.getElementById("cancel-order-modal").classList.add("hidden");
+    }
 
-/* -------------------------
-   DECLINE ORDER
--------------------------- */
-function showCancelConfirmation(orderId) {
-    cancelOrderID = orderId;
-    document.getElementById("cancel-order-modal").classList.remove("hidden");
-}
-
-function closeCancelModal() {
-    document.getElementById("cancel-order-modal").classList.add("hidden");
-}
-
-document.getElementById("confirm-cancel-btn").onclick = function() {
-    fetch(`/admin/orders/${cancelOrderID}/cancel`, {
-        method: "POST",
-        headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'success') {
-            document.querySelector(`tr[data-order-id="${cancelOrderID}"] td.status`).innerText = 'Declined';
-            closeCancelModal();
-            alert("Order declined.");
-        } else {
-            alert(data.message || "Failed to decline the order.");
-        }
-    });
-};
+    document.getElementById("confirm-cancel-btn").onclick = function() {
+        fetch(`/admin/orders/${cancelOrderID}/cancel`, {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                "Content-Type": "application/json"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                document.querySelector(`tr[data-order-id="${cancelOrderID}"] td.status`).innerText = 'Declined';
+                closeCancelModal();
+                alert("Order declined.");
+            } else {
+                alert(data.message || "Failed to decline the order.");
+            }
+        });
+    }
+});
 </script>
 @endsection
