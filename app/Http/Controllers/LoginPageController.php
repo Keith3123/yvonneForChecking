@@ -61,7 +61,7 @@ class LoginPageController extends Controller
         
 
 
-        return redirect()->route('home')->with('success', 'Welcome back, ' . $customer->firstName . '!');
+        return redirect()->route('catalog')->with('success', 'Welcome back, ' . $customer->firstName . '!');
     }
 
     // Handle logout
