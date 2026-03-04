@@ -13,26 +13,24 @@
 <body class="bg-white">
     <div class="flex h-screen overflow-hidden">
 
-        <!-- Sidebar -->
         <aside class="bg-white border-r border-pink-200">
             @include('partials.admin-sidebar')
         </aside>
 
-        <!-- RIGHT SIDE -->
         <div class="flex-1 flex flex-col overflow-hidden">
 
-            <!-- Header -->
             <header class="shrink-0">
                 @include('partials.admin-header')
             </header>
 
-            <!-- MAIN CONTENT (scrollable) -->
             <main class="flex-1 overflow-y-auto p-4">
                 @yield('content')
             </main>
 
         </div>
     </div>
-</body>
 
+    @yield('scripts')
+
+</body>
 </html>

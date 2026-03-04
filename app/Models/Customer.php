@@ -2,22 +2,17 @@
 
 namespace App\Models;
 
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-
 class Customer extends Model
 {
-use HasFactory;
+    use HasFactory;
 
+    protected $table = 'customer';
+    protected $primaryKey = 'customerID';
+    public $timestamps = true;
 
-protected $table = 'customer';
-protected $primaryKey = 'customerID';
-public $timestamps = true; // uses created_at & updated_at
-
-
-// Keep camelCase to match your DB
     protected $fillable = [
         'firstName',
         'lastName',
@@ -30,7 +25,11 @@ public $timestamps = true; // uses created_at & updated_at
         'isActive',
     ];
 
-
-
     protected $hidden = ['password'];
+
+    // ✅ ADD THIS (VERY IMPORTANT)
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'customerID', 'customerID');
+    }
 }

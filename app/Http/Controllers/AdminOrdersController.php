@@ -4,25 +4,33 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Order;
+use App\Models\Customer;
 
 class AdminOrdersController extends Controller
 {
     public function index()
     {
-        $orders = Order::with('orderItems.product', 'customer')
+        $orders = Order::with(['orderItems.product', 'customer'])
             ->orderBy('orderDate', 'desc')
             ->get();
 
-        return view('admin.orders', compact('orders'));
+        // ✅ FIXED: use Customer model, not User
+        $customers = Customer::whereHas('orders')->get();
+
+        return view('admin.orders', compact('orders', 'customers'));
     }
 
-    // VIEW ORDER DETAILS (AJAX)
     public function viewOrder($orderID)
     {
-        $order = Order::with('orderItems.product', 'customer')->find($orderID);
+        $order = Order::with(['orderItems.product', 'customer'])
+            ->where('orderID', $orderID)
+            ->first();
 
         if (!$order) {
-            return response()->json(['status' => 'error', 'message' => 'Order not found']);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Order not found'
+            ]);
         }
 
         return response()->json([
@@ -31,33 +39,39 @@ class AdminOrdersController extends Controller
         ]);
     }
 
-    // ACCEPT ORDER
-    public function acceptOrder($orderID)
+    public function updateStatus(Request $request, $orderID)
     {
-        $order = Order::find($orderID);
+        $order = Order::where('orderID', $orderID)->first();
 
         if (!$order) {
-            return response()->json(['status' => 'error', 'message' => 'Order not found']);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Order not found'
+            ]);
         }
 
-        $order->status = 'In Progress';
+        $validStatuses = [
+            'Pending',
+            'Confirmed',
+            'Preparing',
+            'Out for Delivery',
+            'Done',
+            'Cancelled'
+        ];
+
+        if (!in_array($request->status, $validStatuses)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid status'
+            ]);
+        }
+
+        $order->status = $request->status;
         $order->save();
 
-        return response()->json(['status' => 'success', 'message' => 'Order accepted']);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Status updated successfully'
+        ]);
     }
-
-    // CANCEL ORDER
-    public function cancel($id)
-{
-    $order = Order::find($id);
-    if (!$order) {
-        return response()->json(['status' => 'error', 'message' => 'Order not found']);
-    }
-
-    $order->status = 'Declined'; // Set status as declined
-    $order->save();
-
-    return response()->json(['status' => 'success', 'message' => 'Order declined']);
-}
-
 }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Ingredient;
 use App\Models\User;
+use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
@@ -35,7 +36,13 @@ class AdminDashboardController extends Controller
                               ->count();
 
         // Total users
-        $totalCustomers = User::count();
+        $totalCustomers = Customer::count();
+
+        // Recent orders - latest 5, eager load customer info
+        $recentOrders = Order::with('customer')
+            ->orderBy('orderDate', 'desc')
+            ->limit(5)
+            ->get();
 
         return view('admin.dashboard', compact(
             'totalRevenue',
@@ -45,7 +52,8 @@ class AdminDashboardController extends Controller
             'collected',
             'totalProducts',
             'lowStock',
-            'totalCustomers'
+            'totalCustomers',
+            'recentOrders'
         ));
     }
 }

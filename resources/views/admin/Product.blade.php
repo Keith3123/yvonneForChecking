@@ -75,7 +75,6 @@
                     <th class="p-3">Category</th>
                     <th class="p-3">Price</th>
                     <th class="p-3">Stock</th>
-                    <th class="p-3">Options</th>
                     <th class="p-3 text-center">Actions</th>
                 </tr>
             </thead>

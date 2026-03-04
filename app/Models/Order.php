@@ -20,7 +20,6 @@ class Order extends Model
         'paymentStatus',
         'deliveryDate',
         'deliveryTime',
-
     ];
 
     protected $casts = [
@@ -28,17 +27,19 @@ class Order extends Model
         'deliveryDate' => 'datetime',
     ];
 
-
+    // Order Items
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class, 'orderID', 'orderID');
     }
 
+    // Payment relation
     public function payment()
     {
         return $this->hasOne(Payment::class, 'orderID', 'orderID');
     }
 
+    // Correct Customer relation
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customerID', 'customerID');

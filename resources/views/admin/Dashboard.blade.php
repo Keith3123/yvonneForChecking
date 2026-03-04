@@ -13,6 +13,7 @@
     <!-- CARDS -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
 
+      <!-- Total Revenue -->
       <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 p-4 md:p-5 rounded-xl shadow-sm hover:shadow-md transition">
         <div class="flex items-start justify-between">
           <div class="text-gray-600">Total Revenue</div>
@@ -24,6 +25,7 @@
         <p class="text-gray-500 text-sm mt-1">From {{ $completedOrders }} completed orders</p>
       </div>
 
+      <!-- Pending Orders -->
       <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 p-4 md:p-5 rounded-xl shadow-sm hover:shadow-md transition">
         <div class="flex items-start justify-between">
           <div class="text-gray-600">Pending Orders</div>
@@ -35,6 +37,7 @@
         <p class="text-gray-500 text-sm mt-1">{{ $pendingOrders }} orders in progress</p>
       </div>
 
+      <!-- Active Paluwagan -->
       <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 p-4 md:p-5 rounded-xl shadow-sm hover:shadow-md transition">
         <div class="flex items-start justify-between">
           <div class="text-gray-600">Active Paluwagan</div>
@@ -46,6 +49,7 @@
         <p class="text-gray-500 text-sm mt-1">{{ number_format($collected, 2) }} collected</p>
       </div>
 
+      <!-- Low Stock Items -->
       <div class="bg-gradient-to-br from-pink-50 to-white border border-pink-100 p-4 md:p-5 rounded-xl shadow-sm hover:shadow-md transition">
         <div class="flex items-start justify-between">
           <div class="text-gray-600">Low Stock Items</div>
@@ -63,21 +67,41 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
 
       <!-- RECENT ORDERS -->
-      <div class="col-span-1 lg:col-span-2 bg-white border border-pink-100 p-6 md:p-8 rounded-xl
-                  flex flex-col justify-center items-center text-gray-400 min-h-[250px] shadow-sm">
-        <h3 class="text-xl md:text-2xl font-bold text-gray-700 mb-2">Recent Orders</h3>
-        <p class="text-gray-500 mb-4">Latest customer orders</p>
+      <div class="col-span-1 lg:col-span-2 bg-white border border-pink-100 p-6 md:p-8 rounded-xl shadow-sm">
+        <h3 class="text-xl md:text-2xl font-bold text-gray-700 mb-4">Recent Orders</h3>
+        <p class="text-gray-500 mb-6">Latest customer orders</p>
 
-        @if($completedOrders > 0 || $pendingOrders > 0)
-          <p class="text-gray-600">Recent orders will appear here.</p>
+        @if($recentOrders->count() > 0)
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-pink-200">
+                <th class="py-2">Order ID</th>
+                <th class="py-2">Customer</th>
+                <th class="py-2">Status</th>
+                <th class="py-2">Order Date</th>
+                <th class="py-2">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach($recentOrders as $order)
+                <tr class="border-b border-pink-100 hover:bg-pink-50 transition">
+                  <td class="py-2">{{ $order->orderID }}</td>
+                  <td class="py-2">{{ $order->customer ? $order->customer->firstName.' '.$order->customer->lastName : 'Guest' }}</td>
+                  <td class="py-2 capitalize">{{ $order->status }}</td>
+                  <td class="py-2">{{ \Carbon\Carbon::parse($order->orderDate)->format('M d, Y h:i A') }}</td>
+                  <td class="py-2">₱{{ number_format($order->totalAmount, 2) }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
         @else
-          <p class="text-gray-500">No orders yet</p>
+          <p class="text-gray-500">No recent orders yet.</p>
         @endif
       </div>
 
       <!-- QUICK ACTIONS -->
       <div class="bg-white border border-pink-100 p-6 md:p-8 rounded-xl shadow-sm">
-        <h3 class="text-lg md:text-xl font-bold mb-2">Quick Actions</h3>
+        <h3 class="text-lg md:text-xl font-bold mb-2">Quick View</h3>
         <p class="text-gray-500 mb-3 md:mb-5">Common administrative tasks</p>
 
         <div class="space-y-3 md:space-y-4">

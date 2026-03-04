@@ -58,7 +58,7 @@ Route::get('/orders', [OrdersPageController::class, 'index'])->name('orders.inde
 Route::get('/orders/{orderID}/receipt', [OrdersPageController::class, 'viewReceipt'])->name('orders.receipt');
 
 // Route to cancel an order
-Route::post('/order/{orderID}/cancel', [OrdersPageController::class, 'cancelOrder'])->name('order.cancel');
+Route::post('/orders/{orderID}/cancel', [OrdersPageController::class, 'cancelOrder']);
 
 Route::get('/profile', [ProfilePageController::class, 'index'])->name('profile');
 Route::post('/profile/update', [ProfilePageController::class, 'update'])->name('profile.update');
@@ -88,9 +88,8 @@ Route::prefix('admin')->group(function() {
 
     // Orders Management
     Route::get('/orders', [AdminOrdersController::class, 'index'])->name('admin.orders');
-    Route::post('/admin/orders/{orderID}/accept', [AdminOrdersController::class, 'acceptOrder']);
-    Route::post('/admin/orders/{orderID}/cancel', [AdminOrdersController::class, 'cancelOrder']);
-    Route::get('/admin/orders/{orderID}/view', [AdminOrdersController::class, 'viewOrder']);
+    Route::get('/orders/{orderID}/view', [AdminOrdersController::class, 'viewOrder']);
+    Route::post('/orders/{orderID}/update-status', [AdminOrdersController::class, 'updateStatus']);
 
     Route::get('/salesreport', [AdminSalesReportController::class, 'index'])->name('admin.salesreport');
     Route::get('/users', [AdminUsersController::class, 'index'])->name('admin.users');
