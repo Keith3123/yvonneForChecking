@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProductType;
+use App\Models\PaluwaganPackage;
 use Illuminate\Http\Request;
 use App\Helpers\ProductLoader;
-use Illuminate\Support\Facades\DB;
 
 class HomePageController extends Controller
 {
@@ -25,7 +25,7 @@ class HomePageController extends Controller
             'productType'   => 'Paluwagan'
         ]);
 
-        // Define icons for categories (FontAwesome classes)
+        // Define icons for categories
         $categoryIcons = [
             'all' => 'fas fa-th-large',
             'paluwagan' => 'fas fa-hand-holding-usd',
@@ -43,24 +43,34 @@ class HomePageController extends Controller
             return strtolower($p['productType']) === 'paluwagan';
         });
 
-        // Load Paluwagan packages from DB
-        $paluwagan = DB::table('paluwaganpackage')->get()->map(function ($p) {
+        $paluwagan = PaluwaganPackage::all()->map(function ($p) {
             return [
                 'id' => $p->packageID,
                 'name' => $p->packageName,
                 'productType' => 'paluwagan',
-                'imageURL' => $p->image ? asset('images/paluwagan/' . $p->image) : asset('images/default-paluwagan.jpg'),
+                'productTypeID' => 'paluwagan',
+
+                // RELATIVE PATH ONLY
+                'imageURL' => $p->image
+                ? $p->image
+                : 'default-paluwagan.jpg',
+
+                'description' => $p->description,
                 'descriptionList' => explode('|', $p->description ?? ''),
+
                 'servings' => [
                     [
                         'price' => $p->totalAmount,
-                        'size'  => $p->durationMonths
+                        'size'  => $p->durationMonths . ' Months'
                     ]
-                ]
+                ],
+
+                // keep compatibility with your blade
+                'price' => $p->totalAmount
             ];
         });
 
-        // Merge normal products with Paluwagan products
+        // Merge normal products with Paluwagan
         $allProducts = $allProducts->merge($paluwagan);
 
         // Category filter logic
@@ -70,15 +80,21 @@ class HomePageController extends Controller
             $featuredProducts = $allProducts->filter(function ($p) {
                 return strtolower($p['productType']) === 'paluwagan';
             })->values();
+
         } elseif ($type && is_numeric($type)) {
+
             $featuredProducts = $allProducts
                 ->where('productTypeID', intval($type))
                 ->values();
+
         } elseif ($type) {
-            // Invalid string type filter, return empty
+
+            // Invalid string filter
             $featuredProducts = collect();
+
         } else {
-            // Default: show first 8 normal products
+
+            // Default: first 8 non-paluwagan products
             $featuredProducts = $allProducts
                 ->reject(function ($p) {
                     return strtolower($p['productType']) === 'paluwagan';
@@ -87,7 +103,10 @@ class HomePageController extends Controller
                 ->values();
         }
 
-        // Pass everything to view
-        return view('user.HomePage', compact('categories', 'featuredProducts', 'categoryIcons'));
+        return view('user.HomePage', compact(
+            'categories',
+            'featuredProducts',
+            'categoryIcons'
+        ));
     }
 }

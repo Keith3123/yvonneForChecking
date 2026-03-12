@@ -23,7 +23,7 @@
             @click="showAdd = true"
             class="bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 rounded-lg shadow w-full md:w-auto transition"
         >
-            Add Admin
+            Add User
         </button>
     </div>
 

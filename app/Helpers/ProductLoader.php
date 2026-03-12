@@ -35,12 +35,12 @@ class ProductLoader
                     'descriptionList' => $first->description
                         ? array_filter(array_map('trim', explode("\n", $first->description)))
                         : [],
-                    'imageURL' => $first->imageURL,
-                    'productType' => strtolower(trim($first->productType)), // ensure lowercase & no spaces
+                    'imageURL' => $first->imageURL, // just filename
+                    'productType' => strtolower(trim($first->productType)),
                     'servings' => $group->map(fn($g) => [
-                        'size' => $g->size,
-                        'price' => $g->price
-                    ])->values()->toArray(), // convert to array
+                        'size' => $g->size ?? null,
+                        'price' => $g->price ?? 0
+                    ])->values()->toArray(),
                 ];
             })
             ->values();
@@ -60,13 +60,12 @@ class ProductLoader
             ->map(function ($pkg) {
                 return [
                     'id' => $pkg->id,
-                    'packageID' => $pkg->id, 
                     'name' => $pkg->name,
                     'description' => $pkg->description ?? '',
                     'descriptionList' => $pkg->description
                         ? array_filter(array_map('trim', explode("\n", $pkg->description)))
                         : [],
-                    'imageURL' => 'images/' . $pkg->image,
+                    'imageURL' => $pkg->image, // just filename
                     'productType' => 'paluwagan',
                     'servings' => [
                         [

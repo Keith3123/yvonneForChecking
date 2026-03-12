@@ -1,77 +1,71 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class AdminProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('type')->orderBy('name')->get();
-        $types    = ProductType::all();
-
-        $stats = [
-            'total'      => Product::count(),
-            'cakes'      => Product::where('productTypeID', 1)->count(),
-            'cupcakes'   => Product::where('productTypeID', 2)->count(),
-            'food_items' => Product::where('productTypeID', 3)->count(),
-            'paluwagan'  => Product::where('productTypeID', 4)->count(),
-        ];
-
-        return view('admin.Product', compact('products', 'types', 'stats'));
+        $products = Product::with('type','servings')->orderBy('name')->get();
+        $types = ProductType::all();
+        return view('admin.Product', compact('products','types'));
     }
 
     public function ajaxFetch(Request $request)
     {
-        $search   = $request->search;
-        $category = $request->category;
+        $query = Product::with('type','servings');
 
-        $query = Product::with('type');
-
-        if ($search !== null && $search !== '') {
-            $query->where('name', 'LIKE', "%$search%");
+        if($request->search){
+            $query->where('name', 'LIKE', "%{$request->search}%");
         }
 
-        if ($category !== null && $category !== '') {
-            $query->where('productTypeID', $category);
+        if($request->category){
+            $query->where('productTypeID', $request->category);
         }
 
         $products = $query->orderBy('name')->get();
-
         $html = view('admin.products.product-table', compact('products'))->render();
-
-        return response()->json(['html' => $html]);
+        return response()->json(['html'=>$html]);
     }
 
     public function modalEdit($id)
     {
-        $product = Product::findOrFail($id);
-        return response()->json(['product' => $product]);
+        // Preload servings and type for edit modal
+        $product = Product::with('servings','type')->findOrFail($id);
+        return response()->json(['product'=>$product]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'productTypeID' => 'required|integer',
-            'name'          => 'required|string|max:255',
-            'description'   => 'nullable|string',
-            'price'         => 'required|numeric|min:1',
-            'stock'         => 'required|integer|min:0',
-            'isAvailable'   => 'required|boolean',
-            'imageURL'      => 'required|image',
+        $validated = $request->validate([
+            'name'=>'required|string|max:255',
+            'productTypeID'=>'required|integer|exists:producttype,productTypeID',
+            'description'=>'nullable|string',
+            'isAvailable'=>'required|boolean',
+            'promo'=>'nullable|numeric|min:0|max:100',
+            'imageURL'=>'required|image|max:2048'
         ]);
 
-        if ($request->hasFile('imageURL')) {
-            $data['imageURL'] = $request->file('imageURL')->store('products', 'public');
+        if($request->hasFile('imageURL')){
+            $file = $request->file('imageURL');
+            $filename = Str::random(10).'_'.time().'.'.$file->getClientOriginalExtension();
+            $file->move(public_path('images'), $filename);
+            $validated['imageURL'] = $filename;
         }
 
-        Product::create($data);
+        $product = Product::create($validated);
 
-        return redirect()->route('admin.products')
-            ->with('success', 'Product created successfully!');
+        if($request->ajax()){
+            $product->load('type','servings');
+            $rowHTML = view('admin.products.product-row', compact('product'))->render();
+            return response()->json(['success'=>true,'rowHTML'=>$rowHTML]);
+        }
+
+        return redirect()->back()->with('success','Product added!');
     }
 
     public function update(Request $request, $id)
@@ -79,30 +73,45 @@ class AdminProductController extends Controller
         $product = Product::findOrFail($id);
 
         $data = $request->validate([
-            'productTypeID' => 'required|integer',
-            'name'          => 'required|string|max:255',
-            'description'   => 'nullable|string',
-            'price'         => 'required|numeric|min:1',
-            'stock'         => 'required|integer|min:0',
-            'isAvailable'   => 'required|boolean',
-            'imageURL'      => 'nullable|image',
+            'name'=>'required|string|max:255',
+            'productTypeID'=>'required|integer',
+            'description'=>'nullable|string',
+            'isAvailable'=>'required|boolean',
+            'promo'=>'nullable|numeric|min:0|max:100',
+            'imageURL'=>'nullable|image|max:2048'
         ]);
 
-        if ($request->hasFile('imageURL')) {
-            $data['imageURL'] = $request->file('imageURL')->store('products', 'public');
+        if($request->hasFile('imageURL')){
+            $file = $request->file('imageURL');
+            $filename = Str::random(10).'_'.time().'.'.$file->getClientOriginalExtension();
+            $file->move(public_path('images'), $filename);
+            $data['imageURL'] = $filename;
         }
 
         $product->update($data);
 
-        return redirect()->route('admin.products')
-            ->with('success', 'Product updated successfully!');
+        if($request->ajax()){
+            $product->load('type','servings');
+            $rowHTML = view('admin.products.product-row', compact('product'))->render();
+            return response()->json([
+                'success'=>true,
+                'rowHTML'=>$rowHTML,
+                'productID'=>$product->productID
+            ]);
+        }
+
+        return redirect()->back()->with('success','Product updated!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        Product::destroy($id);
+        $product = Product::findOrFail($id);
+        $product->delete();
 
-        return redirect()->route('admin.products')
-            ->with('success', 'Product deleted successfully!');
+        if($request->ajax()){
+            return response()->json(['success'=>true]);
+        }
+
+        return redirect()->back()->with('success','Product deleted!');
     }
 }

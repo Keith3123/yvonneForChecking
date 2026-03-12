@@ -25,10 +25,10 @@
 
             <input type="text" id="searchInput"
                    placeholder="Search Order ID..."
-                   class="border rounded-lg px-3 py-2 text-sm w-full">
+                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
 
             <select id="statusFilter"
-                    class="border rounded-lg px-3 py-2 text-sm w-full">
+                    class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
                 <option value="">All Status</option>
                 <option value="Pending">Pending</option>
                 <option value="Confirmed">Confirmed</option>
@@ -39,13 +39,13 @@
             </select>
 
             <input type="date" id="startDate"
-                   class="border rounded-lg px-3 py-2 text-sm w-full">
+                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
 
             <input type="date" id="endDate"
-                   class="border rounded-lg px-3 py-2 text-sm w-full">
+                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
 
             <select id="customerFilter"
-                    class="border rounded-lg px-3 py-2 text-sm w-full">
+                    class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
                 <option value="">All Customers</option>
                 @foreach($customers as $customer)
                     <option value="{{ strtolower($customer->firstName . ' ' . $customer->lastName) }}">
@@ -115,7 +115,7 @@
                         'Preparing' => 'bg-purple-600 text-white',
                         'Out for Delivery' => 'bg-indigo-600 text-white',
                         'Done' => 'bg-green-700 text-white',
-                        'Pending' => 'bg-gray-200 text-gray-700'
+                        'Pending' => 'bg-yellow-200 text-gray-700'
                     ];
                 @endphp
 
@@ -194,10 +194,100 @@
         <div id="order-content"></div>
     </div>
 </div>
+
+{{-- FEEDBACK MESSAGE --}}
+<div id="actionMessage"
+     class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 hidden z-50">
+    <div class="px-6 py-4 rounded-xl shadow-lg text-center">
+        <p id="actionText" class="text-lg font-semibold text-gray-800"></p>
+    </div>
+</div>
+
+
+{{-- CONFIRM ACTION MODAL --}}
+<div id="confirmModal"
+     class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+
+    <div class="bg-white rounded-xl p-6 w-96 text-center shadow-xl">
+
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+            Confirm Action
+        </h3>
+
+        <p id="confirmText" class="text-gray-600 mb-6"></p>
+
+        <div class="flex justify-center gap-4">
+            <button id="confirmBtn"
+                    class="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700">
+                Confirm
+            </button>
+
+
+            <button onclick="closeConfirmModal()"
+                    class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
+                Cancel
+            </button>
+
+        </div>
+
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
+let confirmCallback = null;
+
+function showMessage(message, status = null) {
+
+    const box = document.getElementById('actionMessage');
+    const text = document.getElementById('actionText');
+
+    let bg = "bg-gray-100";
+
+    if(status === "Confirmed") bg = "bg-green-600";
+    if(status === "Cancelled") bg = "bg-red-600";
+    if(status === "Preparing") bg = "bg-purple-600";
+    if(status === "Out for Delivery") bg = "bg-indigo-600";
+    if(status === "Done") bg = "bg-green-700";
+
+    text.innerHTML = `
+        <span class="px-6 py-3 rounded-xl text-white font-semibold ${bg}">
+            ${message}
+        </span>
+    `;
+
+    box.classList.remove('hidden');
+
+    setTimeout(() => {
+        box.classList.add('hidden');
+    }, 3000);
+}
+
+function showConfirm(message, callback) {
+
+    document.getElementById("confirmText").innerText = message;
+    document.getElementById("confirmModal").classList.remove("hidden");
+
+    confirmCallback = callback;
+}
+
+function closeConfirmModal() {
+    document.getElementById("confirmModal").classList.add("hidden");
+}
+
+document.getElementById("confirmBtn").addEventListener("click", function(){
+
+    if(confirmCallback){
+        confirmCallback();
+    }
+
+    closeConfirmModal();
+});
+
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
 
     const selectAll = document.getElementById('selectAll');
@@ -291,17 +381,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Bulk update action
     window.bulkUpdate = function(newStatus) {
-        const selected = Array.from(document.querySelectorAll('.orderCheckbox:checked'));
-        if(selected.length === 0) return;
-        if(!confirm(`Update ${selected.length} orders to ${newStatus}?`)) return;
+
+    const selected = Array.from(document.querySelectorAll('.orderCheckbox:checked'));
+
+    if(selected.length === 0) return;
+
+    showConfirm(`Update ${selected.length} orders to ${newStatus}?`, () => {
 
         selected.forEach(cb => updateStatus(cb.value, newStatus));
+
+        showMessage(`${selected.length} order(s) updated to ${newStatus}`, newStatus);
+
         deselectAll();
-    };
+    });
+
+};
 
     function getStatusClass(status) {
         switch(status) {
-            case 'Confirmed': return 'bg-green-600 text-white';
+            case 'Confirmed': return 'bg-green-400 text-white';
             case 'Cancelled': return 'bg-red-600 text-white';
             case 'Preparing': return 'bg-purple-600 text-white';
             case 'Out for Delivery': return 'bg-indigo-600 text-white';
@@ -322,13 +420,17 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(res => res.json())
         .then(data => {
             if(data.status === 'success') {
+
                 let row = document.querySelector(`tr[data-order-id="${orderId}"]`);
                 let statusClass = getStatusClass(newStatus);
 
                 row.querySelector(".status").innerHTML =
-                    `<span class="inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusClass}">${newStatus}</span>`;
+                `<span class="inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusClass}">
+                ${newStatus}</span>`;
 
                 row.dataset.status = newStatus;
+
+                showMessage(`Order #${orderId} updated to ${newStatus}`, newStatus);
             }
         });
     };
@@ -392,11 +494,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             <p><strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleString()}</p>
                             <p><strong>Delivery Date:</strong> ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</p>
                             <p><strong>Delivery Time:</strong> ${order.deliveryTime ?? 'N/A'}</p>
+                            <p><strong>Delivery Address:</strong> ${order.deliveryAddress ?? 'N/A'}</p>
                         </div>
                     </div>
                 `;
 
                 document.getElementById('view-order-modal').classList.remove('hidden');
+
             }
         });
     };

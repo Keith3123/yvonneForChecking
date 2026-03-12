@@ -78,11 +78,9 @@ Route::prefix('admin')->group(function() {
     // Product Management Routes
     Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products');
     Route::get('/products/ajax/fetch', [AdminProductController::class, 'ajaxFetch']);
-
     Route::post('/products/store', [AdminProductController::class, 'store'])->name('admin.products.store');
-    Route::post('/products/{id}/update', [AdminProductController::class, 'update'])->name('admin.products.update');
+    Route::put('/products/{id}', [AdminProductController::class, 'update'])->name('admin.products.update');    
     Route::delete('/products/{id}/delete', [AdminProductController::class, 'destroy'])->name('admin.products.delete');
-
     Route::get('/products/modal/edit/{id}', [AdminProductController::class, 'modalEdit']);
 
 

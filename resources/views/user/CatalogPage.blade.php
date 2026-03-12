@@ -78,12 +78,12 @@
                     data-category="{{ strtolower(preg_replace('/[^a-z]/', '', $product['productType'])) }}"
                     data-name="{{ $product['name'] }}"
                     data-description="{{ $product['description'] }}"
-                    data-image="{{ asset($product['imageURL']) }}"
+                    data-image="{{ asset('images/' . $product['imageURL']) }}"
                     data-servings='@json($product['servings'])'
                     data-price="{{ $product['servings'][0]['price'] ?? 0 }}"
                 >
                     <img
-                        src="{{ asset($product['imageURL']) }}"
+                        src="{{ asset('images/' . $product['imageURL']) }}"
                         class="w-full h-40 object-cover transition-transform duration-500 hover:scale-105"
                     >
 
