@@ -28,14 +28,17 @@ Route::get('/cart/sidebar', fn () =>
 
 Route::get('/', [HomePageController::class, 'index'])->name('home');
 
-Route::get('/register', [RegisterPageController::class, 'show'])->name('register');
-Route::post('/register', [RegisterPageController::class, 'store'])->name('register.store');
-
 Route::get('/login', [LoginPageController::class, 'index'])->name('login');
 Route::post('/login', [LoginPageController::class, 'store'])->name('login.store');
 Route::post('/logout', [LoginPageController::class, 'logout'])->name('logout');
 
+
+Route::get('/register', [RegisterPageController::class, 'show'])->name('register');
+Route::post('/register', [RegisterPageController::class, 'store'])->name('register.store');
+
 Route::post('/check-username', [RegisterPageController::class, 'checkUsername']);
+Route::post('/check-email', [RegisterPageController::class, 'checkEmail']);
+
 
 Route::get('/catalog', [CatalogPageController::class, 'index'])->name('catalog');
 

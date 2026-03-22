@@ -10,7 +10,7 @@
     </p>
 
     <div class="flex justify-center mb-4">
-      <a href="{{ route(session('logged_in_user') ? 'catalog' : 'register') }}"
+      <a href="{{ route(session('logged_in_user') ? 'catalog' : 'login') }}"
          class="bg-white text-pink-600 font-semibold px-6 py-3 rounded-full shadow
                 transition-all duration-300
                 hover:-translate-y-1 hover:scale-105 hover:shadow-2xl">

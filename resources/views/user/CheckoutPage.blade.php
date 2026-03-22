@@ -4,7 +4,7 @@
 @endsection
 
 @section('content')
-
+@php $user = session('logged_in_user'); @endphp
 <div class="bg-[#FFF6F6] min-h-screen py-10">
     <div class="max-w-6xl mx-auto px-6">
 
@@ -183,10 +183,18 @@
                     </div>
 
 
-                    <button type="submit" form="checkoutForm"
+                    @if(!$user)
+                    <button type="button"
+                        id="trigger-login-modal"
                         class="w-full mt-4 bg-[#FF1493] hover:bg-[#FF69B4] text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200">
                         Place Order
-                    </button>
+                        </button>
+                    @else
+                        <button type="submit" form="checkoutForm"
+                            class="w-full mt-4 bg-[#FF1493] hover:bg-[#FF69B4] text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200">
+                            Place Order
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -222,6 +230,7 @@
     </div>
 </div>
 
+
 {{-- Leaflet --}}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -234,7 +243,6 @@
 
         setTimeout(() => {
             const addressText = document.getElementById('deliveryAddress').value;
-
             const defaultLatLng = [7.1907, 125.4553];
 
             map = L.map('map').setView(defaultLatLng, 15);
@@ -243,9 +251,7 @@
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            marker = L.marker(defaultLatLng, {
-                draggable: true
-            }).addTo(map);
+            marker = L.marker(defaultLatLng, { draggable: true }).addTo(map);
 
             if (addressText) {
                 fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressText)}`)
@@ -294,35 +300,97 @@
     function savePinnedLocation() {
         const pos = marker.getLatLng();
 
-        // Update form address
         document.getElementById('deliveryAddress').value = document.getElementById('mapAddress').value;
         document.getElementById('latitude').value = pos.lat;
         document.getElementById('longitude').value = pos.lng;
 
-        // ====== SAVE DIRECTLY TO PROFILE ======
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         fetch("{{ route('profile.saveAddress') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": token
-                },
-                body: JSON.stringify({
-                    address: document.getElementById('mapAddress').value,
-                    latitude: pos.lat,
-                    longitude: pos.lng
-                })
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": token
+            },
+            body: JSON.stringify({
+                address: document.getElementById('mapAddress').value,
+                latitude: pos.lat,
+                longitude: pos.lng
             })
-            .then(res => res.json())
-            .then(data => {
-                alert(data.message);
-            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+        });
 
         closeMapModal();
     }
+
+    // ✅ UPDATED AUTH MODAL
+    function openAuthModal() {
+        document.getElementById('authModal').classList.remove('hidden');
+
+        showLogin();
+
+        // ✅ auto focus username
+        setTimeout(() => {
+            const username = document.querySelector('#authModal input[name="username"]');
+            if (username) username.focus();
+        }, 200);
+    }
+
+    function closeAuthModal() {
+        document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function showLogin() {
+        document.getElementById('loginSection').classList.remove('hidden');
+        document.getElementById('registerSection').classList.add('hidden');
+
+        document.getElementById('loginTab').classList.add('bg-pink-100','text-pink-600');
+        document.getElementById('registerTab').classList.remove('bg-pink-100','text-pink-600');
+    }
+
+    function showRegister() {
+        document.getElementById('registerSection').classList.remove('hidden');
+        document.getElementById('loginSection').classList.add('hidden');
+
+        document.getElementById('registerTab').classList.add('bg-pink-100','text-pink-600');
+        document.getElementById('loginTab').classList.remove('bg-pink-100','text-pink-600');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('trigger-login-modal');
+
+        // ✅ safe trigger
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                openAuthModal();
+            });
+        }
+
+        // ✅ click outside = close modal
+        const modal = document.getElementById('authModal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAuthModal();
+                }
+            });
+        }
+
+        // ✅ ESC key close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAuthModal();
+            }
+        });
+    });
 </script>
 
 {{-- Include Vite JS --}}
 @vite('resources/js/payment.js')
+
+@include('partials.auth-modal')
 @endsection

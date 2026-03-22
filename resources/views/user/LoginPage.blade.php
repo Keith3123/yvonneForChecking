@@ -41,7 +41,7 @@
     </div>
     @endif
 
-    {{-- Form --}}
+    {{-- Login Form --}}
     <form action="{{ route('login.store') }}" method="POST"
         class="w-full max-w-sm bg-white p-6 rounded-xl shadow-lg text-left"
         id="loginForm" novalidate>
@@ -61,8 +61,7 @@
                 <input type="password" name="password" required
                     placeholder="Enter your password*"
                     class="w-full border border-gray-300 rounded-lg p-2
-                              focus:ring-2 focus:ring-pink-300 focus:border-pink-300
-                              outline-none password-input">
+                              focus:ring-2 focus:ring-pink-300 focus:border-pink-300 outline-none                                                                                                                                                                                                                                                                                                      ine-none password-input">
                 <button type="button"
                     class="absolute right-3 top-8 text-gray-500 hover:text-pink-500 toggle-password">
                     <i class="far fa-eye-slash"></i>

@@ -16,10 +16,10 @@
         @php $user = session('logged_in_user'); @endphp
 
         @if(!$user)
-            <a href="#products"
-               class="inline-block bg-pink-400 px-8 py-3 rounded-lg text-lg
-                      transition-all duration-300
-                      hover:-translate-y-1 hover:shadow-xl hover:shadow-pink-400/40">
+            <a href="{{ route('catalog') }}"
+            class="inline-block bg-pink-400 px-8 py-3 rounded-lg text-lg
+                    transition-all duration-300
+                    hover:-translate-y-1 hover:shadow-xl hover:shadow-pink-400/40">
                 Browse Products
             </a>
         @else

@@ -1,5 +1,6 @@
 @extends('layouts.app')
-
+@section('no-footer')
+@endsection
 @section('content')
 <div class="min-h-screen flex flex-col items-center pt-16 text-center bg-[#FFF8F5]">
 
@@ -125,13 +126,22 @@
                 {{-- Password --}}
                 <label class="flex flex-col relative">
                     <span class="mb-1">Password
-                        <span class="text-gray-400 text-xs">(Min 8 chars, 1 uppercase, 1 lowercase, 1 number)</span>
                     </span>
+
                     <input type="password" name="password" required
                         class="w-full border border-gray-300 rounded-lg p-2 password-input focus:ring-2 focus:ring-pink-300 outline-none">
+
                     <button type="button" class="absolute right-2 top-9 text-gray-500 toggle-password">
                         <i class="far fa-eye-slash"></i>
                     </button>
+
+                    {{-- ✅ PASSWORD RULES UI --}}
+                    <div class="text-xs mt-2 space-y-1 password-rules">
+                        <p data-rule="length" class="text-gray-400">✖ At least 8 characters</p>
+                        <p data-rule="upper" class="text-gray-400">✖ 1 uppercase letter</p>
+                        <p data-rule="lower" class="text-gray-400">✖ 1 lowercase letter</p>
+                        <p data-rule="number" class="text-gray-400">✖ 1 number</p>
+                    </div>
                 </label>
 
                 {{-- Confirm Password --}}

@@ -59,9 +59,14 @@ class LoginPageController extends Controller
             'username'  => $customer->username,
         ]]);
         
+    $redirectTo = $request->input('redirect_to');
 
+    if ($redirectTo) {
+        return redirect($redirectTo)->with('success', 'Welcome back, ' . $customer->firstName . '!');
+    }
 
-        return redirect()->route('catalog')->with('success', 'Welcome back, ' . $customer->firstName . '!');
+    // fallback (existing behavior)
+    return redirect()->route('catalog')->with('success', 'Welcome back, ' . $customer->firstName . '!');
     }
 
     // Handle logout
