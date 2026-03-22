@@ -53,7 +53,7 @@
     </button>
 
     {{-- Info --}}
-    <div class="flex items-start gap-2 text-xs text-gray-500">
+    <div class="flex items-start gap-2 text-xs text-gray-500 justify-center">
         <span class="text-yellow-400 text-base">💡</span>
         <p>Order ahead of time with a 2–3 days reservation for normal orders.</p>
     </div>

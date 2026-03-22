@@ -24,19 +24,19 @@
 
             <label class="flex flex-col">
                 <span class="mb-1 font-medium text-gray-700">Last Name</span>
-                <input type="text" name="lastName" value="{{ old('lastName') }}" required
+                <input type="text" name="lastName" value="{{ old('lastName') }}" required autocomplete="family-name"
                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 outline-none">
             </label>
 
             <label class="flex flex-col">
                 <span class="mb-1 font-medium text-gray-700">First Name</span>
-                <input type="text" name="firstName" value="{{ old('firstName') }}" required
+                <input type="text" name="firstName" value="{{ old('firstName') }}" required autocomplete="given-name"
                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 outline-none">
             </label>
 
             <label class="flex flex-col">
                 <span class="mb-1 font-medium text-gray-700">Middle Name</span>
-                <input type="text" name="mi" value="{{ old('mi') }}"
+                <input type="text" name="mi" value="{{ old('mi') }}" autocomplete="additional-name"
                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 outline-none">
             </label>
 
@@ -60,19 +60,19 @@
 
             <label class="flex flex-col">
                 <span class="mb-1 font-medium text-gray-700">Email Address</span>
-                <input type="email" name="email" value="{{ old('email') }}" required
+                <input type="email" name="email" value="{{ old('email') }}" required autocomplete="email"
                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 outline-none">
             </label>
 
             <label class="flex flex-col">
                 <span class="mb-1 font-medium text-gray-700">Address</span>
-                <input type="text" name="address" value="{{ old('address') }}" required
+                <input type="text" name="address" value="{{ old('address') }}" required autocomplete="street-address"
                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 outline-none">
             </label>
 
             <label class="flex flex-col">
                 <span class="mb-1 font-medium text-gray-700">Phone Number</span>
-                <input type="text" name="phone" value="{{ old('phone') }}" required
+                <input type="text" name="phone" value="{{ old('phone') }}" required autocomplete="tel"
                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 outline-none">
             </label>
 
@@ -106,7 +106,7 @@
             <label class="flex flex-col">
                 <span class="mb-1 font-medium text-gray-700">Username</span>
                 <input type="text" name="username" value="{{ old('username') }}" required
-                    id="username"
+                    id="username" autocomplete="username"
                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 outline-none">
 
                 <span class="text-red-500 text-xs mt-1 hidden" id="username-error">
@@ -123,20 +123,28 @@
                     </span>
                 </span>
 
-                <input type="password" name="password" required
+                <input type="password" name="password" required autocomplete="new-password"
                     class="w-full border border-gray-300 rounded-xl p-3 pr-10 password-input focus:ring-2 focus:ring-pink-300 outline-none">
 
                 <button type="button"
                     class="absolute right-3 top-10 text-gray-400 toggle-password">
                     <i class="far fa-eye-slash"></i>
                 </button>
+
+                {{-- PASSWORD RULE UI (MATCHES JS) --}}
+                <div class="password-rules text-xs mt-2 space-y-1">
+                    <p data-rule="length" class="text-gray-400">At least 8 characters</p>
+                    <p data-rule="uppercase" class="text-gray-400">One uppercase letter</p>
+                    <p data-rule="lowercase" class="text-gray-400">One lowercase letter</p>
+                    <p data-rule="number" class="text-gray-400">One number</p>
+                </div>
             </label>
 
             {{-- Confirm Password --}}
             <label class="flex flex-col relative">
                 <span class="mb-1 font-medium text-gray-700">Confirm Password</span>
 
-                <input type="password" name="password_confirmation" required
+                <input type="password" name="password_confirmation" required autocomplete="new-password"
                     class="w-full border border-gray-300 rounded-xl p-3 pr-10 password-input focus:ring-2 focus:ring-pink-300 outline-none">
 
                 <button type="button"

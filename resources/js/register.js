@@ -6,59 +6,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const steps = form.querySelectorAll('.step');
     let currentStep = 0;
 
-    /**
-     * =========================
-     * PASSWORD RULE CHECK
-     * =========================
-     */
     let passwordValid = false;
-
-    const validatePasswordRules = (password) => {
-        return {
-            length: password.length >= 8,
-            upper: /[A-Z]/.test(password),
-            lower: /[a-z]/.test(password),
-            number: /\d/.test(password),
-        };
-    };
+    let usernameValid = false;
+    let emailValid = false;
 
     /**
      * =========================
-     * PROGRESS BAR (PAGE)
+     * PASSWORD RULES
      * =========================
      */
-    const circlesPage = document.querySelectorAll('.progress-step');
-    const progressLinePage = document.getElementById('progress-line');
+    const validatePasswordRules = (password) => ({
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /\d/.test(password),
+    });
 
-    const updateProgressPage = (index) => {
-        if (!circlesPage.length || !progressLinePage) return;
+    /**
+     * =========================
+     * PROGRESS BAR (PAGE + MODAL)
+     * =========================
+     */
+    const circles = document.querySelectorAll('.progress-step, .progress-step-modal');
+    const progressLine =
+        document.getElementById('progress-line') ||
+        document.getElementById('progress-line-modal');
 
-        const total = circlesPage.length - 1;
+    const updateProgress = (index) => {
+        if (!circles.length || !progressLine) return;
+
+        const total = circles.length - 1;
         const progress = (index / total) * 100;
 
-        progressLinePage.style.width = `${progress}%`;
+        progressLine.style.width = `${progress}%`;
 
-        circlesPage.forEach((circle, i) => {
-            if (i <= index) {
-                circle.classList.add('bg-pink-400', 'text-white');
-                circle.classList.remove('bg-gray-300', 'text-gray-700');
-            } else {
-                circle.classList.remove('bg-pink-400', 'text-white');
-                circle.classList.add('bg-gray-300', 'text-gray-700');
-            }
+        circles.forEach((circle, i) => {
+            circle.classList.toggle('bg-pink-400', i <= index);
+            circle.classList.toggle('text-white', i <= index);
+            circle.classList.toggle('bg-gray-300', i > index);
+            circle.classList.toggle('text-gray-700', i > index);
         });
     };
 
     const showStep = (index) => {
-        steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
-        updateProgressPage(index);
+        steps.forEach((step, i) => {
+            step.classList.toggle('hidden', i !== index);
+        });
+        updateProgress(index);
     };
 
     showStep(currentStep);
 
     /**
      * =========================
-     * VALIDATION
+     * STEP VALIDATION
      * =========================
      */
     const validateStep = (index) => {
@@ -74,13 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // STEP 3 VALIDATION
         if (index === 2) {
             const password = steps[index].querySelector('input[name="password"]');
             const confirmPassword = steps[index].querySelector('input[name="password_confirmation"]');
             const errorMsg = confirmPassword.parentElement.querySelector('.password-error');
-
-            if (errorMsg) errorMsg.classList.add('hidden');
 
             if (!passwordValid) {
                 password.classList.add('border-red-500');
@@ -89,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (password.value !== confirmPassword.value) {
                 confirmPassword.classList.add('border-red-500');
-                if (errorMsg) errorMsg.classList.remove('hidden');
+                errorMsg?.classList.remove('hidden');
                 valid = false;
             }
         }
@@ -127,8 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     form.querySelectorAll('.toggle-password').forEach(btn => {
         btn.addEventListener('click', () => {
-            const container = btn.closest('label');
-            const input = container.querySelector('.password-input');
+            const input = btn.closest('label').querySelector('.password-input');
             const icon = btn.querySelector('i');
 
             if (!input) return;
@@ -150,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const usernameField = form.querySelector('input[name="username"]');
     const usernameError = form.querySelector('#username-error');
-    let usernameValid = false;
 
     if (usernameField) {
         usernameField.addEventListener('input', () => {
@@ -187,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * =========================
      */
     const emailField = form.querySelector('input[name="email"]');
-    let emailValid = false;
 
     if (emailField) {
         const emailError = document.createElement('span');
@@ -233,12 +228,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (phoneField) {
         const phoneError = document.createElement('span');
         phoneError.className = "text-red-500 text-xs mt-1 hidden";
-        phoneError.innerText = "Invalid phone number (must be 11 digits)";
+        phoneError.innerText = "Invalid phone number (11 digits)";
         phoneField.parentElement.appendChild(phoneError);
 
         phoneField.addEventListener('input', () => {
-            const value = phoneField.value;
-            const valid = /^\d{11}$/.test(value);
+            const valid = /^\d{11}$/.test(phoneField.value);
 
             if (!valid) {
                 phoneField.classList.add('border-red-500');
@@ -252,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * =========================
-     * PASSWORD LIVE UI CHECK
+     * PASSWORD LIVE UI
      * =========================
      */
     const step3 = steps[2];
@@ -264,34 +258,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const rulesContainer = step3.querySelector('.password-rules');
 
-        const ruleElements = {
-            length: rulesContainer?.querySelector('[data-rule="length"]'),
-            upper: rulesContainer?.querySelector('[data-rule="upper"]'),
-            lower: rulesContainer?.querySelector('[data-rule="lower"]'),
-            number: rulesContainer?.querySelector('[data-rule="number"]'),
-        };
+        const ruleLength = rulesContainer?.querySelector('[data-rule="length"]');
+        const ruleUpper = rulesContainer?.querySelector('[data-rule="uppercase"]');
+        const ruleLower = rulesContainer?.querySelector('[data-rule="lowercase"]');
+        const ruleNumber = rulesContainer?.querySelector('[data-rule="number"]');
 
-        const updateUI = (value) => {
-            const checks = validatePasswordRules(value);
+        const updateRuleUI = () => {
+            const checks = validatePasswordRules(password.value);
 
-            passwordValid = Object.values(checks).every(v => v);
-
-            Object.keys(checks).forEach(key => {
-                const el = ruleElements[key];
+            const update = (el, condition) => {
                 if (!el) return;
 
-                if (checks[key]) {
-                    el.textContent = "✔ " + el.textContent.substring(2);
-                    el.classList.add('text-green-500');
-                    el.classList.remove('text-gray-400');
-                } else {
-                    el.textContent = "✖ " + el.textContent.substring(2);
-                    el.classList.remove('text-green-500');
-                    el.classList.add('text-gray-400');
-                }
-            });
+                const text = el.textContent.replace(/^✔|✖/, '').trim();
 
-            password.classList.toggle('border-red-500', !passwordValid);
+                el.classList.remove('text-red-500', 'text-green-500');
+
+                if (condition) {
+                    el.classList.add('text-green-500');
+                    el.innerHTML = `✔ ${text}`;
+                } else {
+                    el.classList.add('text-red-500');
+                    el.innerHTML = `✖ ${text}`;
+                }
+            };
+
+            update(ruleLength, checks.length);
+            update(ruleUpper, checks.uppercase);
+            update(ruleLower, checks.lowercase);
+            update(ruleNumber, checks.number);
+
+            passwordValid = Object.values(checks).every(Boolean);
+
+            password.classList.remove('border-red-500', 'border-green-500');
+            password.classList.add(passwordValid ? 'border-green-500' : 'border-red-500');
         };
 
         const checkMatch = () => {
@@ -299,15 +298,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (password.value !== confirmPassword.value) {
                 confirmPassword.classList.add('border-red-500');
+                confirmPassword.classList.remove('border-green-500');
                 errorMsg?.classList.remove('hidden');
             } else {
                 confirmPassword.classList.remove('border-red-500');
+                confirmPassword.classList.add('border-green-500');
                 errorMsg?.classList.add('hidden');
             }
         };
 
         password?.addEventListener('input', () => {
-            updateUI(password.value);
+            updateRuleUI();
             checkMatch();
         });
 
@@ -316,22 +317,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * =========================
-     * SUBMIT VALIDATION
+     * SUBMIT
      * =========================
      */
     form.addEventListener('submit', (e) => {
-        const passOK = validateStep(2);
+        const validStep = validateStep(2);
 
-        if (!passOK || !passwordValid || usernameValid === false || emailValid === false) {
+        if (!validStep || !passwordValid || !usernameValid || !emailValid) {
             e.preventDefault();
-
-            // balik sa step 3
             currentStep = 2;
             showStep(currentStep);
-
-            if (!passwordValid) {
-                form.querySelector('input[name="password"]').focus();
-            }
         }
     });
 

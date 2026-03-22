@@ -137,10 +137,10 @@
 
                     {{-- ✅ PASSWORD RULES UI --}}
                     <div class="text-xs mt-2 space-y-1 password-rules">
-                        <p data-rule="length" class="text-gray-400">✖ At least 8 characters</p>
-                        <p data-rule="upper" class="text-gray-400">✖ 1 uppercase letter</p>
-                        <p data-rule="lower" class="text-gray-400">✖ 1 lowercase letter</p>
-                        <p data-rule="number" class="text-gray-400">✖ 1 number</p>
+                        <p data-rule="length" class="text-gray-400">At least 8 characters</p>
+                        <p data-rule="uppercase" class="text-gray-400">1 uppercase letter</p>
+                        <p data-rule="lowercase" class="text-gray-400">1 lowercase letter</p>
+                        <p data-rule="number" class="text-gray-400">1 number</p>
                     </div>
                 </label>
 
