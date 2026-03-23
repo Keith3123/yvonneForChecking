@@ -21,7 +21,7 @@
                             hover:-translate-y-2 hover:shadow-2xl
                             cursor-pointer overflow-hidden">
 
-                    <img src="{{ asset('images/' . $product['imageURL']) }}"
+                    <img src="{{ asset('storage/products/' . $product['imageURL']) }}"
                          class="w-full h-40 object-cover
                                 transition-transform duration-500 hover:scale-105">
 
@@ -44,7 +44,7 @@
                            hover:-translate-y-2 hover:shadow-2xl
                            cursor-pointer overflow-hidden">
 
-                    <img src="{{ asset('images/' . $product['imageURL']) }}"
+                    <img src="{{ asset('storage/products/' . $product['imageURL']) }}"
                          class="w-full h-40 object-cover
                                 transition-transform duration-500 hover:scale-105">
 

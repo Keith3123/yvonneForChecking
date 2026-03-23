@@ -86,7 +86,7 @@
                                 @php
                                     $productImageURL = $item->product->imageURL ?? null;
                                 @endphp
-                                <img src="{{ $productImageURL ? asset('images/'.$productImageURL) : asset('images/sample_food.jpg') }}"
+                                <img src="{{ $productImageURL ? asset('storage/products/'.$productImageURL) : asset('images/sample_food.jpg') }}"
                                      alt="Food Package"
                                      class="w-24 h-24 object-cover rounded-lg border shadow-sm">
                                 <div class="flex-1">

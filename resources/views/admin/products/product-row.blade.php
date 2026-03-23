@@ -1,6 +1,6 @@
 <tr id="productRow{{ $product->productID }}" class="border-b hover:bg-pink-50 transition">
     <td class="p-4 flex gap-3 items-center">
-        <img src="{{ asset('images/' . $product->imageURL) }}" class="w-14 h-14 rounded-lg object-cover shadow">
+        <img src="{{ asset('storage/products/' . $product->imageURL) }}" class="w-14 h-14 rounded-lg object-cover shadow">
         <div class="relative">
             <p class="font-semibold">{{ $product->name }}</p>
             <p class="text-xs text-gray-500">{{ $product->description ?? '' }}</p>
