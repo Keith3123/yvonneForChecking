@@ -1,3 +1,14 @@
+@php 
+    $user = session('logged_in_user');
+    $showOrderDot = false;
+    if($user) {
+        $showOrderDot = \App\Models\Order::where('customerID', $user['customerID'])
+            ->whereIn('status', ['Confirmed', 'Preparing', 'Out for Delivery', 'Done', 'Cancelled'])
+            ->where('is_read', false)
+            ->exists();
+    }
+@endphp
+
 <nav class="w-full bg-pink-100/90 backdrop-blur-md shadow-md px-6 md:px-20 py-4 sticky top-0 z-50">
 
     <div class="flex justify-between items-center">
@@ -32,13 +43,21 @@
 
             @if($user)
                 <a href="{{ route('orders.index') }}"
-                   class="relative font-medium text-gray-800 transition-all duration-300
-                          hover:text-pink-500 hover:-translate-y-0.5
-                          after:absolute after:left-1/2 after:-bottom-1
-                          after:h-[2px] after:w-0 after:bg-pink-500 after:transition-all
-                          after:-translate-x-1/2 hover:after:w-full">
-                    My Orders
-                </a>
+   class="relative font-medium text-gray-800 transition-all duration-300
+          hover:text-pink-500 hover:-translate-y-0.5 flex items-center gap-1 group">
+    My Orders
+    
+    @if($showOrderDot)
+        <!-- The Notification Dot -->
+        <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+        </span>
+    @endif
+
+    <span class="absolute left-1/2 -bottom-1 h-[2px] w-0 bg-pink-500 transition-all 
+          group-hover:w-full -translate-x-1/2"></span>
+</a>
 
                 <!-- PROFILE DROPDOWN -->
                 <div class="relative" x-data="{ open: false }">

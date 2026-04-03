@@ -6,11 +6,17 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Customer;
 
-class AdminOrdersController extends Controller
+class AdminOrdersController extends AdminBaseController
 {
     public function index()
     {
-        $orders = Order::with(['orderItems.product', 'customer'])
+        parent::__construct();
+        $user = session('admin_user');
+        if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 3)) {
+            abort(403, 'Unauthorized');
+        }
+
+        $orders = Order::with(['orderItems.product', 'customer', 'payment'])
             ->orderBy('orderDate', 'desc')
             ->get();
 
@@ -22,7 +28,7 @@ class AdminOrdersController extends Controller
 
     public function viewOrder($orderID)
     {
-        $order = Order::with(['orderItems.product', 'customer'])
+        $order = Order::with(['orderItems.product', 'customer', 'payment'])
             ->where('orderID', $orderID)
             ->first();
 
@@ -67,6 +73,7 @@ class AdminOrdersController extends Controller
         }
 
         $order->status = $request->status;
+        $order->is_read = false; 
         $order->save();
 
         return response()->json([

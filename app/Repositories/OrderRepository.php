@@ -6,21 +6,22 @@ use App\DTO\CreateOrderDTO;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use Illuminate\Support\Facades\Log;
 
 class OrderRepository implements OrderRepositoryInterface
 {
-    public function create(CreateOrderDTO $orderDTO): int
+    public function create(CreateOrderDTO $dto): int
     {
         $order = Order::create([
-            'customerID'      => $orderDTO->customerID,
-            'deliveryAddress' => $orderDTO->deliveryAddress,
-            'remarks'         => $orderDTO->remarks,
-            'totalAmount'     => collect($orderDTO->items)->sum(fn($i) => $i['price'] * $i['qty']),
+            'customerID'      => $dto->customerID,
+            'deliveryAddress' => $dto->deliveryAddress,
+            'remarks'         => $dto->remarks,
+            'totalAmount'     => 0, // will update after items
             'status'          => 'Pending',
             'orderDate'       => now(),
             'paymentStatus'   => 'Pending',
-            'deliveryDate'    => $orderDTO->deliveryDate,
-            'deliveryTime'    => $orderDTO->deliveryTime,
+            'deliveryDate'    => $dto->deliveryDate,
+            'deliveryTime'    => $dto->deliveryTime,
         ]);
 
         return $order->orderID;
@@ -29,13 +30,11 @@ class OrderRepository implements OrderRepositoryInterface
     public function addItems(int $orderID, array $items): void
     {
         foreach ($items as $item) {
-
-            // Ensure productID exists and is numeric
             $productID = $item['productID'] ?? $item['id'] ?? null;
 
             if (!is_numeric($productID)) {
-                \Log::error('Invalid productID for order item', $item);
-                continue; // skip invalid product
+                Log::error('Invalid productID for order item', $item);
+                continue;
             }
 
             OrderItem::create([
@@ -43,9 +42,18 @@ class OrderRepository implements OrderRepositoryInterface
                 'productID' => (int)$productID,
                 'price'     => $item['price'],
                 'qty'       => $item['qty'],
-                // subtotal is auto-calculated in DB
             ]);
         }
+    }
+
+    public function updateTotalAmount(int $orderID): void
+    {
+        $order = Order::find($orderID);
+        if (!$order) return;
+
+        $total = $order->orderItems()->sum('subtotal');
+        $order->totalAmount = $total;
+        $order->save();
     }
 
     public function addPayment(int $orderID, CreateOrderDTO $dto): void
@@ -70,4 +78,4 @@ class OrderRepository implements OrderRepositoryInterface
             ->get()
             ->toArray();
     }
-}
+}   

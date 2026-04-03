@@ -1,85 +1,65 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // -------------------- PAYMENT TOGGLE --------------------
-    const gcashDetails = document.getElementById('gcashDetails');
-    const codNote = document.getElementById('codNote');
-    const paymentRadios = document.querySelectorAll('input[name="payment"]');
-    const orderTotal = document.getElementById('orderTotal');
-    const checkoutForm = document.getElementById('checkoutForm');
-    const placeOrderBtn = document.getElementById('place-order-btn');
+document.addEventListener('DOMContentLoaded', () => {
 
-    function togglePaymentDetails() {
-        const checkedRadio = document.querySelector('input[name="payment"]:checked');
-        const selected = checkedRadio ? checkedRadio.value : null;
+    const btn = document.getElementById('place-order-btn');
+    const form = document.getElementById('checkoutForm');
+    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        if (selected === 'gcash') {
-            gcashDetails.classList.remove('hidden');
-            codNote.classList.add('hidden');
-        } else if (selected === 'cod') {
-            gcashDetails.classList.add('hidden');
-            codNote.classList.remove('hidden');
-            orderTotal.textContent = document.getElementById('summaryTotal').textContent;
-        } else {
-            gcashDetails.classList.add('hidden');
-            codNote.classList.add('hidden');
+    btn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        const payment = document.querySelector('input[name="payment"]:checked')?.value;
+
+        if (!payment) {
+            alert('Select payment method');
+            return;
         }
-    }
 
-    // Listen to payment radio changes
-    paymentRadios.forEach(radio => radio.addEventListener('change', togglePaymentDetails));
-    togglePaymentDetails();
+        const formData = new FormData(form);
+        formData.append('payment', payment); // ✅ append selected payment
 
-    // -------------------- PLACE ORDER AJAX --------------------
-    if (placeOrderBtn) {
-        placeOrderBtn.addEventListener('click', async (e) => {
-            e.preventDefault(); // prevent default form submission
-            placeOrderBtn.disabled = true;
-            placeOrderBtn.textContent = 'Placing Order...';
 
-            const formData = new FormData(checkoutForm);
+        try {
+            let res, data;
 
-            const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value;
-        
-             if (paymentMethod === 'gcash') {
-            const fileInput = document.querySelector('input[name="paymentProof"]');
-            if (fileInput.files.length > 0) {
-                formData.append('paymentProof', fileInput.files[0]);
-            }
-
-        }
-            try {
-                const response = await fetch(checkoutForm.action, {
+            // COD
+            if (payment === 'cod') {
+                res = await fetch(window.checkoutRoutes.placeOrder, {
                     method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json' 
-                    },
+                    headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
                     body: formData
                 });
 
-                // Parse JSON response
-                const data = await response.json();
+                data = await res.json();
 
                 if (data.success) {
-                    alert(data.message || 'Order placed successfully!');
-                    if (window.localStorage) localStorage.removeItem('cart');
-                    window.location.href = data.redirect || '/orders';
+                    alert(data.message);
+                    window.location.href = 'orders'; // ✅ redirect to orders page
                 } else {
-                    // Handle validation errors from Laravel
-                    if (data.errors) {
-                        let messages = Object.values(data.errors).flat().join('\n');
-                        alert(messages);
-                    } else {
-                        alert(data.error || 'Failed to place order. Please check your inputs.');
-                    }
-                    placeOrderBtn.disabled = false;
-                    placeOrderBtn.textContent = 'Place Order';
+                    alert(data.error || 'Error');
                 }
-            } catch (err) {
-                console.error(err);
-                alert('Network error or session expired. Please refresh and try again.');
-                placeOrderBtn.disabled = false;
-                placeOrderBtn.textContent = 'Place Order';
             }
-        });
-    }
+
+            // GCASH
+            if (payment === 'gcash') {
+                res = await fetch(window.checkoutRoutes.paymongo, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+                    body: formData
+                });
+
+                data = await res.json();
+
+                if (data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else {
+                    alert(data.error || 'GCash error');
+                }
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert('Something broke. Check console.');
+        }
+    });
+
 });

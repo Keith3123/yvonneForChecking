@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -10,23 +9,29 @@ class PaluwaganEntry extends Model
     protected $primaryKey = 'paluwaganEntryID';
     public $timestamps = false;
 
-     protected $fillable = [
+    protected $fillable = [
         'customerID',
         'packageID',
         'joinDate',
-        'Status',
+        'status',
     ];
 
+    // Entry → Package
+    public function package()
+    {
+        return $this->belongsTo(PaluwaganPackage::class, 'packageID', 'packageID');
+    }
 
-public function package()
-{
-    return $this->belongsTo(PaluwaganPackage::class, 'packageID');
-}
+    // Entry → Schedules
+    public function schedules()
+    {
+        return $this->hasMany(PaluwaganSchedule::class, 'paluwaganEntryID', 'paluwaganEntryID');
+    }
 
-public function schedules()
-{
-    return $this->hasMany(PaluwaganSchedule::class, 'paluwaganEntryID');
+    // Entry → Payments
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'paluwaganEntryID', 'paluwaganEntryID')
+                    ->where('contextType', 'paluwagan');
+    }
 }
-
-}
-?>

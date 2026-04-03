@@ -10,7 +10,12 @@ class ProductType extends Model
     protected $primaryKey = 'productTypeID';
     public $timestamps = false;
 
-    protected $fillable = ['name', 'image', 'key', 'productType' ];
+    protected $fillable = [
+        'name',
+        'productType',
+        'created_at',
+        'updated_by'
+    ];
 
     public function products()
     {

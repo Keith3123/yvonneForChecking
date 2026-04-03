@@ -17,9 +17,19 @@ class OrdersPageController extends Controller
             return redirect()->route('catalog')->with('error', 'Please log in to view your orders.');
         }
 
+         Order::where('customerID', $customerID)
+        ->whereIn('status', ['Confirmed', 'Preparing', 'Out for Delivery', 'Done', 'Cancelled'])
+        ->where('is_read', false)
+        ->update(['is_read' => true]);
+        
         $orders = Order::where('customerID', $customerID)
             ->with(['orderItems.product'])
-            ->orderBy('orderDate', 'desc')
+            ->orderByRaw("CASE 
+        WHEN status IN ('Confirmed', 'Preparing', 'Out for Delivery', 'Pending') THEN 0 
+        WHEN status IN ('Done', 'Cancelled') THEN 1 
+        ELSE 2 
+    END ASC")
+            ->orderBy('updated_at', 'desc')
             ->get();
 
         $vatRate = 0.12;

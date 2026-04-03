@@ -4,6 +4,27 @@
 @endsection
 
 @section('content')
+{{-- SUCCESS FEEDBACK TOAST --}}
+@if(session('success'))
+    <div id="success-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[100] flex items-center w-full max-w-xs p-4 text-gray-700 bg-white rounded-xl shadow-2xl border-l-4 border-pink-500 animate-bounce" role="alert">
+        <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-pink-500 bg-pink-100 rounded-lg">
+            <i class="fas fa-check"></i>
+        </div>
+        <div class="ml-3 text-sm font-semibold">{{ session('success') }}</div>
+    </div>
+
+    <script>
+        setTimeout(() => {
+            const toast = document.getElementById('success-toast');
+            if(toast) {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => toast.remove(), 500);
+            }
+        }, 4000);
+    </script>
+@endif
+
 <div class="bg-gradient-to-br from-[#FFF6F6] to-[#FFFDFD] min-h-screen py-12">
     <div class="max-w-5xl mx-auto px-6">
 
@@ -62,11 +83,10 @@
 
                     <div>
                         <label class="font-medium text-gray-700 mb-1 block">Username</label>
-                        <input type="text" value="{{ $user['username'] }}" readonly
-                            class="w-full rounded-lg bg-gray-100 px-3 py-2 text-gray-700
-                            border-0 outline-none focus:outline-none focus:ring-0 focus:border-transparent
-                            cursor-not-allowed">
-                        <p class="text-xs text-gray-400 mt-1">Username cannot be changed</p>
+                        <input type="text" name="username" value="{{ $user['username'] }}"
+                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2
+                            focus:ring-2 focus:ring-pink-300 outline-none">
+                        <p class="text-xs text-gray-400 mt-1">Your username must be unique</p>
                     </div>
 
                     <div class="grid grid-cols-3 gap-3">
@@ -100,7 +120,7 @@
                     </div>
 
                     <div class="md:col-span-2">
-                        <label class="font-medium text-gray-700 mb-1 block">Delivery Address</label>
+                        <label class="font-medium text-gray-700 mb-1 block">Personal Address</label>
                         <input name="address" value="{{ $user['address'] }}" readonly
                             class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                     </div>
@@ -138,7 +158,14 @@
             <div class="flex justify-between items-center bg-pink-50 border border-pink-200 p-5 rounded-xl">
                 <div>
                     <p class="font-medium text-gray-800">Password</p>
-                    <p class="text-xs text-gray-500">Last changed: Never</p>
+                    <p class="text-xs text-gray-500">
+    Last changed: 
+    @if($user->password_changed_at)
+        {{ \Carbon\Carbon::parse($user->password_changed_at)->diffForHumans() }}
+    @else
+        Never
+    @endif
+</p>
                 </div>
                 <button onclick="openPasswordModal()"
                     class="px-4 py-2 rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition">
@@ -163,38 +190,46 @@
                         Customer
                     </span>
                 </p>
-                <p><strong>Member Since:</strong> Recently Joined</p>
+                <p><strong>Member Since:</strong> 
+                    {{ \Carbon\Carbon::parse($user->created_at)->format('F d, Y') }}
+                </p>
             </div>
         </div>
 
         {{-- PASSWORD MODAL --}}
-        <div id="passwordModal"
-            class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+     <div id="passwordModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 overflow-hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">Change Password</h2>
+                    <button onclick="closePasswordModal()" class="text-gray-400 hover:text-gray-600">&times;</button>
+                </div>
 
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-                <h2 class="text-xl font-semibold mb-4">Change Password</h2>
-
-                <form action="{{ route('password.update') }}" method="POST">
+                <form action="{{ route('profile.password.update') }}" method="POST" class="space-y-4">
                     @csrf
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                        <input type="password" name="current_password" required
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none @error('current_password') border-red-500 @enderror">
+                        @error('current_password')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
 
-                    <input type="password" name="current_password" placeholder="Current Password"
-                        class="w-full mb-3 rounded-lg border px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                        <input type="password" name="new_password" required
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                    </div>
 
-                    <input type="password" name="new_password" placeholder="New Password"
-                        class="w-full mb-3 rounded-lg border px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                        <input type="password" name="new_password_confirmation" required
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                    </div>
 
-                    <input type="password" name="new_password_confirmation" placeholder="Confirm New Password"
-                        class="w-full mb-4 rounded-lg border px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
-
-                    <div class="flex justify-end gap-3">
-                        <button type="button" onclick="closePasswordModal()"
-                            class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">
-                            Cancel
-                        </button>
-                        <button type="submit"
-                            class="px-4 py-2 rounded-lg bg-pink-500 text-white hover:bg-pink-600">
-                            Update Password
-                        </button>
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button type="button" onclick="closePasswordModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition">Update Password</button>
                     </div>
                 </form>
             </div>
@@ -202,6 +237,7 @@
 
     </div>
 </div>
+
 
 <script>
     const editBtn = document.getElementById('editBtn');
@@ -241,32 +277,19 @@
     function showTab(tab) {
         const profileTab = document.getElementById('profile-tab');
         const securityTab = document.getElementById('security-tab');
-
         const profileBtn = document.getElementById('tab-profile');
         const securityBtn = document.getElementById('tab-security');
 
         if (tab === 'profile') {
-            // Show content
             profileTab.classList.remove('hidden');
             securityTab.classList.add('hidden');
-
-            // Active styles
-            profileBtn.classList.add('bg-pink-100', 'text-pink-600');
-            profileBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
-
-            securityBtn.classList.remove('bg-pink-100', 'text-pink-600');
-            securityBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+            profileBtn.className = "w-1/2 py-2 rounded-full transition bg-pink-100 text-pink-600";
+            securityBtn.className = "w-1/2 py-2 rounded-full transition text-gray-600 hover:bg-gray-100";
         } else {
-            // Show content
             securityTab.classList.remove('hidden');
             profileTab.classList.add('hidden');
-
-            // Active styles
-            securityBtn.classList.add('bg-pink-100', 'text-pink-600');
-            securityBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
-
-            profileBtn.classList.remove('bg-pink-100', 'text-pink-600');
-            profileBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+            securityBtn.className = "w-1/2 py-2 rounded-full transition bg-pink-100 text-pink-600";
+            profileBtn.className = "w-1/2 py-2 rounded-full transition text-gray-600 hover:bg-gray-100";
         }
     }
 
@@ -277,7 +300,37 @@
 
     // Close change password modal
     function closePasswordModal() {
-        document.getElementById('passwordModal').classList.add('hidden');
+ document.getElementById('passwordModal').classList.add('hidden');
     }
+// Edit Profile Logic
+    document.getElementById('editBtn').addEventListener('click', function() {
+        document.querySelectorAll('.profile-field').forEach(el => {
+            el.removeAttribute('readonly');
+            el.classList.replace('bg-gray-100', 'bg-white');
+        });
+        this.classList.add('hidden');
+        document.getElementById('saveBtn').classList.remove('hidden');
+        document.getElementById('cancelBtn').classList.remove('hidden');
+    });
+
+    // Automatically re-open modal if there are password errors
+    @if($errors->has('current_password') || $errors->has('new_password'))
+        window.onload = function() {
+            showTab('security');
+            openPasswordModal();
+        };
+    @endif
+
+
+    document.querySelectorAll('.profile-field').forEach((field, i, arr) => {
+    field.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // prevent form submit
+            if (i + 1 < arr.length) {
+                arr[i + 1].focus();
+            }
+        }
+    });
+});
 </script>
 @endsection

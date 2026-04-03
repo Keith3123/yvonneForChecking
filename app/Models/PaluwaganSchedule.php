@@ -9,7 +9,6 @@ class PaluwaganSchedule extends Model
     protected $primaryKey = 'scheduleID';
     public $timestamps = false;
 
-
     protected $fillable = [
         'paluwaganEntryID',
         'dueDate',
@@ -18,10 +17,23 @@ class PaluwaganSchedule extends Model
         'amountPaid',
         'isPaid'
     ];
-   
-public function entry() 
-{
-    return $this->belongsTo(PaluwaganEntry::class, 'paluwaganEntryID');
+
+    // Link to payment (single payment per schedule)
+    public function payment()
+    {
+        return $this->hasOne(Payment::class, 'paluwaganEntryID', 'paluwaganEntryID')
+                    ->where('contextType', 'paluwagan');
+    }
+
+    // Schedule → Entry
+    public function entry()
+    {
+        return $this->belongsTo(PaluwaganEntry::class, 'paluwaganEntryID', 'paluwaganEntryID');
+    }
+
+    // Schedule → Package through entry
+    public function package()
+    {
+        return $this->belongsTo(PaluwaganPackage::class, 'paluwaganPackageID', 'packageID');
+    }
 }
-}
-?>

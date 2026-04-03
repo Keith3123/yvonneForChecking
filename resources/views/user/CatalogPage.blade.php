@@ -4,6 +4,36 @@
 @endsection
 
 @section('content')
+{{-- SUCCESS NOTIFICATION --}}
+@if(session('success'))
+    <div 
+        id="success-toast"
+        class="fixed top-24 left-1/2 -translate-x-1/2 z-[100] flex items-center w-full max-w-xs p-4 text-gray-700 bg-white rounded-lg shadow-2xl border-l-4 border-pink-500 transition-all duration-500"
+        role="alert"
+    >
+        <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-pink-500 bg-pink-100 rounded-lg">
+            <i class="fas fa-check"></i>
+        </div>
+        <div class="ml-3 text-sm font-semibold">{{ session('success') }}</div>
+        <!-- <button type="button" class="ml-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg p-1.5 inline-flex h-8 w-8" onclick="document.getElementById('success-toast').remove()">
+            <span class="sr-only">Close</span>
+            <i class="fas fa-times"></i>
+        </button> -->
+    </div>
+
+    <script>
+        // Auto-hide the toast after 4 seconds
+        setTimeout(() => {
+            const toast = document.getElementById('success-toast');
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -20px)';
+                setTimeout(() => toast.remove(), 500);
+            }
+        }, 4000);
+    </script>
+@endif
+
 <div class="flex min-h-screen bg-[#FFF8F5]">
 
     {{-- MAIN AREA --}}

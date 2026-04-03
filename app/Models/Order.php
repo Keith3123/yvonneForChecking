@@ -23,23 +23,23 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'orderDate' => 'datetime',
+        'orderDate'    => 'datetime',
         'deliveryDate' => 'datetime',
+        'totalAmount'  => 'float',
     ];
 
-    // Order Items
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class, 'orderID', 'orderID');
     }
 
-    // Payment relation
     public function payment()
-    {
-        return $this->hasOne(Payment::class, 'orderID', 'orderID');
-    }
+{
+    return $this->hasOne(Payment::class, 'orderID', 'orderID')->withDefault([
+        'method' => 'COD'
+    ]);
+}
 
-    // Correct Customer relation
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customerID', 'customerID');

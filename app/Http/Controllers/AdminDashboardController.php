@@ -9,10 +9,18 @@ use App\Models\User;
 use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
 
-class AdminDashboardController extends Controller
+class AdminDashboardController extends AdminBaseController
 {
     public function index()
-    {
+    {   
+        parent::__construct();
+
+        // 🔒 Role-based access
+        $user = session('admin_user');
+        if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 1)) {
+            abort(403, 'Unauthorized');
+        }
+
         // Orders
         $totalRevenue = Order::where('status', 'completed')->sum('totalAmount') ?? 0;
         $completedOrders = Order::where('status', 'completed')->count() ?? 0;

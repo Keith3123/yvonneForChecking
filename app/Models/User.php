@@ -11,14 +11,22 @@ class User extends Model
     public $timestamps = true;         // Use timestamps
 
     protected $fillable = [
+        'userID',
         'username',
         'password',
         'roleID',
         'status',
+        'created_at',
+        'updated_at',
     ];
 
     public function role()
     {
         return $this->belongsTo(Role::class, 'roleID', 'roleID');
     }
+
+    public function getAuthPassword()
+{
+    return $this->password;
+}
 }

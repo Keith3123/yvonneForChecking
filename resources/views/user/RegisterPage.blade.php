@@ -58,9 +58,12 @@
                 </label>
 
                 <label class="flex flex-col">
-                    <span class="mb-1">Middle Name</span>
+                    <span class="mb-1">Middle Initial</span>
                     <input type="text" name="mi" value="{{ old('mi') }}"
-                        class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                        class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-300 outline-none @error('mi') border-red-500 @enderror">
+                    @error('mi')
+                        <span class="text-red-500 text-xs mt-1">{{ $message }}</span>
+                    @enderror
                 </label>
             </div>
 
@@ -83,14 +86,17 @@
                         class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
 
-                <label>Address
+                <label>Personal Address
                     <input type="text" name="address" value="{{ old('address') }}" required
                         class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
 
                 <label>Phone Number
                     <input type="text" name="phone" value="{{ old('phone') }}" required
-                        class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none">
+                        class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none @error('phone') is-invalid @enderror">
+                    @error('phone')
+                        <div class="text-red-500 text-xs mt-1">{{ $message }}</div>
+                    @enderror
                 </label>
             </div>
 
@@ -172,6 +178,22 @@
         </div>
     </form>
 </div>
+<script>
+<script>
+    let currentStep = 0;
 
+    @if ($errors->any())
+        // Find the first step that has an error
+        const firstErrorInput = document.querySelector('.is-invalid') || document.querySelector('.step input');
+        if (firstErrorInput) {
+            const stepWithError = firstErrorInput.closest('.step');
+            if (stepWithError) {
+                currentStep = [...document.querySelectorAll('.step')].indexOf(stepWithError);
+            }
+        }
+    @endif
+
+    showStep(currentStep);
+</script>
 @vite('resources/js/register.js')
 @endsection

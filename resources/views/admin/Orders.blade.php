@@ -13,7 +13,7 @@
         </div>
     </div>
 
-    <div class="mt-6 bg-white border border-pink-200 rounded-xl p-6 shadow-sm">
+    <div class="mt-6 bg-white border border-pink-200 rounded-xl p-6 shadow-sm ">
 
         <h2 class="text-xl font-semibold text-gray-700 flex justify-between items-center">
             Orders
@@ -25,10 +25,10 @@
 
             <input type="text" id="searchInput"
                    placeholder="Search Order ID..."
-                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
+                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200 focus:ring-pink-500 focus:outline-none focus:ring-2">
 
             <select id="statusFilter"
-                    class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
+                    class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200 focus:ring-pink-500 focus:outline-none focus:ring-2">
                 <option value="">All Status</option>
                 <option value="Pending">Pending</option>
                 <option value="Confirmed">Confirmed</option>
@@ -39,13 +39,13 @@
             </select>
 
             <input type="date" id="startDate"
-                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
+                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200 focus:ring-pink-500 focus:outline-none focus:ring-2">
 
             <input type="date" id="endDate"
-                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
+                   class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200 focus:ring-pink-500 focus:outline-none focus:ring-2">
 
             <select id="customerFilter"
-                    class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200">
+                    class="border rounded-lg px-3 py-2 text-sm w-full border-pink-200 focus:ring-pink-500 focus:outline-none focus:ring-2">
                 <option value="">All Customers</option>
                 @foreach($customers as $customer)
                     <option value="{{ strtolower($customer->firstName . ' ' . $customer->lastName) }}">
@@ -134,7 +134,7 @@
                         <td class="py-3 px-4 font-medium">{{ $order->orderID }}</td>
 
                         <td class="py-3 px-4">
-                            {{ $order->orderDate ? $order->orderDate->format('Y-m-d H:i') : 'N/A' }}
+                            {{ $order->orderDate ? $order->orderDate->format('Y-m-d h:i A') : 'N/A' }}
                         </td>
 
                         <td class="py-3 px-4">
@@ -146,7 +146,7 @@
                         </td>
 
                         <td class="py-3 px-4">
-                            {{ $order->paymentStatus }}
+                            {{ $order->payment->method }}
                         </td>
 
                         <td class="py-3 px-4 status">
@@ -190,7 +190,6 @@
             &times;
         </button>
 
-        <h3 class="text-xl font-semibold mb-4">Order Details</h3>
         <div id="order-content"></div>
     </div>
 </div>
@@ -490,10 +489,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="col-span-3 border p-4 rounded-lg bg-white shadow-sm mt-6">
                             <h4 class="font-semibold mb-3">Order Details</h4>
                             <p><strong>Order Status:</strong> ${order.status}</p>
-                            <p><strong>Payment Status:</strong> ${order.paymentStatus}</p>
+                            <p><strong>Payment Method:</strong> ${order.payment?.method ?? 'COD'}</p>
                             <p><strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleString()}</p>
                             <p><strong>Delivery Date:</strong> ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</p>
-                            <p><strong>Delivery Time:</strong> ${order.deliveryTime ?? 'N/A'}</p>
+                            <p><strong>Delivery Time:</strong> ${
+                                order.deliveryTime 
+                                    ? new Date(`1970-01-01T${order.deliveryTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) 
+                                    : 'N/A'
+                            }</p>
                             <p><strong>Delivery Address:</strong> ${order.deliveryAddress ?? 'N/A'}</p>
                         </div>
                     </div>
@@ -508,6 +511,15 @@ document.addEventListener("DOMContentLoaded", () => {
     window.closeViewModal = function() {
         document.getElementById('view-order-modal').classList.add('hidden');
     };
+
+    // Close modal on backdrop click
+    document.getElementById('view-order-modal').addEventListener('click', e => {
+        if(e.target.id === 'view-order-modal') closeViewModal();
+    });
+
+    document.getElementById('confirmModal').addEventListener('click', e => {
+        if(e.target.id === 'confirmModal') closeConfirmModal();
+    });
 
     // AUTO DESELECT ON OUTSIDE CLICK
     document.addEventListener('click', (e) => {

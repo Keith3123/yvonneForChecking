@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Services\OrderService;
 use App\DTO\CreateOrderDTO;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Models\Customer;
 
 class CheckoutPageController extends Controller
@@ -14,146 +16,223 @@ class CheckoutPageController extends Controller
 
     public function __construct(OrderService $orderService)
     {
+        // ✅ FIXED (critical)
         $this->orderService = $orderService;
     }
 
+    // ==============================
+    // CHECKOUT PAGE
+    // ==============================
     public function index()
     {
         $cart = session('cart', []);
-        $subtotal = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
-        $vatRate = 0.12; // 12% VAT
-        $vatAmount = round($subtotal * $vatRate, 2);
-        $total = $subtotal + $vatAmount;
+        $total = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
 
-        $sessionUser = session('logged_in_user');
+        $vatRate = 0.12;
+        $subtotal = round($total / (1 + $vatRate), 2);
+        $vatAmount = round($total - $subtotal, 2);
+
         $customer = null;
-
-        if ($sessionUser) {
+        if ($sessionUser = session('logged_in_user')) {
             $customer = Customer::find($sessionUser['customerID']);
         }
 
         return view('user.CheckoutPage', compact('cart', 'subtotal', 'vatAmount', 'total', 'customer'));
     }
 
+    // ==============================
+    // COD ORDER
+    // ==============================
     public function placeOrder(Request $request)
     {
-        $isAjax = $request->expectsJson() || $request->wantsJson();
-
         $customer = session('logged_in_user');
-        $customerID = $customer['customerID'] ?? null;
-
-        if (!$customerID) {
-            return $isAjax
-                ? response()->json(['error' => 'You must be logged in as a customer to place an order.'])
-                : back()->with('error', 'You must be logged in as a customer to place an order.');
-        }
+        if (!$customer) return response()->json(['error' => 'Login required'], 401);
 
         $cart = session('cart', []);
-        if (empty($cart)) {
-            return $isAjax
-                ? response()->json(['error' => 'Your cart is empty.'])
-                : redirect()->route('cart')->with('error', 'Your cart is empty.');
-        }
+        if (empty($cart)) return response()->json(['error' => 'Cart empty'], 400);
 
-        try {
-            // Validation rules
-            $rules = [
-                'deliveryAddress' => 'required|string|max:255',
-                'remarks' => 'nullable|string|max:200',
-                'deliveryDate' => 'required|date',
-                'deliveryTime' => 'required|string',
-                'payment' => 'required|string|in:gcash,cod',
-            ];
-
-            if ($request->payment === 'gcash') {
-                $rules['paymentProof'] = 'required|file|mimes:jpg,jpeg,png,pdf|max:10240';
-            } else {
-                $rules['paymentProof'] = 'nullable';
-            }
-
-            $validated = $request->validate($rules);
-
-            // ✅ UPDATE CUSTOMER ADDRESS
-            Customer::where('customerID', $customerID)->update([
-                'address' => $validated['deliveryAddress'],
-            ]);
-
-            $paymentProof = $request->hasFile('paymentProof')
-                ? $request->file('paymentProof')->store('payment_proofs', 'public')
-                : null;
-
-            $items = array_map(fn($item) => [
-                'productID' => $item['productID'] ?? $item['id'] ?? null,
-                'qty'       => $item['quantity'],
-                'price'     => $item['price'],
-            ], $cart);
-
-            $timeParts = explode('-', $validated['deliveryTime']);
-            $startTime = trim($timeParts[0]);
-            $deliveryDateTime = Carbon::parse($validated['deliveryDate'] . ' ' . $startTime);
-
-            $orderDTO = new CreateOrderDTO([
-                'customerID'      => $customerID,
-                'deliveryAddress' => $validated['deliveryAddress'],
-                'remarks'         => $validated['remarks'] ?? '',
-                'items'           => $items,
-                'deliveryDate'    => $deliveryDateTime->format('Y-m-d H:i:s'),
-                'deliveryTime'    => $validated['deliveryTime'],
-                'payment'         => $validated['payment'],
-                'paymentProof'    => $paymentProof,
-            ]);
-
-            $this->orderService->createOrder($orderDTO);
-
-            session()->forget('cart');
-
-            return $isAjax
-                ? response()->json(['success' => true, 'message' => 'Order placed successfully!', 'redirect' => route('orders.index')])
-                : redirect()->route('catalog')->with('success', 'Your order has been placed successfully!');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            if ($isAjax) {
-                return response()->json(['error' => 'Validation failed', 'errors' => $e->errors()]);
-            }
-            throw $e;
-        } catch (\Exception $e) {
-            if ($isAjax) {
-                return response()->json(['error' => 'Failed to place order. Please try again.', 'exception' => $e->getMessage()]);
-            }
-            return back()->with('error', 'Failed to place order. Please try again.');
-        }
-    }
-
-    // ✅ NEW: Save address from checkout map modal
-    public function saveAddressFromCheckout(Request $request)
-    {
-        $request->validate([
-            'address' => 'required|string|max:255',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+        $validated = $request->validate([
+            'deliveryAddress' => 'required|string|max:255',
+            'remarks' => 'nullable|string|max:200',
+            'deliveryDate' => 'required|date',
+            'deliveryTime' => 'required|string',
+            'payment' => 'required|string|in:cod,gcash', // ✅ add this
         ]);
 
-        $sessionUser = session('logged_in_user');
-        $customerID = $sessionUser['customerID'] ?? null;
+        $items = array_map(fn($item) => [
+            'productID' => $item['productID'] ?? $item['id'],
+            'qty' => $item['quantity'],
+            'price' => $item['price'],
+        ], $cart);
 
-        if (!$customerID) {
-            return response()->json(['status' => 'error', 'message' => 'User not logged in.'], 401);
-        }
+        $dto = new CreateOrderDTO([
+            'customerID' => $customer['customerID'],
+            'deliveryAddress' => $validated['deliveryAddress'],
+            'remarks' => $validated['remarks'] ?? '',
+            'items' => $items,
+            'deliveryDate' => Carbon::parse($validated['deliveryDate'].' '.$validated['deliveryTime']),
+            'deliveryTime' => $validated['deliveryTime'],
+            'payment' => $validated['payment'], // ✅ store selected payment
+        ]);
 
-        $customer = Customer::find($customerID);
-        $customer->address = $request->address;
+        $this->orderService->createOrder($dto);
 
-        // Update lat/lng if exists
-        if (isset($request->latitude)) $customer->latitude = $request->latitude;
-        if (isset($request->longitude)) $customer->longitude = $request->longitude;
-
-        $customer->save();
-
-        // Update session
-        session(['logged_in_user' => $customer->toArray()]);
+        session()->forget('cart');
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'Address saved to your profile.'
+            'success' => true,
+            'message' => 'Order placed successfully'
         ]);
     }
+
+    // ==============================
+    // GCASH PAYMENT
+    // ==============================
+    // ==============================
+public function payWithGcash(Request $request)
+{
+    try {
+        $customer = session('logged_in_user');
+        if (!$customer) return response()->json(['error' => 'Login required'], 401);
+
+        $cart = session('cart', []);
+        if (empty($cart)) return response()->json(['error' => 'Cart empty'], 400);
+
+        $validated = $request->validate([
+            'deliveryAddress' => 'required|string|max:255',
+            'remarks' => 'nullable|string|max:200',
+            'deliveryDate' => 'required|date',
+            'deliveryTime' => 'required|string',
+        ]);
+
+        $total = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
+
+        // ✅ Store payload in session
+        session([
+            'paymongo_payload' => [
+                'customerID' => $customer['customerID'],
+                'deliveryAddress' => $validated['deliveryAddress'],
+                'remarks' => $validated['remarks'] ?? '',
+                'deliveryDate' => $validated['deliveryDate'],
+                'deliveryTime' => $validated['deliveryTime'],
+                'cart' => $cart,
+            ]
+        ]);
+
+        // ✅ Correct redirect object keys for PayMongo
+        $response = Http::withBasicAuth(config('services.paymongo.secret'), '')
+            ->post('https://api.paymongo.com/v1/sources', [
+                'data' => [
+                    'attributes' => [
+                        'type' => 'gcash',
+                        'amount' => intval($total * 100),
+                        'currency' => 'PHP',
+                        'redirect' => [
+                            'success' => route('checkout.payment.processing'),
+                            'failed' => route('checkout.payment.failed'),
+                        ]
+                    ]
+                ]
+            ]);
+
+        if (!$response->successful()) {
+            Log::error('PayMongo failed: ' . json_encode($response->json()));
+            return response()->json(['error' => 'PayMongo failed'], 500);
+        }
+
+        $sourceId = $response->json()['data']['id'];
+        session(['paymongo_source_id' => $sourceId]);
+
+        return response()->json([
+            'checkout_url' => $response->json()['data']['attributes']['redirect']['checkout_url']
+        ]);
+
+    } catch (\Throwable $e) {
+        Log::error('PayMongo Exception: ' . $e->getMessage());
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+
+    // ==============================
+    // PROCESSING PAGE
+    // ==============================
+    public function processing()
+    {
+        return view('payment.processing', [
+            'sourceId' => session('paymongo_source_id')
+        ]);
+    }
+
+    // ==============================
+    // CHECK STATUS (CORE LOGIC)
+    // ==============================
+    public function checkPaymentStatus($sourceId)
+    {
+        try {
+            $response = Http::withBasicAuth(config('services.paymongo.secret'), '')
+                ->get("https://api.paymongo.com/v1/sources/$sourceId");
+
+            $status = $response->json()['data']['attributes']['status'];
+
+            if ($status === 'chargeable') {
+
+                // STEP 1: CREATE PAYMENT
+                Http::withBasicAuth(config('services.paymongo.secret'), '')
+                    ->post('https://api.paymongo.com/v1/payments', [
+                        'data' => [
+                            'attributes' => [
+                                'amount' => $response->json()['data']['attributes']['amount'],
+                                'currency' => 'PHP',
+                                'source' => [
+                                    'id' => $sourceId,
+                                    'type' => 'source',
+                                ],
+                            ]
+                        ]
+                    ]);
+
+                // STEP 2: CREATE ORDER
+                $payload = session('paymongo_payload');
+
+                $items = array_map(fn($item) => [
+                    'productID' => $item['productID'] ?? $item['id'],
+                    'qty' => $item['quantity'],
+                    'price' => $item['price'],
+                ], $payload['cart']);
+
+                $dto = new CreateOrderDTO([
+                    'customerID' => $payload['customerID'],
+                    'deliveryAddress' => $payload['deliveryAddress'],
+                    'remarks' => $payload['remarks'],
+                    'items' => $items,
+                    'deliveryDate' => Carbon::parse($payload['deliveryDate'].' '.$payload['deliveryTime']),
+                    'deliveryTime' => $payload['deliveryTime'],
+                    'payment' => 'gcash',
+                ]);
+
+                $this->orderService->createOrder($dto);
+
+                session()->forget(['cart', 'paymongo_payload', 'paymongo_source_id']);
+
+                return response()->json(['status' => 'paid']);
+            }
+
+            return response()->json(['status' => $status]);
+
+        } catch (\Throwable $e) {
+            Log::error($e->getMessage());
+            return response()->json(['status' => 'error']);
+        }
+    }
+
+    public function paymentSuccess()
+    {
+        return view('payment.success');
+    }
+
+    public function paymentFailed()
+    {
+        return view('payment.failed');
+    }
+    
 }

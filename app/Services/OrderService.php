@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTO\CreateOrderDTO;
 use App\Repositories\OrderRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
@@ -16,36 +17,28 @@ class OrderService
     }
 
     public function createOrder(CreateOrderDTO $dto)
-{
-    \Log::info('Starting createOrder');
+    {
+        Log::info('Starting createOrder');
 
-    try {
-        $orderID = $this->repo->create($dto);
-        \Log::info("Order created: {$orderID}");
-    } catch (\Exception $e) {
-        \Log::error("Failed to create order: " . $e->getMessage());
-        throw $e;
+        return DB::transaction(function () use ($dto) {
+            // Create order
+            $orderID = $this->repo->create($dto);
+            Log::info("Order created: {$orderID}");
+
+            // Add items
+            $this->repo->addItems($orderID, $dto->items);
+            Log::info("Order items added");
+
+            // Update totalAmount after items
+            $this->repo->updateTotalAmount($orderID);
+
+            // Add payment
+            $this->repo->addPayment($orderID, $dto);
+            Log::info("Payment added");
+
+            return $orderID;
+        });
     }
-
-    try {
-        $this->repo->addItems($orderID, $dto->items);
-        \Log::info("Order items added");
-    } catch (\Exception $e) {
-        \Log::error("Failed to add order items: " . $e->getMessage());
-        throw $e;
-    }
-
-    try {
-        $this->repo->addPayment($orderID, $dto);
-        \Log::info("Payment added");
-    } catch (\Exception $e) {
-        \Log::error("Failed to add payment: " . $e->getMessage());
-        throw $e;
-    }
-
-    return $orderID;
-}
-
 
     public function getCustomerOrders(int $customerID)
     {

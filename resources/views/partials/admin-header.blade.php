@@ -9,6 +9,9 @@
 
     <!-- User Greeting -->
     <div class="text-gray-700 text-sm sm:text-base">
-        Welcome, <span class="font-semibold text-pink-500">Yvonne Admin</span>
+        Welcome, 
+        <span class="font-semibold text-pink-500">
+            {{ session('admin_user')['username'] ?? 'Guest' }}
+        </span>
     </div>
 </header>

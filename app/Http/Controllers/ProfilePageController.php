@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Customer;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+
 
 class ProfilePageController extends Controller
 {
@@ -33,70 +35,66 @@ class ProfilePageController extends Controller
 
     // Update the user's profile information
     public function update(Request $request)
-    {
-        // Validate profile fields
-        $request->validate([
-            'firstName' => 'required|string|max:255',
-            'lastName' => 'required|string|max:255',
-            'email' => 'required|email',
-            'phone' => 'required|string|max:20',
-            'address' => 'required|string|max:255',
-        ]);
+{
+    // Get the logged-in user from the session
+    $sessionUser = session('logged_in_user');
+    $customer = Customer::find($sessionUser['customerID']);
 
-        // Get the logged-in user from the session
-        $sessionUser = session('logged_in_user');
-        $customer = Customer::find($sessionUser['customerID']);
-
-        if (!$customer) {
-            return redirect()->back()->with('error', 'User not found.');
-        }
-
-        // Update user information
-        $customer->firstName = $request->firstName;
-        $customer->lastName = $request->lastName;
-        $customer->email = $request->email;
-        $customer->phone = $request->phone;
-        $customer->address = $request->address;
-
-        $customer->save();
-
-        // Update session data so it reflects changes immediately
-        session(['logged_in_user' => $customer->toArray()]);
-
-        return redirect()->back()->with('success', 'Profile updated successfully!');
+    if (!$customer) {
+        return redirect()->back()->with('error', 'User not found.');
     }
+
+    // Validate profile fields, allow current username
+    $request->validate([
+        'username'  => 'required|string|max:255|unique:customer,username,' . $customer->customerID . ',customerID',
+        'firstName' => 'required|string|max:255',
+        'lastName'  => 'required|string|max:255',
+        'email'     => 'required|email',
+        'phone'     => 'required|string|max:20',
+        'address'   => 'required|string|max:255',
+    ]);
+
+    // Update user info including username
+    $customer->username  = $request->username;
+    $customer->firstName = $request->firstName;
+    $customer->lastName  = $request->lastName;
+    $customer->email     = $request->email;
+    $customer->phone     = $request->phone;
+    $customer->address   = $request->address;
+
+    $customer->save();
+
+    // Update session immediately
+    session(['logged_in_user' => $customer->toArray()]);
+
+    return redirect()->back()->with('success', 'Profile updated successfully!');
+}
 
 
     // Update the user's password
     public function updatePassword(Request $request)
     {
-        // Validate the password fields
-        $request->validate([
-            'current_password' => 'required', // Current password is required
-            'new_password' => 'required|min:6|confirmed', // New password must be confirmed
-        ], [
-            'new_password.confirmed' => 'The new password and confirmation password do not match.', // Custom error message
-        ]);
+         $request->validate([
+        'current_password' => 'required',
+        'new_password' => 'required|min:6|confirmed',
+    ]);
 
-        // Get the logged-in user from the session
-        $sessionUser = session('logged_in_user');
-        $customer = Customer::find($sessionUser['customerID']);
+    $sessionUser = session('logged_in_user');
+    $customer = Customer::find($sessionUser['customerID']);
 
-        // Check if the current password matches the one in the database
-        if (!Hash::check($request->current_password, $customer->password)) {
-            return back()->withErrors(['current_password' => 'The current password is incorrect.']);
-        }
-
-        // Hash the new password and update it in the database
-        $customer->password = Hash::make($request->new_password);
-        $customer->save();
-
-        // Log out the user to force them to log in again with the new password
-        Auth::logout();
-
-        // Redirect to the login page with a success message
-        return redirect()->route('login')->with('status', 'Password updated successfully! Please log in again.');
+    if (!Hash::check($request->current_password, $customer->password)) {
+        return back()->withErrors(['current_password' => 'The current password is incorrect.']);
     }
+
+    $customer->password = Hash::make($request->new_password);
+    $customer->password_changed_at = now(); 
+    $customer->save();
+
+    // Re-sync session and redirect back with a success message
+    session(['logged_in_user' => $customer->toArray()]);
+
+    return redirect()->back()->with('success', 'Your password has been changed successfully!');
+}
 
     public function saveAddress(Request $request)
     {

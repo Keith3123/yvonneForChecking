@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-
     const form = document.getElementById('registerForm');
     if (!form) return;
 
@@ -7,8 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentStep = 0;
 
     let passwordValid = false;
-    let usernameValid = false;
-    let emailValid = false;
+    let usernameValid = true;
+    let emailValid = true;
 
     /**
      * =========================
@@ -24,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * =========================
-     * PROGRESS BAR (PAGE + MODAL)
+     * PROGRESS BAR
      * =========================
      */
     const circles = document.querySelectorAll('.progress-step, .progress-step-modal');
@@ -34,10 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateProgress = (index) => {
         if (!circles.length || !progressLine) return;
-
         const total = circles.length - 1;
         const progress = (index / total) * 100;
-
         progressLine.style.width = `${progress}%`;
 
         circles.forEach((circle, i) => {
@@ -49,13 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showStep = (index) => {
-        steps.forEach((step, i) => {
-            step.classList.toggle('hidden', i !== index);
-        });
+        steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
         updateProgress(index);
     };
-
-    showStep(currentStep);
 
     /**
      * =========================
@@ -97,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * =========================
-     * NAVIGATION
+     * NAVIGATION BUTTONS
      * =========================
      */
     form.querySelectorAll('.next-btn').forEach(btn => {
@@ -127,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const input = btn.closest('label').querySelector('.password-input');
             const icon = btn.querySelector('i');
-
             if (!input) return;
 
             if (input.type === 'password') {
@@ -151,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (usernameField) {
         usernameField.addEventListener('input', () => {
             const username = usernameField.value;
-
             if (username.length > 3) {
                 fetch('/check-username', {
                     method: 'POST',
@@ -183,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * =========================
      */
     const emailField = form.querySelector('input[name="email"]');
-
     if (emailField) {
         const emailError = document.createElement('span');
         emailError.className = "text-red-500 text-xs mt-1 hidden";
@@ -192,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         emailField.addEventListener('input', () => {
             const email = emailField.value;
-
             if (email.length > 5) {
                 fetch('/check-email', {
                     method: 'POST',
@@ -224,7 +213,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * =========================
      */
     const phoneField = form.querySelector('input[name="phone"]');
-
     if (phoneField) {
         const phoneError = document.createElement('span');
         phoneError.className = "text-red-500 text-xs mt-1 hidden";
@@ -233,7 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         phoneField.addEventListener('input', () => {
             const valid = /^\d{11}$/.test(phoneField.value);
-
             if (!valid) {
                 phoneField.classList.add('border-red-500');
                 phoneError.classList.remove('hidden');
@@ -250,12 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * =========================
      */
     const step3 = steps[2];
-
     if (step3) {
         const password = step3.querySelector('input[name="password"]');
         const confirmPassword = step3.querySelector('input[name="password_confirmation"]');
         const errorMsg = confirmPassword?.parentElement.querySelector('.password-error');
-
         const rulesContainer = step3.querySelector('.password-rules');
 
         const ruleLength = rulesContainer?.querySelector('[data-rule="length"]');
@@ -265,14 +250,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const updateRuleUI = () => {
             const checks = validatePasswordRules(password.value);
-
             const update = (el, condition) => {
                 if (!el) return;
-
                 const text = el.textContent.replace(/^✔|✖/, '').trim();
-
                 el.classList.remove('text-red-500', 'text-green-500');
-
                 if (condition) {
                     el.classList.add('text-green-500');
                     el.innerHTML = `✔ ${text}`;
@@ -281,21 +262,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.innerHTML = `✖ ${text}`;
                 }
             };
-
             update(ruleLength, checks.length);
             update(ruleUpper, checks.uppercase);
             update(ruleLower, checks.lowercase);
             update(ruleNumber, checks.number);
-
             passwordValid = Object.values(checks).every(Boolean);
-
             password.classList.remove('border-red-500', 'border-green-500');
             password.classList.add(passwordValid ? 'border-green-500' : 'border-red-500');
         };
 
         const checkMatch = () => {
             if (!confirmPassword.value) return;
-
             if (password.value !== confirmPassword.value) {
                 confirmPassword.classList.add('border-red-500');
                 confirmPassword.classList.remove('border-green-500');
@@ -311,23 +288,57 @@ document.addEventListener('DOMContentLoaded', () => {
             updateRuleUI();
             checkMatch();
         });
-
         confirmPassword?.addEventListener('input', checkMatch);
     }
 
     /**
+ * =========================
+ * ENTER KEY NAVIGATION (FIXED)
+ * =========================
+ */
+form.querySelectorAll('input').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+
+            // If NOT last step → go next
+            if (currentStep < steps.length - 1) {
+                const nextBtn = steps[currentStep].querySelector('.next-btn');
+                if (nextBtn) nextBtn.click();
+            } 
+            // If last step → submit
+            else {
+                form.requestSubmit();
+            }
+        }
+    });
+});
+
+    /**
      * =========================
-     * SUBMIT
+     * SERVER-SIDE ERROR DETECTION
+     * =========================
+     */
+    const firstErrorInput = document.querySelector('.is-invalid');
+    if (firstErrorInput) {
+        const stepWithError = firstErrorInput.closest('.step');
+        if (stepWithError) {
+            currentStep = [...steps].indexOf(stepWithError);
+        }
+    }
+    showStep(currentStep);
+
+    /**
+     * =========================
+     * FORM SUBMIT
      * =========================
      */
     form.addEventListener('submit', (e) => {
         const validStep = validateStep(2);
-
         if (!validStep || !passwordValid || !usernameValid || !emailValid) {
             e.preventDefault();
             currentStep = 2;
             showStep(currentStep);
         }
     });
-
 });

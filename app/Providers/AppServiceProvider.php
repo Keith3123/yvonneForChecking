@@ -6,6 +6,7 @@ use App\Repositories\PaluwaganRepositoryInterface;
 use App\Repositories\PaluwaganRepository;
 use App\Repositories\OrderRepositoryInterface;
 use App\Repositories\OrderRepository;
+use Illuminate\Support\Facades\URL;
 
 
 class AppServiceProvider extends ServiceProvider

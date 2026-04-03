@@ -63,9 +63,27 @@ Route::get('/orders/{orderID}/receipt', [OrdersPageController::class, 'viewRecei
 // Route to cancel an order
 Route::post('/orders/{orderID}/cancel', [OrdersPageController::class, 'cancelOrder']);
 
+
+// PAYMONGO GCASH FLOW
+Route::post('/checkout/paymongo', [CheckoutPageController::class, 'payWithGcash'])->name('checkout.paymongo');
+Route::post('/checkout/pay-gcash', [CheckoutPageController::class, 'payWithGcash'])->name('checkout.pay');
+Route::get('/checkout/status/{sourceId}', [CheckoutPageController::class, 'checkPaymentStatus']);
+
+Route::get('/checkout/success', [CheckoutPageController::class, 'paymentSuccess'])->name('checkout.payment.success');
+Route::get('/checkout/processing', [CheckoutPageController::class, 'processing'])->name('checkout.payment.processing');
+Route::get('/checkout/failed', [CheckoutPageController::class, 'paymentFailed'])->name('checkout.payment.failed');
+Route::get('/payment/failed', [CheckoutPageController::class, 'paymentFailed'])->name('checkout.payment.failed');
+
+Route::get('/checkout/payment/success', [CheckoutPageController::class, 'paymentSuccessRedirect'])
+    ->name('checkout.payment.success');
+
+Route::get('/checkout/payment/failed', [CheckoutPageController::class, 'paymentFailed'])
+    ->name('checkout.payment.failed');
+
+//Profile Page
 Route::get('/profile', [ProfilePageController::class, 'index'])->name('profile');
 Route::post('/profile/update', [ProfilePageController::class, 'update'])->name('profile.update');
-Route::post('/password/update', [ProfilePageController::class, 'updatePassword'])->name('password.update');
+Route::post('/password/update', [ProfilePageController::class, 'updatePassword'])->name('profile.password.update');
 
 // ------------------- PALUWAGAN -------------------
 Route::get('/paluwagan', [PaluwaganPageController::class, 'index'])->name('paluwagan'); 
@@ -76,7 +94,6 @@ Route::get('/paluwagan/schedule/{entryID}', [PaluwaganPageController::class, 'vi
 Route::prefix('admin')->group(function() {
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-    Route::patch('/admin/users/toggle-status/{userID}', [AdminUsersController::class, 'toggleStatus'])->name('admin.users.toggleStatus');
 
     // Product Management Routes
     Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products');
@@ -92,11 +109,23 @@ Route::prefix('admin')->group(function() {
     Route::get('/orders/{orderID}/view', [AdminOrdersController::class, 'viewOrder']);
     Route::post('/orders/{orderID}/update-status', [AdminOrdersController::class, 'updateStatus']);
 
+    // Sales Report
     Route::get('/salesreport', [AdminSalesReportController::class, 'index'])->name('admin.salesreport');
+
+    // User Management
     Route::get('/users', [AdminUsersController::class, 'index'])->name('admin.users');
     Route::get('/users/{id}', [AdminUsersController::class, 'show'])->name('admin.users.show');
     Route::post('/users/create-admin', [AdminUsersController::class, 'storeAdmin'])->name('admin.users.storeAdmin');
+    Route::patch('/users/toggle-status/{userID}', [AdminUsersController::class, 'toggleStatus'])->name('admin.users.toggleStatus');
+
+
+    // Paluwagan Management
     Route::get('/paluwagan', [AdminPaluwaganController::class, 'index'])->name('admin.paluwagan');
+    Route::post('/paluwagan/package/create', [AdminPaluwaganController::class, 'createPackage']);
+    Route::delete('/paluwagan/package/{id}/delete', [AdminPaluwaganController::class,'destroy']);
+    Route::put('/paluwagan/package/{id}', [AdminPaluwaganController::class,'updatePackage']);
+    Route::post('/paluwagan/month/toggle', [AdminPaluwaganController::class, 'toggleMonth']);
+
 
     // Inventory Routes
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('admin.inventory');
@@ -109,4 +138,3 @@ Route::prefix('admin')->group(function() {
 
     Route::post('/admin/logout', [LoginPageController::class, 'logout'])->name('admin.logout');
 });
-

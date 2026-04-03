@@ -22,7 +22,6 @@
             </a>
         </div>
 
-        
         {{-- Features --}}
         @php
             $features = [
@@ -42,72 +41,84 @@
             @endforeach
         </div>
 
-        {{-- Orders --}}
-        @forelse ($orders as $order)
+        {{-- Paluwagan Entries --}}
+        @forelse ($entries as $entry)
+        @php
+            $totalPaid = collect($entry['schedules'])->sum('amountPaid');
+            $totalMonths = count($entry['schedules']);
+            $monthsPaid = collect($entry['schedules'])->where('isPaid', true)->count();
+            $monthsLeft = $totalMonths - $monthsPaid;
+            $nextSchedule = collect($entry['schedules'])->firstWhere('isPaid', false);
+        @endphp
+
         <div class="bg-white rounded-xl shadow-md border border-red-100 p-6 mb-8">
 
             {{-- Header --}}
             <div class="flex justify-between items-start mb-4">
                 <div>
                     <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <span class="text-green-600">✔</span> {{ $order->name }}
+                        <span class="text-green-600">✔</span> {{ $entry['name'] }}
                     </h3>
-                    <p class="text-sm text-gray-600">{{ $order->desc }}</p>
+                    <p class="text-sm text-gray-600">{{ $entry['desc'] ?? '' }}</p>
                     <p class="text-sm text-gray-600 mt-1">
-                        Started: {{ $order->startDate ?? 'N/A' }} • Monthly:
-                        <span class="font-semibold">₱{{ $order->monthlyPayment }}</span>
+                        Started: {{ $entry['startDate'] ?? 'N/A' }} • Monthly:
+                        <span class="font-semibold">₱{{ number_format($entry['monthlyPayment'],2) }}</span>
                     </p>
                 </div>
 
                 <span class="bg-green-100 text-green-700 text-xs px-4 py-1.5 rounded-full font-semibold">
-                    {{ $order->status }}
+                    {{ ucfirst($entry['status']) }}
                 </span>
             </div>
 
             {{-- Progress --}}
             <div class="mb-6">
                 <div class="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>0 of 10 months paid</span>
-                    <span>₱5,000 remaining</span>
+                    <span>{{ $monthsPaid }} of {{ $totalMonths }} months paid</span>
+                    <span>₱{{ number_format($entry['totalPackage'] - $totalPaid,2) }} remaining</span>
                 </div>
                 <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                    <div class="h-2 bg-gradient-to-r from-green-400 to-green-600 rounded-full w-[10%]"></div>
+                    <div class="h-2 bg-gradient-to-r from-green-400 to-green-600 rounded-full"
+                         style="width: {{ $totalMonths > 0 ? ($monthsPaid/$totalMonths)*100 : 0 }}%"></div>
                 </div>
             </div>
 
             {{-- Metrics --}}
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">₱5,000</p>
+                    <p class="text-lg font-bold">₱{{ number_format($entry['totalPackage'],2) }}</p>
                     <p class="text-xs text-gray-500">Package Amount</p>
                 </div>
                 <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">₱0</p>
+                    <p class="text-lg font-bold">₱{{ number_format($totalPaid,2) }}</p>
                     <p class="text-xs text-gray-500">Total Paid</p>
                 </div>
                 <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">0</p>
+                    <p class="text-lg font-bold">{{ $monthsPaid }}</p>
                     <p class="text-xs text-gray-500">Months Paid</p>
                 </div>
                 <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">10</p>
+                    <p class="text-lg font-bold">{{ $monthsLeft }}</p>
                     <p class="text-xs text-gray-500">Months Left</p>
                 </div>
             </div>
 
             {{-- Next Payment --}}
+            @if($nextSchedule)
             <div class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm mb-6">
-                📅 <span>Next payment due: <strong>11/11/2025 – ₱500</strong></span>
+                📅 <span>Next payment due: <strong>{{ \Carbon\Carbon::parse($nextSchedule['dueDate'])->format('M d, Y') }} – ₱{{ number_format($nextSchedule['amountDue'],2) }}</strong></span>
             </div>
+            @endif
 
             {{-- Actions --}}
             <div class="flex flex-wrap gap-3">
-                <button class="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition">
+                <button onclick="openPaymentModal('{{ $entry['entryID'] }}')"
+                        class="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition">
                     Make Payment
                 </button>
 
-                <button onclick="openScheduleModal('{{ $order->entryID }}')"
-                    class="border px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 transition">
+                <button onclick="openScheduleModal('{{ $entry['entryID'] }}')"
+                        class="border px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 transition">
                     View Schedule
                 </button>
 
@@ -126,9 +137,9 @@
     </div>
 </div>
 
-
-{{-- Include Schedule Modal --}}
+{{-- Include Modals --}}
 @include('user.modals.paluwaganSchedule')
+
 
 @push('scripts')
 <script>
@@ -170,12 +181,32 @@ async function openScheduleModal(entryID) {
 
     document.getElementById("sched-months-paid").textContent = schedules.filter(s => s.isPaid).length;
     document.getElementById("sched-total-months").textContent = schedules.length;
-
 }
-
 
 function closeScheduleModal() {
     document.getElementById("paluwagan-schedule-modal").classList.add("hidden");
+}
+
+async function openPaymentModal(entryID) {
+    const response = await fetch(`/paluwagan/schedule/${entryID}`);
+    const data = await response.json();
+
+    const nextSchedule = data.schedules.find(s => !s.isPaid);
+    if (!nextSchedule) {
+        alert('All payments are already completed!');
+        return;
+    }
+
+    const modal = document.getElementById("payment-modal");
+    modal.classList.remove("hidden");
+
+    document.getElementById("payment-entryID").value = entryID;
+    document.getElementById("payment-schedule-due").textContent = new Date(nextSchedule.dueDate).toLocaleDateString();
+    document.getElementById("payment-amount").textContent = `₱${parseFloat(nextSchedule.amountDue).toFixed(2)}`;
+}
+
+function closePaymentModal() {
+    document.getElementById("payment-modal").classList.add("hidden");
 }
 </script>
 @endpush

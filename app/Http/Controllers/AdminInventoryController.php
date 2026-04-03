@@ -5,13 +5,22 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Ingredient;
 
-class AdminInventoryController extends Controller
+class AdminInventoryController extends AdminBaseController
 {
     public function index()
-{
-    $ingredients = Ingredient::all();
-    return view('admin.inventory', compact('ingredients'));
-}
+    {   
+        parent::__construct();
+        // 🔒 Role-based access
+        $user = session('admin_user');
+        if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 2)) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Fetch all ingredients to display
+        $ingredients = Ingredient::all();
+
+        return view('admin.inventory', compact('ingredients'));
+    }
 
 public function store(Request $request)
 {

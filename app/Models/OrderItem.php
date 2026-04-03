@@ -18,6 +18,12 @@ class OrderItem extends Model
         'subtotal'
     ];
 
+    protected $casts = [
+        'price'    => 'float',
+        'qty'      => 'integer',
+        'subtotal' => 'float',
+    ];
+
     public function product()
     {
         return $this->belongsTo(Product::class, 'productID', 'productID');

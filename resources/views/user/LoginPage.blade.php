@@ -44,7 +44,7 @@
     {{-- Login Form --}}
     <form action="{{ route('login.store') }}" method="POST"
         class="w-full max-w-sm bg-white p-6 rounded-xl shadow-lg text-left"
-        id="loginForm" novalidate>
+        id="loginForm">
         @csrf
 
         <div class="flex flex-col gap-4 mb-6 text-sm font-medium">

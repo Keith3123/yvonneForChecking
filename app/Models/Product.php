@@ -11,20 +11,16 @@ class Product extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'name',
-        'productTypeID',
-        'description',
-        'isAvailable',
-        'imageURL'
+        'name','productTypeID','description','isAvailable','promo','imageURL','flavor','icing_color','package_includes'
     ];
 
-    public function type()
+    public function productType()
     {
         return $this->belongsTo(ProductType::class, 'productTypeID', 'productTypeID');
     }
 
     public function servings()
     {
-        return $this->hasMany(\App\Models\Serving::class, 'productID', 'productID');
+        return $this->hasMany(\App\Models\Serving::class, 'productID');
     }
 }

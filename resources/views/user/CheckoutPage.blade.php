@@ -30,24 +30,22 @@
                     {{-- Delivery Information --}}
                     <div class="mb-8">
                         <h2 class="font-semibold mb-1">Delivery Information</h2>
-                        <p class="text-sm text-gray-500 mb-4">
-                            Please provide your delivery details (2–3 days advance reservation required)
-                        </p>
+                        <p class="text-sm text-gray-500 mb-4">Please provide your delivery details (2–3 days advance reservation required)</p>
 
                         <div class="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Delivery Date</label>
-                                <input type="date" name="deliveryDate" required
+                                <input type="date" id="deliveryDate" name="deliveryDate" required onkeydown="return false"
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
+                                @error('deliveryDate')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Delivery Time</label>
-                                <select name="deliveryTime" required
+                                <input type="time" name="deliveryTime" required
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
-                                    <option>9:30 - 11:00</option>
-                                    <option>1:00 - 3:00</option>
-                                    <option>3:00 - 5:00</option>
-                                </select>
+                                <p class="text-[10px] text-gray-400 mt-1">Please select your preferred delivery time.</p>
                             </div>
                         </div>
 
@@ -55,47 +53,33 @@
                         <div class="grid md:grid-cols-2 gap-4 mt-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Complete Delivery Address</label>
-
                                 <div class="flex gap-2">
-                                    <input type="text"
-                                        id="deliveryAddress"
-                                        name="deliveryAddress"
+                                    <input type="text" id="deliveryAddress" name="deliveryAddress"
                                         value="{{ old('deliveryAddress', $customer->address ?? '') }}"
                                         placeholder="Enter delivery address"
                                         class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
-
-                                    <button type="button"
-                                        onclick="openMapModal()"
-                                        class="px-4 rounded-md bg-pink-500 text-white hover:bg-pink-600 transition">
-                                        ➜
-                                    </button>
+                                    <button type="button" onclick="openMapModal()"
+                                        class="px-4 rounded-md bg-pink-500 text-white hover:bg-pink-600 transition">➜</button>
                                 </div>
-
-                                {{-- error message --}}
                                 @error('deliveryAddress')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
-
                             <div>
                                 <label class="block text-sm font-medium mb-1">Phone Number</label>
-                                <input type="text"
-                                    name="phone"
+                                <input type="text" name="phone"
                                     value="{{ old('phone', $customer->phone ?? '') }}"
                                     placeholder="Enter phone number"
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                             </div>
                         </div>
 
-                        {{-- hidden lat/lng --}}
                         <input type="hidden" name="latitude" id="latitude">
                         <input type="hidden" name="longitude" id="longitude">
 
                         <div class="mt-4">
                             <label class="block text-sm font-medium mb-1">Message for Admin (Optional)</label>
-                            <input type="text"
-                                name="remarks"
-                                maxlength="200"
+                            <input type="text" name="remarks" maxlength="200"
                                 placeholder="Any special instructions or notes for your order..."
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
                             <p class="text-xs text-gray-400 mt-1 text-right">0/200 Characters</p>
@@ -118,25 +102,14 @@
                             </label>
                         </div>
 
-                        {{-- error message --}}
                         @error('payment')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
 
-                        {{-- Gcash Details --}}
                         <div id="gcashDetails" class="hidden bg-[#FFF8F8] border border-[#F9B3B0] p-4 rounded-lg text-sm">
-                            <p class="font-semibold mb-2">Gcash Payment Details</p>
-                            <p>Gcash Number: <span class="font-semibold">09123456789</span></p>
-                            <p>Name: <span class="font-semibold">Yvonne’s Cakes and Pastries</span></p>
-
-                            <div class="mt-3">
-                                <label class="font-medium block mb-1">Upload Proof of Payment</label>
-                                <input type="file" name="paymentProof"
-                                    class="w-full text-sm border border-gray-300 rounded-md px-2 py-2 bg-white outline-none focus:ring-2 focus:ring-[#F9B3B0]">
-                            </div>
+                            <p class="font-semibold mb-2">Gcash Payment</p>
                         </div>
 
-                        {{-- COD Note --}}
                         <p id="codNote"
                             class="mt-2 text-sm text-gray-600 border border-gray-300 rounded p-3 flex items-center gap-2 hidden">
                             <span class="text-red-500 font-semibold">❗</span>
@@ -144,16 +117,13 @@
                             <span>You will pay ₱<span id="orderTotal">0</span> when the order is delivered.</span>
                         </p>
                     </div>
-
                 </form>
             </div>
 
             {{-- RIGHT: Order Summary --}}
             <div class="bg-white rounded-lg shadow p-6 border border-gray-200 h-fit flex flex-col justify-between">
                 <div>
-                    <h2 class="text-lg font-semibold text-center bg-[#FF69B4] text-white py-2 rounded">
-                        Order Summary
-                    </h2>
+                    <h2 class="text-lg font-semibold text-center bg-[#FF1493] text-white py-2 rounded">Order Summary</h2>
 
                     <div class="mt-4 text-sm divide-y divide-gray-200">
                         @foreach($cart as $item)
@@ -165,35 +135,24 @@
                     </div>
 
                     <div class="text-sm mt-3 space-y-2">
-                        <div class="flex justify-between">
-                            <span>Subtotal</span>
-                            <span>₱{{ number_format($subtotal, 2) }}</span>
-                        </div>
-
-                        {{-- VAT --}}
-                        <div class="flex justify-between text-gray-600">
-                            <span>VAT (12%)</span>
-                            <span>₱{{ number_format($vatAmount, 2) }}</span>
-                        </div>
-
+                        <div class="flex justify-between"><span>VATable Sales</span><span>₱{{ number_format($subtotal, 2) }}</span></div>
+                        <div class="flex justify-between text-gray-600"><span>VAT</span><span>₱{{ number_format($vatAmount, 2) }}</span></div>
                         <div class="flex justify-between text-lg font-bold border-t pt-3 mt-3">
-                            <span>Total</span>
-                            <span>₱{{ number_format($total, 2) }}</span>
+                            <span>Total Amount</span>
+                            <span id="summaryTotal">₱{{ number_format($total, 2) }}</span>
                         </div>
                     </div>
 
-
                     @if(!$user)
-                    <button type="button"
-                        id="trigger-login-modal"
+                    <button type="button" id="trigger-login-modal"
                         class="w-full mt-4 bg-[#FF1493] hover:bg-[#FF69B4] text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200">
                         Place Order
-                        </button>
+                    </button>
                     @else
-                        <button type="submit" form="checkoutForm"
-                            class="w-full mt-4 bg-[#FF1493] hover:bg-[#FF69B4] text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200">
-                            Place Order
-                        </button>
+                    <button type="button" id="place-order-btn"
+                        class="w-full mt-4 bg-[#FF1493] hover:bg-[#FF69B4] text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200">
+                        Place Order
+                    </button>
                     @endif
                 </div>
             </div>
@@ -204,6 +163,7 @@
         </p>
     </div>
 </div>
+
 
 {{-- MAP MODAL --}}
 <div id="mapModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
@@ -304,24 +264,6 @@
         document.getElementById('latitude').value = pos.lat;
         document.getElementById('longitude').value = pos.lng;
 
-        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-        fetch("{{ route('profile.saveAddress') }}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": token
-            },
-            body: JSON.stringify({
-                address: document.getElementById('mapAddress').value,
-                latitude: pos.lat,
-                longitude: pos.lng
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message);
-        });
 
         closeMapModal();
     }
@@ -360,6 +302,26 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        const dateInput = document.querySelector('input[name="deliveryDate"]');
+    if (dateInput) {
+        const today = new Date();
+        
+        // Add 3 days (Reservation Rule)
+        // If today is March 25, min will be March 28
+        const minDate = new Date(today);
+        minDate.setDate(today.getDate() + 3);
+        
+        // Format to YYYY-MM-DD
+        const yyyy = minDate.getFullYear();
+        const mm = String(minDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(minDate.getDate()).padStart(2, '0');
+        
+        const minDateString = `${yyyy}-${mm}-${dd}`;
+        
+        // Apply restriction and hover message
+        dateInput.setAttribute('min', minDateString);
+        dateInput.setAttribute('title', 'Please choose a date at least 3 days in advance. Past dates are disabled.');
+    }
         const btn = document.getElementById('trigger-login-modal');
 
         // ✅ safe trigger
@@ -388,7 +350,13 @@
         });
     });
 </script>
-
+<script>
+    window.checkoutRoutes = {
+        paymongo: "{{ route('checkout.paymongo') }}",
+        placeOrder: "{{ route('checkout.placeOrder') }}",
+        success: "{{ route('checkout.payment.success') }}"
+    };
+</script>
 {{-- Include Vite JS --}}
 @vite('resources/js/payment.js')
 

@@ -27,7 +27,7 @@ class RegisterPageController extends Controller
         $validator = Validator::make($request->all(), [
             'firstName' => 'required|string|max:255',
             'lastName'  => 'required|string|max:255',
-            'mi'        => 'nullable|string|max:5',
+            'mi'        => 'nullable|string|max:1',
             'phone'     => 'required|digits:11',
             'email'     => 'required|email|unique:customer,email',
             'address'   => 'required|string|max:255',

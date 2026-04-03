@@ -88,5 +88,8 @@ aside {
 #feedbackBox{
     animation: pop .25s ease;
 }
+    [x-cloak] {
+        display: none !important;
+    }
 
 

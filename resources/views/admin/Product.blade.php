@@ -9,11 +9,11 @@
 
     <!-- FILTERS -->
     <div class="flex gap-4 mb-4">
-        <select id="filterCategory" class="border p-2 rounded border-pink-200">
+        <select id="filterCategory" class="border p-2 rounded border-pink-200 focus:ring-pink-500 focus:outline-none focus:ring-2">
             <option value="">All Categories</option>
         </select>
 
-        <select id="filterStatus" class="border p-2 rounded border-pink-200">
+        <select id="filterStatus" class="border p-2 rounded border-pink-200 focus:ring-pink-500 focus:outline-none focus:ring-2">
             <option value="">All Status</option>
             <option value="Available">Available</option>
             <option value="Unavailable">Unavailable</option>

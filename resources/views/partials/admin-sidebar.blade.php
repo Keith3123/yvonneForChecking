@@ -7,12 +7,10 @@
 
         <!-- LOGO -->
         <div class="flex items-center mb-10">
-
             <img src="{{ asset('images/logo.png') }}"
                  class="h-10 w-10 rounded-full mx-auto
                         transition-all duration-300
                         group-hover/sidebar:mx-0" />
-
             <div
               class="ml-3 opacity-0 max-w-0 overflow-hidden
                      group-hover/sidebar:opacity-100
@@ -28,134 +26,48 @@
         </div>
 
         <!-- NAVIGATION -->
-        <nav class="space-y-1">
+        <nav class="space-y-1 relative">
+            @php
+                $user = session('admin_user') ?? ['username'=>'guest','roleID'=>0];
+                $links = [
+                    ['route'=>'admin.dashboard', 'label'=>'Dashboard', 'icon'=>'fas fa-chart-bar', 'roles'=>[1]],
+                    ['route'=>'admin.orders', 'label'=>'Orders', 'icon'=>'fas fa-shopping-cart', 'roles'=>[3]],
+                    ['route'=>'admin.products', 'label'=>'Products', 'icon'=>'fas fa-box-open', 'roles'=>[6]],
+                    ['route'=>'admin.salesreport', 'label'=>'Reports', 'icon'=>'fas fa-file-alt', 'roles'=>[5]],
+                    ['route'=>'admin.users', 'label'=>'Users', 'icon'=>'fas fa-users', 'roles'=>[1]],
+                    ['route'=>'admin.paluwagan', 'label'=>'Paluwagan', 'icon'=>'fas fa-wallet', 'roles'=>[4]],
+                    ['route'=>'admin.inventory', 'label'=>'Inventory', 'icon'=>'fas fa-boxes', 'roles'=>[2]],
+                ];
+            @endphp
 
-            <!-- DASHBOARD -->
-            <a href="{{ route('admin.dashboard') }}"
-               class="grid grid-cols-[40px_1fr] items-center
-                      py-3 rounded-lg
-                      text-gray-700 hover:text-pink-500
-                      hover:bg-pink-50 transition">
+            @foreach($links as $link)
+                @php
+                    $enabled = $user['username'] === 'masteradmin' || in_array($user['roleID'], $link['roles']);
+                @endphp
 
-                <i class="fas fa-chart-bar text-pink-500 fa-fw justify-self-center"></i>
+                <div class="relative group tooltip-wrapper">
+                    <a href="{{ $enabled ? route($link['route']) : '#' }}"
+                       class="grid grid-cols-[40px_1fr] items-center py-3 rounded-lg
+                              text-gray-700 hover:text-pink-500 hover:bg-pink-50 transition
+                              {{ $enabled ? '' : 'pointer-events-none opacity-50 cursor-not-allowed' }}">
+                        <i class="{{ $link['icon'] }} text-pink-500 fa-fw justify-self-center"></i>
+                        <span
+                          class="font-semibold opacity-0 max-w-0 overflow-hidden
+                                 group-hover/sidebar:opacity-100
+                                 group-hover/sidebar:max-w-xs
+                                 transition-all duration-300 whitespace-nowrap">
+                            {{ $link['label'] }}
+                        </span>
+                    </a>
 
-                <span
-                  class="font-semibold opacity-0 max-w-0 overflow-hidden
-                         group-hover/sidebar:opacity-100
-                         group-hover/sidebar:max-w-xs
-                         transition-all duration-300 whitespace-nowrap">
-                    Dashboard
-                </span>
-            </a>
-
-            <!-- ORDERS -->
-            <a href="{{ route('admin.orders') }}"
-               class="grid grid-cols-[40px_1fr] items-center
-                      py-3 rounded-lg
-                      text-gray-700 hover:text-pink-500
-                      hover:bg-pink-50 transition">
-
-                <i class="fas fa-shopping-cart text-pink-500 fa-fw justify-self-center"></i>
-
-                <span
-                  class="font-semibold opacity-0 max-w-0 overflow-hidden
-                         group-hover/sidebar:opacity-100
-                         group-hover/sidebar:max-w-xs
-                         transition-all duration-300 whitespace-nowrap">
-                    Orders
-                </span>
-            </a>
-
-            <!-- PRODUCTS -->
-            <a href="{{ route('admin.products') }}"
-               class="grid grid-cols-[40px_1fr] items-center
-                      py-3 rounded-lg
-                      text-gray-700 hover:text-pink-500
-                      hover:bg-pink-50 transition">
-
-                <i class="fas fa-box-open text-pink-500 fa-fw justify-self-center"></i>
-
-                <span
-                  class="font-semibold opacity-0 max-w-0 overflow-hidden
-                         group-hover/sidebar:opacity-100
-                         group-hover/sidebar:max-w-xs
-                         transition-all duration-300 whitespace-nowrap">
-                    Products
-                </span>
-            </a>
-
-            <!-- REPORTS -->
-            <a href="{{ route('admin.salesreport') }}"
-               class="grid grid-cols-[40px_1fr] items-center
-                      py-3 rounded-lg
-                      text-gray-700 hover:text-pink-500
-                      hover:bg-pink-50 transition">
-
-                <i class="fas fa-file-alt text-pink-500 fa-fw justify-self-center"></i>
-
-                <span
-                  class="font-semibold opacity-0 max-w-0 overflow-hidden
-                         group-hover/sidebar:opacity-100
-                         group-hover/sidebar:max-w-xs
-                         transition-all duration-300 whitespace-nowrap">
-                    Reports
-                </span>
-            </a>
-
-            <!-- USERS -->
-            <a href="{{ route('admin.users') }}"
-               class="grid grid-cols-[40px_1fr] items-center
-                      py-3 rounded-lg
-                      text-gray-700 hover:text-pink-500
-                      hover:bg-pink-50 transition">
-
-                <i class="fas fa-users text-pink-500 fa-fw justify-self-center"></i>
-
-                <span
-                  class="font-semibold opacity-0 max-w-0 overflow-hidden
-                         group-hover/sidebar:opacity-100
-                         group-hover/sidebar:max-w-xs
-                         transition-all duration-300 whitespace-nowrap">
-                    Users
-                </span>
-            </a>
-
-            <!-- PALUWAGAN -->
-            <a href="{{ route('admin.paluwagan') }}"
-               class="grid grid-cols-[40px_1fr] items-center
-                      py-3 rounded-lg
-                      text-gray-700 hover:text-pink-500
-                      hover:bg-pink-50 transition">
-
-                <i class="fas fa-wallet text-pink-500 fa-fw justify-self-center"></i>
-
-                <span
-                  class="font-semibold opacity-0 max-w-0 overflow-hidden
-                         group-hover/sidebar:opacity-100
-                         group-hover/sidebar:max-w-xs
-                         transition-all duration-300 whitespace-nowrap">
-                    Paluwagan
-                </span>
-            </a>
-
-            <!-- INVENTORY -->
-            <a href="{{ route('admin.inventory') }}"
-               class="grid grid-cols-[40px_1fr] items-center
-                      py-3 rounded-lg
-                      text-gray-700 hover:text-pink-500
-                      hover:bg-pink-50 transition">
-
-                <i class="fas fa-boxes text-pink-500 fa-fw justify-self-center"></i>
-
-                <span
-                  class="font-semibold opacity-0 max-w-0 overflow-hidden
-                         group-hover/sidebar:opacity-100
-                         group-hover/sidebar:max-w-xs
-                         transition-all duration-300 whitespace-nowrap">
-                    Inventory
-                </span>
-            </a>
-
+                    @unless($enabled)
+                        <span class="access-denied-tooltip absolute px-2 py-1 rounded bg-gray-800 text-white text-xs
+                                     opacity-0 pointer-events-none z-50">
+                            {{ $link['label'] }} - Access Denied
+                        </span>
+                    @endunless
+                </div>
+            @endforeach
         </nav>
     </div>
 
@@ -179,5 +91,31 @@
             </span>
         </button>
     </form>
-
 </aside>
+
+<!-- TOOLTIP FOLLOW SCRIPT -->
+<script>
+    document.querySelectorAll('.tooltip-wrapper').forEach(wrapper => {
+        const tooltip = wrapper.querySelector('.access-denied-tooltip');
+        if (!tooltip) return;
+
+        wrapper.addEventListener('mousemove', e => {
+            tooltip.style.left = (e.pageX + 10) + 'px';
+            tooltip.style.top = (e.pageY + 10) + 'px';
+            tooltip.style.opacity = 1;
+        });
+
+        wrapper.addEventListener('mouseleave', () => {
+            tooltip.style.opacity = 0;
+        });
+    });
+</script>
+
+<style>
+    /* optional smooth fade for tooltip */
+    .access-denied-tooltip {
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        transform: translate(0,0);
+        white-space: nowrap;
+    }
+</style>

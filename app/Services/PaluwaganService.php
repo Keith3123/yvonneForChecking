@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Repositories\PaluwaganRepositoryInterface;
+use App\Models\PaluwaganEntry;
+use App\Models\PaluwaganPackage;
 use App\Models\PaluwaganSchedule;
+use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
-
 
 class PaluwaganService
 {
@@ -18,35 +20,63 @@ class PaluwaganService
 
     public function getUserPaluwaganEntries(int $customerID)
     {
-        return $this->repository->getUserEntries($customerID);
+        // Eager load relationships, including payment on each schedule
+        return PaluwaganEntry::with(['package', 'schedules.payment'])
+            ->where('customerID', $customerID)
+            ->get();
     }
 
-   public function joinPaluwagan($customerID, $packageID)
-{
-    $entry = $this->repository->joinPackage($customerID, $packageID);
+    public function joinPaluwagan(int $customerID, int $packageID)
+    {
+        return DB::transaction(function () use ($customerID, $packageID) {
 
-    if (!$entry) {
-        throw new \Exception("Already enrolled in this paluwagan.");
+            // 1️⃣ Check if already enrolled
+            $exists = PaluwaganEntry::where('customerID', $customerID)
+                                    ->where('packageID', $packageID)
+                                    ->exists();
+            if ($exists) {
+                throw new \Exception("You are already enrolled in this paluwagan package.");
+            }
+
+            // 2️⃣ Create the entry
+            $entry = PaluwaganEntry::create([
+                'customerID' => $customerID,
+                'packageID' => $packageID,
+                'joinDate' => now(),
+                'status' => 'active'
+            ]);
+
+            // 3️⃣ Get package details
+            $package = PaluwaganPackage::findOrFail($packageID);
+
+            // 4️⃣ Generate schedules and payments
+            $startDate = now();
+            for ($m = 0; $m < $package->durationMonths; $m++) {
+                $dueDate = $startDate->copy()->addMonths($m);
+
+                $schedule = PaluwaganSchedule::create([
+                    'paluwaganEntryID' => $entry->paluwaganEntryID,
+                    'dueDate' => $dueDate->format('Y-m-d'),
+                    'amountDue' => $package->monthlyPayment,
+                    'amountPaid' => 0,
+                    'status' => 'pending',
+                    'isPaid' => 0
+                ]);
+
+                // 5️⃣ Create Eloquent payment linked to this schedule
+                Payment::create([
+                    'paluwaganEntryID' => $entry->paluwaganEntryID,
+                    'orderID' => null,
+                    'contextType' => 'paluwagan',
+                    'paymentType' => 'installment',
+                    'amount' => 0,
+                    'paymentDate' => now(),
+                    'method' => 'GCash',
+                    'proofURL' => ''
+                ]);
+            }
+
+            return $entry;
+        });
     }
-
-    $package = DB::table('paluwaganpackage')
-        ->where('packageID', $packageID)
-        ->first();
-
-    // Generate schedules
-    for ($m = 1; $m <= $package->durationMonths; $m++) {
-        PaluwaganSchedule::create([
-            'paluwaganEntryID' => $entry->paluwaganEntryID,
-            'dueDate' => now()->addMonths($m)->format('Y-m-d'),
-            'amountDue' => $package->monthlyPayment,
-            'amountPaid' => 0,
-            'status' => 'PENDING',
-            'isPaid' => 0
-        ]);
-    }
-
-    return $entry;
-}
-
-
 }

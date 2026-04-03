@@ -6,11 +6,19 @@ use App\Models\ProductType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-class AdminProductController extends Controller
+class AdminProductController extends AdminBaseController
 {
     public function index()
-    {
-        $products = Product::with('type','servings')->orderBy('name')->get();
+    {   
+        parent::__construct();
+        // 🔒 Role-based access
+        $user = session('admin_user');
+        if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 6)) {
+            abort(403, 'Unauthorized');
+        }
+
+
+        $products = Product::with('productType','servings')->orderBy('name')->get();
         $types = ProductType::all();
         return view('admin.Product', compact('products','types'));
     }
@@ -57,7 +65,7 @@ class AdminProductController extends Controller
             $validated['imageURL'] = $filename;
         }
 
-        $product = Product::create($validated);
+        $product = Product::create($validated); 
 
         if($request->ajax()){
             $product->load('type','servings');
