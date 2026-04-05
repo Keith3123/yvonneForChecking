@@ -33,9 +33,8 @@
                                 Order #{{ $order->orderID }}
                             </h2>
                             <p class="text-sm text-gray-500">
-    Placed on {{ $order->orderDate->timezone('Asia/Manila')->format('F d, Y \a\t h:i A') }}
-</p>
-
+                                Placed on {{ $order->orderDate->timezone('Asia/Manila')->format('F d, Y \a\t h:i A') }}
+                            </p>
                         </div>
 
                         <span class="text-xs font-semibold px-4 py-1.5 rounded-full
@@ -112,27 +111,27 @@
                             <h4 class="font-semibold text-gray-700 mb-2">Payment Information</h4>
                             <div class="text-sm text-gray-700 space-y-1">
                                  @php
-            $vatRate = 0.12;
-            // The sum of items is the inclusive Total
-            $totalAmount = $order->orderItems->sum('subtotal'); 
-            
-            // Extract VATable Sales (Subtotal)
-            $subtotal = round($totalAmount / (1 + $vatRate), 2);
-            
-            // Extract VAT Amount
-            $vatAmount = round($totalAmount - $subtotal, 2);
-        @endphp
+                                $vatRate = 0.12;
+                                // The sum of items is the inclusive Total
+                                $totalAmount = $order->orderItems->sum('subtotal'); 
+                                
+                                // Extract VATable Sales (Subtotal)
+                                $subtotal = round($totalAmount / (1 + $vatRate), 2);
+                                
+                                // Extract VAT Amount
+                                $vatAmount = round($totalAmount - $subtotal, 2);
+                            @endphp
 
-        <p class="text-gray-500">VATable Sales 
-            <span class="float-right font-semibold text-gray-800">₱{{ number_format($subtotal, 2) }}</span>
-        </p>
-        <p class="text-gray-500">VAT 
-            <span class="float-right font-semibold text-gray-800">₱{{ number_format($vatAmount, 2) }}</span>
-        </p>
-        <div class="border-t border-dashed pt-2 mt-2">
-            <p class="text-base font-bold text-gray-900">Total Amount Due 
-                <span class="float-right">₱{{ number_format($totalAmount, 2) }}</span>
-            </p>
+                            <p class="text-gray-500">VATable Sales 
+                                <span class="float-right font-semibold text-gray-800">₱{{ number_format($subtotal, 2) }}</span>
+                            </p>
+                            <p class="text-gray-500">VAT 
+                                <span class="float-right font-semibold text-gray-800">₱{{ number_format($vatAmount, 2) }}</span>
+                            </p>
+                            <div class="border-t border-dashed pt-2 mt-2">
+                                <p class="text-base font-bold text-gray-900">Total Amount Due 
+                                    <span class="float-right">₱{{ number_format($totalAmount, 2) }}</span>
+                                </p>
 
                             </div>
                         </div>
@@ -153,12 +152,19 @@
                                 <i class="fas fa-times mr-2"></i> Cancel Order
                             </button>
                         @endif
+
+                        @if($order->status === 'Done')
+                            <button onclick="rateOrder('{{ $order->orderID }}')" 
+                                class="bg-yellow-500 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-yellow-600 shadow transition">
+                                <i class="fas fa-star mr-2"></i> Rate
+                            </button>
+                        @endif
                     </div>
                 </div>
 
                 {{-- Receipt Modal --}}
                <div id="receiptModal-{{ $order->orderID }}" class="fixed inset-0 bg-black/50 hidden z-[60] flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+                    <div class="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
 
                         {{-- Close Button --}}
                         <div class="flex justify-end">
@@ -168,15 +174,15 @@
                         {{-- Receipt Content --}}
                         <div class="text-center mb-5">
                             <div class="text-xl font-bold">Yvonne's Cakes & Pastries</div>
-                            <div class="text-sm text-gray-500">Along Bacaca Road</div>
+                            <div class="text-sm text-gray-500">Bacaca Road</div>
                             <div class="text-sm text-gray-500">Davao City</div>
                             <div class="text-sm text-gray-500">Phone: 0912-345-6789</div>
                             <div class="border-t mt-4 pt-4">
                                 <div class="text-center border-b border-dashed pb-4 mb-4">
-            <h3 class="text-xl font-bold text-gray-800">OFFICIAL RECEIPT</h3>
-            <p class="text-xs text-gray-500 uppercase tracking-widest">Order #{{ $order->orderID }}</p>
-            <p class="text-xs text-gray-400">{{ $order->orderDate->format('F d, Y \a\t h:i A') }}</p>
-        </div>
+                                    <h3 class="text-xl font-bold text-gray-800">OFFICIAL RECEIPT</h3>
+                                    <p class="text-xs text-gray-500 uppercase tracking-widest">Order #{{ $order->orderID }}</p>
+                                    <p class="text-xs text-gray-400">{{ $order->orderDate->format('F d, Y \a\t h:i A') }}</p>
+                                </div>
                             </div>
                         </div>
 
@@ -205,48 +211,91 @@
                                 <span class="w-1/4 text-right">Total</span>
                             </div>
                             <div class="space-y-3 mb-6">
-            @foreach($order->orderItems as $item)
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">{{ $item->qty }}x {{ $item->product->name ?? 'Product' }}</span>
-                    <span class="font-medium text-gray-800">₱{{ number_format($item->subtotal, 2) }}</span>
-                </div>
-            @endforeach
-        </div>
+                                @foreach($order->orderItems as $item)
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600">{{ $item->qty }}x {{ $item->product->name ?? 'Product' }}</span>
+                                        <span class="font-medium text-gray-800">₱{{ number_format($item->subtotal, 2) }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
 
                         <hr class="my-3">
 
                         {{-- Totals --}}
                          <div class="border-t border-dashed pt-4 space-y-2">
-            @php
-                $vatRate = 0.12;
-                $totalAmount = $order->orderItems->sum('subtotal');
-                $vatableSales = round($totalAmount / (1 + $vatRate), 2);
-                $vatAmount = round($totalAmount - $vatableSales, 2);
-            @endphp
+                            @php
+                                $vatRate = 0.12;
+                                $totalAmount = $order->orderItems->sum('subtotal');
+                                $vatableSales = round($totalAmount / (1 + $vatRate), 2);
+                                $vatAmount = round($totalAmount - $vatableSales, 2);
+                            @endphp
 
-            <div class="flex justify-between text-sm">
-                <span class="text-gray-500">VATable Sales</span>
-                <span class="text-gray-800">₱{{ number_format($vatableSales, 2) }}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-                <span class="text-gray-500">VAT</span>
-                <span class="text-gray-800">₱{{ number_format($vatAmount, 2) }}</span>
-            </div>
-            <div class="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
-                <span>TOTAL</span>
-                <span>₱{{ number_format($totalAmount, 2) }}</span>
-            </div>
-        </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">VATable Sales</span>
+                                <span class="text-gray-800">₱{{ number_format($vatableSales, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">VAT</span>
+                                <span class="text-gray-800">₱{{ number_format($vatAmount, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
+                                <span>TOTAL</span>
+                                <span>₱{{ number_format($totalAmount, 2) }}</span>
+                            </div>
+                        </div>
 
-                       {{-- Footer Info --}}
-        <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-            <p class="mt-1">Thank you for ordering!</p>
-        </div>
-
+                                    {{-- Footer Info --}}
+                        <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
+                            <p class="mt-1">Thank you for ordering!</p>
+                        </div>
+                                {{-- EXPORT --}}
+                        <div class="flex justify-center mt-4">
+                            <a href="{{ route('orders.receipt.pdf', $order->orderID) }}"
+                            class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm font-semibold transition flex items-center">
+                                <i class="fas fa-file-pdf mr-2"></i>
+                                Export PDF
+                            </a>
+                        </div>
                     </div>
                 </div>
 
+                {{-- Rate Order Modal --}}
+                <div id="rateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+                    <div class="bg-white w-full max-w-md rounded-2xl shadow-lg p-6 relative">
+                        
+                        {{-- Close Button --}}
+                        <button onclick="closeRateModal()" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+
+                        <h2 class="text-xl font-bold mb-4">Rate Your Order</h2>
+
+                        <form id="rateForm" action="{{ route('rate.order') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="orderID" id="rateOrderID">
+                            <input type="hidden" name="rating" id="ratingValue">
+
+                            {{-- Star Rating --}}
+                            <div class="flex justify-center mb-4 space-x-2 text-2xl">
+                                @for ($i = 1; $i <= 5; $i++)
+                                    <i class="fas fa-star cursor-pointer text-gray-300 star" data-value="{{ $i }}"></i>
+                                @endfor
+                            </div>
+
+                            {{-- Comment --}}
+                            <textarea name="comment" rows="4"
+                                class="w-full border rounded-lg p-3 text-sm focus:ring focus:ring-yellow-200"
+                                placeholder="Leave a comment or testimonial..."></textarea>
+
+                            {{-- Submit RATE--}}
+                            <button type="submit"
+                                class="w-full mt-4 bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600 transition font-semibold">
+                                Submit Rating
+                            </button>
+                        </form>
+                    </div>
+                </div>
             @empty
                 <p class="text-gray-500 text-center py-20">You have not placed any orders yet.</p>
             @endforelse
@@ -308,6 +357,48 @@
         console.error(err);
         alert('Something went wrong.');
     });
-}
+
+    }
+
+    function rateOrder(orderID) {
+        document.getElementById('rateOrderID').value = orderID;
+        document.getElementById('rateModal').classList.remove('hidden');
+        document.getElementById('rateModal').classList.add('flex');
+    }
+
+    function closeRateModal() {
+        document.getElementById('rateModal').classList.add('hidden');
+        document.getElementById('rateModal').classList.remove('flex');
+
+        resetStars();
+    }
+
+    const stars = document.querySelectorAll('.star');
+    const ratingInput = document.getElementById('ratingValue');
+
+    stars.forEach(star => {
+        star.addEventListener('click', function () {
+            let value = this.getAttribute('data-value');
+            ratingInput.value = value;
+
+            stars.forEach(s => {
+                s.classList.remove('text-yellow-400');
+                s.classList.add('text-gray-300');
+            });
+
+            for (let i = 0; i < value; i++) {
+                stars[i].classList.remove('text-gray-300');
+                stars[i].classList.add('text-yellow-400');
+            }
+        });
+    });
+
+    function resetStars() {
+        stars.forEach(s => {
+            s.classList.remove('text-yellow-400');
+            s.classList.add('text-gray-300');
+        });
+        ratingInput.value = '';
+    }
 </script>
 @endsection

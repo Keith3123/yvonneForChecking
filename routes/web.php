@@ -52,16 +52,18 @@ Route::get('/checkout', [CheckoutPageController::class, 'index'])->name('checkou
 Route::post('/profile/save-address', [ProfilePageController::class, 'saveAddress'])->name('profile.saveAddress');
 Route::post('/checkout/save-address', [CheckoutPageController::class, 'saveAddressFromCheckout'])
     ->name('checkout.saveAddress');
-
 Route::post('/checkout/place-order', [CheckoutPageController::class, 'placeOrder'])->name('checkout.placeOrder');
 
-Route::get('/orders', [OrdersPageController::class, 'index'])->name('orders.index');
 
+Route::get('/orders', [OrdersPageController::class, 'index'])->name('orders.index');
 // Route to view receipt
 Route::get('/orders/{orderID}/receipt', [OrdersPageController::class, 'viewReceipt'])->name('orders.receipt');
-
 // Route to cancel an order
 Route::post('/orders/{orderID}/cancel', [OrdersPageController::class, 'cancelOrder']);
+// Route to submit a rating for an order
+Route::post('/rate-order', [OrdersPageController::class, 'rate'])->name('rate.order');
+// Route to export receipt as PDF
+Route::get('/orders/{orderID}/receipt/pdf', [OrdersPageController::class, 'exportReceiptPDF'])->name('orders.receipt.pdf');
 
 
 // PAYMONGO GCASH FLOW

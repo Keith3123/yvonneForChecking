@@ -320,17 +320,6 @@
             openPasswordModal();
         };
     @endif
-
-
-    document.querySelectorAll('.profile-field').forEach((field, i, arr) => {
-    field.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault(); // prevent form submit
-            if (i + 1 < arr.length) {
-                arr[i + 1].focus();
-            }
-        }
-    });
-});
+    
 </script>
 @endsection

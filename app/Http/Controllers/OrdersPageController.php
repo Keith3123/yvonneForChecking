@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Order;
+use App\Models\Rating;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrdersPageController extends Controller
 {
@@ -99,4 +101,68 @@ class OrdersPageController extends Controller
 
         return response()->json(['status' => 'error', 'message' => 'Order not found.']);
     }
+
+    public function rate(Request $request)
+    {
+        $request->validate([
+            'orderID' => 'required',
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:500',
+        ]);
+
+        $customer = session('logged_in_user');
+        $customerID = $customer['customerID'] ?? null;
+
+        $order = Order::where('orderID', $request->orderID)
+            ->where('customerID', $customerID)
+            ->first();
+
+        if (!$order) {
+            return back()->with('error', 'Invalid order.');
+        }
+
+        if ($order->status !== 'Done') {
+            return back()->with('error', 'You can only rate completed orders.');
+        }
+
+        Rating::updateOrCreate(
+            ['order_id' => $request->orderID],
+            [
+                'rating' => $request->rating,
+                'comment' => $request->comment,
+            ]
+        );
+
+        return back()->with('success', 'Thank you for your feedback!');
+    }
+
+    public function exportReceiptPDF($orderID)
+    {
+        $customer = session('logged_in_user');
+        $customerID = $customer['customerID'] ?? null;
+
+        if (!$customerID) {
+            return redirect()->back()->with('error', 'Please log in first.');
+        }
+
+        $order = Order::with(['orderItems.product', 'payment'])
+            ->where('orderID', $orderID)
+            ->where('customerID', $customerID)
+            ->first();
+
+        if (!$order) {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        $vatRate = 0.12;
+        $totalAmount = $order->orderItems->sum('subtotal');
+        $vatableSales = round($totalAmount / (1 + $vatRate), 2);
+        $vatAmount = round($totalAmount - $vatableSales, 2);
+
+        $pdf = Pdf::loadView('user.ReceiptPDF', compact('order', 'vatableSales', 'vatAmount', 'totalAmount'));
+
+        return $pdf->download("Receipt-Order-{$order->orderID}.pdf");
+    }
+
 }
+

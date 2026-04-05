@@ -447,9 +447,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     itemsHtml += `
                         <tr>
                             <td class="border-b py-2 px-4">${item.product.name}</td>
-                            <td class="border-b py-2 px-4 text-right">$${parseFloat(item.price).toFixed(2)}</td>
+                            <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.price).toFixed(2)}</td>
                             <td class="border-b py-2 px-4 text-center">${item.qty}</td>
-                            <td class="border-b py-2 px-4 text-right">$${parseFloat(item.subtotal).toFixed(2)}</td>
+                            <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.subtotal).toFixed(2)}</td>
                         </tr>
                     `;
                 });
@@ -472,7 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     ${itemsHtml}
                                     <tr>
                                         <td colspan="3" class="text-right font-semibold py-2 px-4">Total:</td>
-                                        <td class="text-right font-semibold py-2 px-4">$${parseFloat(order.totalAmount).toFixed(2)}</td>
+                                        <td class="text-right font-semibold py-2 px-4">₱${parseFloat(order.totalAmount).toFixed(2)}</td>
                                     </tr>
                                 </tbody>
                             </table>

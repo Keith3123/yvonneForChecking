@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductType;
 use App\Models\PaluwaganPackage;
+use App\Models\Rating;
 use Illuminate\Http\Request;
 use App\Helpers\ProductLoader;
 
@@ -103,10 +104,23 @@ class HomePageController extends Controller
                 ->values();
         }
 
+
+
+        // $testimonials = Rating::whereNotNull('comment')
+        // ->latest()
+        // ->take(6)
+        // ->get();
+
+        $testimonials = Rating::with(['order.customer'])
+        ->latest()
+        ->get(); 
+
+
         return view('user.HomePage', compact(
             'categories',
             'featuredProducts',
-            'categoryIcons'
+            'categoryIcons',
+            'testimonials'
         ));
     }
 }

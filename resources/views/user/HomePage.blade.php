@@ -13,6 +13,7 @@
 
     {{-- CTA before About/Footer --}}
     @include('partials.homepage.cta')
+    @include('partials.homepage.testimonials')
 
     
 @endsection
