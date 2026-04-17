@@ -14,15 +14,13 @@ class PaluwaganSchedule extends Model
         'dueDate',
         'status',
         'amountDue',
-        'amountPaid',
-        'isPaid'
+        'amountPaid'
     ];
 
     // Link to payment (single payment per schedule)
     public function payment()
     {
-        return $this->hasOne(Payment::class, 'paluwaganEntryID', 'paluwaganEntryID')
-                    ->where('contextType', 'paluwagan');
+        return $this->hasOne(Payment::class, 'scheduleID', 'scheduleID');
     }
 
     // Schedule → Entry

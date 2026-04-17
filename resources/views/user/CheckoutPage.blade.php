@@ -3,6 +3,10 @@
 @section('no-footer')
 @endsection
 
+<div id="toast-container" 
+     class="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center space-y-3">
+</div>
+
 @section('content')
 @php $user = session('logged_in_user'); @endphp
 <div class="bg-[#FFF6F6] min-h-screen py-10">
@@ -168,6 +172,7 @@
 {{-- MAP MODAL --}}
 <div id="mapModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
     <div class="bg-white rounded-xl w-full max-w-3xl p-5">
+        
         <div class="flex justify-between items-center mb-3">
             <h2 class="font-semibold text-lg">Pin delivery location</h2>
             <button onclick="closeMapModal()" class="text-xl">&times;</button>
@@ -177,11 +182,31 @@
             Pinpoint your exact location for accurate delivery
         </p>
 
-        <input id="mapAddress" class="w-full border rounded px-3 py-2 mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
+        {{-- ✅ NEW: SAVED ADDRESSES --}}
+        <select id="savedAddresses"
+           class="w-full max-w-full truncate border rounded px-3 py-2 mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
+            <option value="">Select saved address</option>
+        </select>
+
+        {{-- EXISTING --}}
+        <input id="mapAddress"
+            class="w-full border rounded px-3 py-2 mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
+
+        {{-- ✅ NEW: LABEL --}}
+        <input id="addressLabel"
+            placeholder="Save as (Home, Mall, Office)"
+            class="w-full border rounded px-3 py-2 mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
 
         <div id="map" class="h-80 rounded-md mb-4"></div>
 
-        <div class="flex justify-end">
+        <div class="flex justify-between">
+            {{-- ✅ NEW --}}
+            <button onclick="saveNewAddress()"
+                class="bg-gray-200 px-4 py-2 rounded-md hover:bg-gray-300">
+                Save Address
+            </button>
+
+            {{-- EXISTING --}}
             <button onclick="savePinnedLocation()"
                 class="bg-pink-500 text-white px-5 py-2 rounded-md hover:bg-pink-600">
                 Save changes
@@ -195,15 +220,26 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+@if(session('success'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        showToast(@json(session('success')));
+    });
+</script>
+@endif
+
 <script>
     let map, marker;
 
+    // OPEN MODAL
     function openMapModal() {
         document.getElementById('mapModal').classList.remove('hidden');
 
+        loadSavedAddresses(); // ✅ NEW
+
         setTimeout(() => {
             const addressText = document.getElementById('deliveryAddress').value;
-            const defaultLatLng = [7.1907, 125.4553];
+            const defaultLatLng = [7.0647, 125.6088];
 
             map = L.map('map').setView(defaultLatLng, 15);
 
@@ -229,7 +265,7 @@
                 reverseGeocode(defaultLatLng[0], defaultLatLng[1]);
             }
 
-            marker.on('dragend', function(e) {
+            marker.on('dragend', function() {
                 const pos = marker.getLatLng();
                 reverseGeocode(pos.lat, pos.lng);
             });
@@ -242,11 +278,13 @@
         }, 200);
     }
 
+    // CLOSE
     function closeMapModal() {
         document.getElementById('mapModal').classList.add('hidden');
         if (map) map.remove();
     }
 
+    // REVERSE GEOCODE (UNCHANGED)
     function reverseGeocode(lat, lng) {
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
             .then(res => res.json())
@@ -257,15 +295,88 @@
             });
     }
 
+    // APPLY TO CHECKOUT (UNCHANGED)
     function savePinnedLocation() {
         const pos = marker.getLatLng();
 
-        document.getElementById('deliveryAddress').value = document.getElementById('mapAddress').value;
+        document.getElementById('deliveryAddress').value =
+            document.getElementById('mapAddress').value;
+
         document.getElementById('latitude').value = pos.lat;
         document.getElementById('longitude').value = pos.lng;
 
-
         closeMapModal();
+    }
+
+    //
+    // =======================
+    // ✅ NEW FEATURES BELOW
+    // =======================
+    //
+
+    // LOAD SAVED ADDRESSES
+    function loadSavedAddresses() {
+        fetch("{{ route('checkout.addresses') }}")
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('savedAddresses');
+                select.innerHTML = '<option value="">-- Select saved address --</option>';
+
+                data.forEach(addr => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(addr);
+                    const shortAddress = addr.address.length > 50 
+                        ? addr.address.substring(0, 85) + '...' 
+                        : addr.address;
+
+                    option.textContent = addr.label
+                        ? `${addr.label} - ${shortAddress}`
+                        : shortAddress;
+
+                    select.appendChild(option);
+                });
+            });
+    }
+
+    // SELECT SAVED ADDRESS
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'savedAddresses') {
+            if (!e.target.value) return;
+
+            const addr = JSON.parse(e.target.value);
+
+            if (marker && map) {
+                marker.setLatLng([addr.latitude, addr.longitude]);
+                map.setView([addr.latitude, addr.longitude], 16);
+            }
+
+            document.getElementById('mapAddress').value = addr.address;
+        }
+    });
+
+    // SAVE NEW ADDRESS
+    function saveNewAddress() {
+        const pos = marker.getLatLng();
+
+        fetch("{{ route('checkout.addresses.save') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                label: document.getElementById('addressLabel').value,
+                address: document.getElementById('mapAddress').value,
+                latitude: pos.lat,
+                longitude: pos.lng
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            showToast(data.message, 'success');
+            loadSavedAddresses(); // refresh list
+        });
+        
     }
 
     // ✅ UPDATED AUTH MODAL
@@ -349,6 +460,46 @@
             }
         });
     });
+    function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+
+    const toast = document.createElement('div');
+
+      let accentColor = '#D81B60'; // Main Pink/Magenta
+    let iconBg = 'bg-pink-50';   // Soft Pink background for icon
+    let iconPath = '<path d="M5 13l4 4L19 7"></path>'; // Checkmark
+
+    if (type === 'error') {
+        accentColor = '#EF4444'; // Red
+        iconBg = 'bg-red-50';
+        iconPath = '<path d="M6 18L18 6M6 6l12 12"></path>'; // X icon
+    }
+
+    // New UI Structure to match your image
+    toast.className = `flex items-center bg-white px-6 py-4 rounded-xl shadow-xl border-l-[6px] min-w-[320px] max-w-md animate-slideDown transition-all duration-500`;
+    
+    // Set the left border color dynamically
+    toast.style.borderLeftColor = accentColor;
+
+    toast.innerHTML = `
+        <!-- Icon Container -->
+        <div class="flex items-center justify-center w-10 h-10 ${iconBg} rounded-xl mr-4 flex-shrink-0">
+            <svg class="w-5 h-5" style="color: ${accentColor}" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                ${iconPath}
+            </svg>
+        </div>
+        <!-- Message -->
+        <span class="text-gray-700 font-medium text-md">${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Smooth removal
+    setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-4');
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+}
 </script>
 <script>
     window.checkoutRoutes = {
@@ -357,6 +508,7 @@
         success: "{{ route('checkout.payment.success') }}"
     };
 </script>
+
 {{-- Include Vite JS --}}
 @vite('resources/js/payment.js')
 

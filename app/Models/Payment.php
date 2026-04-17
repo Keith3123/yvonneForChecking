@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Order;
 use App\Models\PaluwaganEntry;
 
+
 class Payment extends Model
 {
     protected $table = 'payment';

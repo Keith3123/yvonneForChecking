@@ -23,4 +23,9 @@ class Product extends Model
     {
         return $this->hasMany(\App\Models\Serving::class, 'productID');
     }
+
+    public function category()
+    {
+        return $this->belongsTo(ProductType::class, 'productTypeID', 'productTypeID');
+    }
 }

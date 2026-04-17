@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Customer;
 
 class PaluwaganEntry extends Model
 {
@@ -14,6 +15,8 @@ class PaluwaganEntry extends Model
         'packageID',
         'joinDate',
         'status',
+        'startMonth',
+        'startYear'
     ];
 
     // Entry → Package
@@ -23,10 +26,10 @@ class PaluwaganEntry extends Model
     }
 
     // Entry → Schedules
-    public function schedules()
-    {
-        return $this->hasMany(PaluwaganSchedule::class, 'paluwaganEntryID', 'paluwaganEntryID');
-    }
+public function schedules()
+{
+    return $this->hasMany(PaluwaganSchedule::class, 'paluwaganEntryID', 'paluwaganEntryID');
+}
 
     // Entry → Payments
     public function payments()
@@ -34,4 +37,9 @@ class PaluwaganEntry extends Model
         return $this->hasMany(Payment::class, 'paluwaganEntryID', 'paluwaganEntryID')
                     ->where('contextType', 'paluwagan');
     }
+
+public function customer()
+{
+    return $this->belongsTo(Customer::class, 'customerID', 'customerID');
+}
 }

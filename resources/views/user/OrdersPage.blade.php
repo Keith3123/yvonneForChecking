@@ -3,7 +3,44 @@
 @section('no-footer')
 @endsection
 
+<!-- <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] space-y-3 flex flex-col items-center"></div> -->
+
 @section('content')
+<div id="cancelModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 text-center">
+
+        <!-- ICON -->
+        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
+            <i class="fas fa-trash text-red-500 text-lg"></i>
+        </div>
+
+        <!-- TITLE -->
+        <h2 class="text-lg font-semibold text-gray-800">
+            Cancel Order?
+        </h2>
+
+        <!-- MESSAGE -->
+        <p class="text-sm text-gray-500 mt-2">
+            Are you sure you want to cancel this order? This action cannot be undone.
+        </p>
+
+        <!-- BUTTONS -->
+        <div class="flex gap-3 mt-6">
+            <button onclick="closeCancelModal()"
+                class="flex-1 py-2.5 rounded-lg bg-gray-100 text-gray-600 font-medium hover:bg-gray-200 transition">
+                Cancel
+            </button>
+
+            <button onclick="confirmCancelOrder()"
+                class="flex-1 py-2.5 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 shadow-md transition">
+                Yes, Cancel
+            </button>
+        </div>
+
+    </div>
+</div>
+
 <div class="bg-gradient-to-b from-[#FFF8F5] to-[#FFEDEA] min-h-screen flex justify-center py-12 px-4 overflow-y-auto">
     <div class="w-full max-w-5xl">
 
@@ -147,10 +184,11 @@
                         </button>
 
                         @if($order->status === 'Pending')
-                            <button onclick="cancelOrder('{{ $order->orderID }}')" 
-                                class="border border-red-300 text-red-600 text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-red-50 transition">
-                                <i class="fas fa-times mr-2"></i> Cancel Order
-                            </button>
+                            <button 
+    onclick="openCancelModal('{{ $order->orderID }}')" 
+    class="border border-red-300 text-red-600 text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-red-50 transition">
+    <i class="fas fa-times mr-2"></i> Cancel Order
+</button>
                         @endif
 
                         @if($order->status === 'Done')
@@ -160,6 +198,7 @@
                             </button>
                         @endif
                     </div>
+
                 </div>
 
                 {{-- Receipt Modal --}}
@@ -316,49 +355,50 @@
         document.body.style.overflow = 'auto'; // Restore scroll
     }
 
-    function updateStatus(orderID, status) {
-        fetch(`/orders/${orderID}/update-status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({ status })
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message);
-            if (data.status === 'success') {
-                location.reload();
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Something went wrong.');
-        });
-    }
+    // function updateStatus(orderID, status) {
+    //     fetch(`/orders/${orderID}/update-status`, {
+    //         method: 'POST',
+    //         headers: {
+    //             'Content-Type': 'application/json',
+    //             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    //         },
+    //         body: JSON.stringify({ status })
+    //     })
+    //     .then(res => res.json())
+    //     .then(data => {
+    //         alert(data.message);
+    //         if (data.status === 'success') {
+    //             location.reload();
+    //         }
+    //     })
+    //     .catch(err => {
+    //         console.error(err);
+    //         alert('Something went wrong.');
+    //     });
+    // }
 
-    function cancelOrder(orderID) {
-    fetch(`/orders/${orderID}/cancel`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        alert(data.message);
-        if (data.status === 'success') {
-            location.reload();
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        alert('Something went wrong.');
-    });
+    // function cancelOrder(orderID) {
+    // fetch(`/orders/${orderID}/cancel`, {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json',
+    //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    //     }
+    // })
+    // .then(res => res.json())
+    // .then(data => {
+    //      showToast(data.message, data.status === 'success' ? 'success' : 'error');
 
-    }
+    //     if (data.status === 'success') {
+    //         setTimeout(() => location.reload(), 1500);
+    //     }
+        
+    // })
+    // .catch(err => {
+    //     console.error(err);
+    //     showToast('Something went wrong.', 'error');
+    // });
+    // }
 
     function rateOrder(orderID) {
         document.getElementById('rateOrderID').value = orderID;
@@ -400,5 +440,115 @@
         });
         ratingInput.value = '';
     }
+    document.getElementById('rateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = this;
+    const formData = new FormData(form);
+
+    fetch("{{ route('rate.order') }}", {
+        method: "POST",
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            closeRateModal();
+            showToast(data.message, 'success');
+
+            // OPTIONAL: disable rate button after success
+            // setTimeout(() => location.reload(), 1200);
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('Something went wrong.', 'error');
+    });
+});
+//     function showToast(message, type = 'success') {
+//     const container = document.getElementById('toast-container');
+
+//     const toast = document.createElement('div');
+
+//     let bgColor = 'bg-[#10a345]'; // Exact green from screenshot
+//     let iconColor = 'text-[#10a345]'; // Green icon inside white circle
+
+//     if (type === 'error') {
+//         bgColor = 'bg-red-600';
+//         iconColor = 'text-red-600';
+//     }
+
+//     // Fully rounded (pill) shape and centered text
+//     toast.className = `
+//         ${bgColor} text-white px-8 py-3 rounded-full shadow-lg 
+//         flex items-center gap-3 font-semibold 
+//         animate-slideDown transition-all duration-500
+//     `;
+
+//     toast.innerHTML = `
+//         <!-- White Circular Icon Box -->
+//         <div class="flex-shrink-0 w-6 h-6 bg-white rounded-full flex items-center justify-center">
+//             <svg class="w-4 h-4 ${iconColor}" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24">
+//                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+//             </svg>
+//         </div>
+//         <!-- Success Message -->
+//         <span class="text-[15px] tracking-wide">${message}</span>
+//     `;
+
+//     container.appendChild(toast);
+
+//     // Fade out and remove
+//     setTimeout(() => {
+//         toast.classList.add('opacity-0', '-translate-y-4');
+//         setTimeout(() => toast.remove(), 500);
+//     }, 3000);
+// }
+let selectedOrderID = null;
+
+function openCancelModal(orderID) {
+    selectedOrderID = orderID;
+    const modal = document.getElementById('cancelModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeCancelModal() {
+    const modal = document.getElementById('cancelModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function confirmCancelOrder() {
+    if (!selectedOrderID) return;
+
+    fetch(`/orders/${selectedOrderID}/cancel`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        closeCancelModal();
+
+        showToast(data.message, data.status === 'success' ? 'success' : 'error');
+
+        if (data.status === 'success') {
+            setTimeout(() => location.reload(), 1500);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        closeCancelModal();
+        showToast('Something went wrong.', 'error');
+    });
+}
 </script>
 @endsection

@@ -24,6 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 spinner.classList.remove('hidden');
             }
         });
+
+        // ✅ FORCE ENTER KEY TO SUBMIT FORM
+        form.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    form.requestSubmit(); // triggers your submit event properly
+                }
+            });
+        });
     }
 
     // ✅ Success message fade
@@ -57,12 +67,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
-// ✅ FORCE ENTER KEY TO SUBMIT FORM
-form.querySelectorAll('input').forEach(input => {
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            form.requestSubmit(); // triggers your submit event properly
-        }
-    });
-});

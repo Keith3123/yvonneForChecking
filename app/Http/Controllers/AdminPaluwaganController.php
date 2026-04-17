@@ -8,6 +8,7 @@ use App\Models\PaluwaganSchedule;
 use App\Models\PaluwaganEntry;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Models\PaluwaganMonthAvailability;
 
 class AdminPaluwaganController extends AdminBaseController
 {
@@ -23,7 +24,7 @@ class AdminPaluwaganController extends AdminBaseController
         // Fetch packages with schedules
         $packages = PaluwaganPackage::with(['schedules' => function($q) {
             $q->orderBy('dueDate', 'asc');
-        }])->get();
+        }, 'monthAvailability'])->get();
 
         // Summary
         $activeSubscriptions = PaluwaganEntry::where('status', 'active')->count();
@@ -35,15 +36,18 @@ class AdminPaluwaganController extends AdminBaseController
             ->count();
 
         // Subscriptions
-        $subscriptions = PaluwaganEntry::with(['package', 'schedules'])->get()->map(function($entry) {
+        $subscriptions = PaluwaganEntry::with(['package', 'schedules', 'customer'])->get()->map(function($entry) {
             $package = $entry->package;
             $schedules = $entry->schedules ?? collect();
 
-            $totalPaid = $schedules->where('status', 'paid')->sum('amountPaid');
+            $totalPaid = $schedules->sum('amountPaid');
             $totalMonths = $schedules->count();
             $monthsPaid = $schedules->where('status', 'paid')->count();
             $monthsLeft = $totalMonths - $monthsPaid;
-            $nextSchedule = $schedules->where('status', '!=', 'paid')->sortBy('dueDate')->first();
+            $nextSchedule = $schedules
+            ->whereIn('status', ['pending', 'partial', 'late'])
+            ->sortBy('dueDate')
+            ->first();
 
             return [
                 'entryID' => $entry->paluwaganEntryID,
@@ -56,6 +60,9 @@ class AdminPaluwaganController extends AdminBaseController
                 'totalAmount' => $package?->totalAmount ?? 0,
                 'nextDueDate' => $nextSchedule?->dueDate,
                 'status' => $entry->status,
+                'customerName' => trim(
+                    ($entry->customer->firstName ?? '') . ' ' . ($entry->customer->lastName ?? '')
+                ) ?: 'N/A',
             ];
         });
 
@@ -175,6 +182,8 @@ class AdminPaluwaganController extends AdminBaseController
     {
         try {
             $package = PaluwaganPackage::findOrFail($id);
+            
+            PaluwaganMonthAvailability::where('packageID', $id)->delete();
 
             if ($package->image) {
                 Storage::delete('public/products/'.$package->image);
@@ -197,10 +206,142 @@ class AdminPaluwaganController extends AdminBaseController
     // =========================
     public function toggleMonth(Request $request)
     {
+        try {
+            $request->validate([
+                'packageID' => 'required|integer|exists:paluwaganpackage,packageID',
+                'month' => 'required|integer|min:1|max:12',
+                'status' => 'required|in:active,inactive',
+            ]);
+
+            $packageID = $request->packageID; // 🔥 FIX: define this
+
+            $year = PaluwaganMonthAvailability::where('packageID', $request->packageID)
+                ->max('year') ?? now()->year;
+
+            $record = PaluwaganMonthAvailability::updateOrCreate(
+                [
+                    'packageID' => $packageID,
+                    'month' => $request->month,
+                    'year' => $year
+                ],
+                [
+                    'status' => $request->status
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'month' => $record->month,
+                'status' => $record->status
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+public function complete($id)
+{
+    try {
+        $entry = PaluwaganEntry::with('schedules')->find($id);
+
+        if (!$entry) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Entry not found'
+            ], 404);
+        }
+
+        // 🚨 Only ACTIVE can be completed
+        if ($entry->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only active entries can be completed'
+            ], 400);
+        }
+
+        // If already completed (extra safety)
+        if ($entry->status === 'completed') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Already completed'
+            ]);
+        }
+
+        $entry->status = 'completed';
+        $entry->save();
+
+        // Mark all schedules as fully paid
+        if ($entry->schedules) {
+            foreach ($entry->schedules as $schedule) {
+                $schedule->status = 'paid';
+                $schedule->amountPaid = $schedule->amountDue;
+                $schedule->save();
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'month' => $request->month,
-            'status' => $request->status
+            'message' => 'Subscription completed'
+        ]);
+
+    } catch (\Throwable $e) {
+        \Log::error('Complete error: ' . $e->getMessage());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Server error'
+        ], 500);
+    }
+}
+
+public function reassign(Request $request, $entryID)
+{
+    try {
+        // $customerName = $request->input('customer');
+
+//         $customer = \App\Models\Customer::whereRaw("
+//     BINARY CONCAT(firstName, ' ', lastName) = ?
+// ", [$customerName])->first();
+        $customerID = $request->input('customerID');
+
+$customer = \App\Models\Customer::find($customerID);
+        // $customer = \App\Models\Customer::where('firstName', $firstName)
+        //     ->where('lastName', $lastName)
+        //     ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found'
+            ]);
+        }
+
+$entry = \App\Models\PaluwaganEntry::where('paluwaganEntryID', $entryID)->first();
+        if (!$entry) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Entry not found'
+            ]);
+        }
+
+        $entry->customerID = $customer->customerID;
+        $entry->status = 'active';
+        $entry->save();
+
+        return response()->json([
+            'success' => true
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
         ]);
     }
+
+}
 }

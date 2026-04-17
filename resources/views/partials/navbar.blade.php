@@ -88,6 +88,12 @@
                             View Profile
                         </a>
 
+                         <a href="{{ route('my.ratings') }}"
+                           class="block px-4 py-2 text-sm transition
+                                  hover:bg-pink-50 hover:text-pink-600">
+                            My Ratings
+                        </a>
+
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit"
@@ -143,6 +149,14 @@
                       hover:bg-pink-50 hover:text-pink-500
                       hover:tracking-wide">
                 Profile
+            </a>
+
+             <a href="{{ route('my.ratings') }}"
+               class="py-4 font-medium text-gray-800
+                      transition-all duration-200
+                      hover:bg-pink-50 hover:text-pink-500
+                      hover:tracking-wide">
+                My Ratings
             </a>
         @endif
     </div>

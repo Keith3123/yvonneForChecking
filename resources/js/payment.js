@@ -10,13 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const payment = document.querySelector('input[name="payment"]:checked')?.value;
 
         if (!payment) {
-            alert('Select payment method');
+            showToast('Please select a payment method', 'warning');
             return;
         }
 
         const formData = new FormData(form);
         formData.append('payment', payment); // ✅ append selected payment
 
+        // Disable button to prevent multiple clicks
+        btn.disabled = true;
+        btn.innerText = 'Processing...';
 
         try {
             let res, data;
@@ -32,10 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 data = await res.json();
 
                 if (data.success) {
-                    alert(data.message);
-                    window.location.href = 'orders'; // ✅ redirect to orders page
+                    showToast(data.message, 'success');
+                    setTimeout(() => {
+                    window.location.href = '/orders';
+                    }, 1500);
                 } else {
-                    alert(data.error || 'Error');
+                    showToast(data.error || 'Error', 'error');
                 }
             }
 
@@ -52,13 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.checkout_url) {
                     window.location.href = data.checkout_url;
                 } else {
-                    alert(data.error || 'GCash error');
+                    showToast(data.error || 'GCash error', 'error');
                 }
             }
 
         } catch (err) {
             console.error(err);
-            alert('Something broke. Check console.');
+            showToast('Something went wrong. Please try again.', 'error');
+
+            // Re-enable button on error
+            btn.disabled = false;
+            btn.innerText = 'Place Order';
+
+            
         }
     });
 

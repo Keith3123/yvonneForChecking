@@ -92,4 +92,20 @@ aside {
         display: none !important;
     }
 
+@keyframes slideDown {
+    from { 
+        transform: translateY(-30px) translateX(-50%); /* Start slightly above */
+        opacity: 0; 
+    }
+    to { 
+        transform: translateY(0) translateX(-50%); /* End at natural position */
+        opacity: 1; 
+    }
+}
+
+.animate-slideDown {
+    /* Uses a 'spring' timing function for a premium feel */
+    animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 

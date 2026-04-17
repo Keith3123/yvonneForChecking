@@ -18,7 +18,8 @@ use App\Http\Controllers\{
     AdminUsersController,
     AdminPaluwaganController,
     AdminInventoryController,
-    AdminProductController
+    AdminProductController,
+    MyRatingPageController
 };
 
 // ------------------- USER PAGES -------------------
@@ -27,11 +28,14 @@ Route::get('/cart/sidebar', fn () =>
 );
 
 Route::get('/', [HomePageController::class, 'index'])->name('home');
+Route::get('/filter-testimonials', [HomePageController::class, 'filterTestimonials']);
 
 Route::get('/login', [LoginPageController::class, 'index'])->name('login');
 Route::post('/login', [LoginPageController::class, 'store'])->name('login.store');
 Route::post('/logout', [LoginPageController::class, 'logout'])->name('logout');
 
+//My Rating Page
+Route::get('/my-ratings', [MyRatingPageController::class, 'index'])->name('my.ratings');
 
 Route::get('/register', [RegisterPageController::class, 'show'])->name('register');
 Route::post('/register', [RegisterPageController::class, 'store'])->name('register.store');
@@ -50,8 +54,8 @@ Route::post('/cart/update', [CartPageController::class, 'update'])->name('cart.u
 
 Route::get('/checkout', [CheckoutPageController::class, 'index'])->name('checkout');
 Route::post('/profile/save-address', [ProfilePageController::class, 'saveAddress'])->name('profile.saveAddress');
-Route::post('/checkout/save-address', [CheckoutPageController::class, 'saveAddressFromCheckout'])
-    ->name('checkout.saveAddress');
+Route::get('/checkout/addresses', [CheckoutPageController::class, 'getSavedAddresses'])->name('checkout.addresses');
+Route::post('/checkout/addresses/save', [CheckoutPageController::class, 'saveAddress'])->name('checkout.addresses.save');
 Route::post('/checkout/place-order', [CheckoutPageController::class, 'placeOrder'])->name('checkout.placeOrder');
 
 
@@ -66,7 +70,7 @@ Route::post('/rate-order', [OrdersPageController::class, 'rate'])->name('rate.or
 Route::get('/orders/{orderID}/receipt/pdf', [OrdersPageController::class, 'exportReceiptPDF'])->name('orders.receipt.pdf');
 
 
-// PAYMONGO GCASH FLOW
+// PAYMONGO GCASH FLOW - CHECKOUT PAGE
 Route::post('/checkout/paymongo', [CheckoutPageController::class, 'payWithGcash'])->name('checkout.paymongo');
 Route::post('/checkout/pay-gcash', [CheckoutPageController::class, 'payWithGcash'])->name('checkout.pay');
 Route::get('/checkout/status/{sourceId}', [CheckoutPageController::class, 'checkPaymentStatus']);
@@ -91,6 +95,8 @@ Route::post('/password/update', [ProfilePageController::class, 'updatePassword']
 Route::get('/paluwagan', [PaluwaganPageController::class, 'index'])->name('paluwagan'); 
 Route::post('/paluwagan/join', [PaluwaganPageController::class, 'join'])->name('paluwagan.join');
 Route::get('/paluwagan/schedule/{entryID}', [PaluwaganPageController::class, 'viewSchedule'])->name('paluwagan.schedule');
+Route::get('/user/paluwagan/available-months/{packageID}', [PaluwaganPageController::class, 'availableMonths'])->name('user.paluwagan.available-months');
+Route::post('/paluwagan/cancel/{id}', [PaluwaganPageController::class, 'cancel']);
 
 // ------------------- ADMIN PAGES -------------------
 Route::prefix('admin')->group(function() {
@@ -126,8 +132,9 @@ Route::prefix('admin')->group(function() {
     Route::post('/paluwagan/package/create', [AdminPaluwaganController::class, 'createPackage']);
     Route::delete('/paluwagan/package/{id}/delete', [AdminPaluwaganController::class,'destroy']);
     Route::put('/paluwagan/package/{id}', [AdminPaluwaganController::class,'updatePackage']);
-    Route::post('/paluwagan/month/toggle', [AdminPaluwaganController::class, 'toggleMonth']);
-
+    Route::post('/paluwagan/month/toggle', [AdminPaluwaganController::class,'toggleMonth']);
+    Route::post('/paluwagan/entry/{id}/complete', [AdminPaluwaganController::class, 'complete'])->name('admin.paluwagan.complete');
+    Route::post('/paluwagan/entry/{entryID}/reassign', [AdminPaluwaganController::class, 'reassign']);
 
     // Inventory Routes
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('admin.inventory');

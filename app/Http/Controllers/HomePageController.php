@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProductType;
 use App\Models\PaluwaganPackage;
 use App\Models\Rating;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Helpers\ProductLoader;
 
@@ -111,16 +112,51 @@ class HomePageController extends Controller
         // ->take(6)
         // ->get();
 
-        $testimonials = Rating::with(['order.customer'])
+$testimonials = Rating::with([
+            'order.customer',
+            'order.orderItems.product.productType'  // changed from category
+        ])
+        ->when(request('rating'), fn($q, $rating) => $q->where('rating', $rating))
+        ->when(request('category'), fn($q, $category) => 
+            $q->whereHas('order.orderItems.product.productType', fn($q) =>   // changed
+                $q->where('productTypeID', $category)))                       // changed
+        ->when(request('product'), fn($q, $product) => 
+            $q->whereHas('order.orderItems.product', fn($q) => 
+                $q->where('product.productID', $product)))
         ->latest()
         ->get(); 
+
+        $productTypes = ProductType::orderBy('productType')->get();
+        $products = Product::orderBy('name')->get();
 
 
         return view('user.HomePage', compact(
             'categories',
             'featuredProducts',
             'categoryIcons',
-            'testimonials'
+            'testimonials',
+            'productTypes',  // changed
+            'products'
         ));
     }
+
+     public function filterTestimonials(Request $request)
+    {
+        $testimonials = Rating::with([
+            'order.customer',
+            'order.orderItems.product.productType'
+        ])
+        ->when($request->rating, fn($q, $rating) => $q->where('rating', $rating))
+        ->when($request->category, fn($q, $category) =>
+            $q->whereHas('order.orderItems.product.productType', fn($q) =>
+                $q->where('productTypeID', $category)))
+        ->when($request->product, fn($q, $product) =>
+            $q->whereHas('order.orderItems.product', fn($q) =>
+                $q->where('product.productID', $product)))
+        ->latest()
+        ->get();
+
+        return view('partials.homepage.testimonial-cards', compact('testimonials'));
+    }
+
 }

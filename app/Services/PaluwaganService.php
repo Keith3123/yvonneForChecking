@@ -26,14 +26,15 @@ class PaluwaganService
             ->get();
     }
 
-    public function joinPaluwagan(int $customerID, int $packageID)
+    public function joinPaluwagan(int $customerID, int $packageID, int $startMonth)
     {
-        return DB::transaction(function () use ($customerID, $packageID) {
+        return DB::transaction(function () use ($customerID, $packageID, $startMonth) {
 
             // 1️⃣ Check if already enrolled
-            $exists = PaluwaganEntry::where('customerID', $customerID)
-                                    ->where('packageID', $packageID)
-                                    ->exists();
+           $exists = PaluwaganEntry::where('customerID', $customerID)
+                        ->where('packageID', $packageID)
+                        ->where('status', 'active')
+                        ->exists();
             if ($exists) {
                 throw new \Exception("You are already enrolled in this paluwagan package.");
             }
@@ -43,32 +44,43 @@ class PaluwaganService
                 'customerID' => $customerID,
                 'packageID' => $packageID,
                 'joinDate' => now(),
-                'status' => 'active'
+                'status' => 'active',
+                'startMonth' => $startMonth,
+                'startYear' => now()->year
             ]);
 
             // 3️⃣ Get package details
             $package = PaluwaganPackage::findOrFail($packageID);
 
             // 4️⃣ Generate schedules and payments
-            $startDate = now();
+            $startDate = now()
+                ->month($startMonth)
+                ->day(15)
+                ->startOfDay();
+
             for ($m = 0; $m < $package->durationMonths; $m++) {
-                $dueDate = $startDate->copy()->addMonths($m);
+
+                $dueDate = $startDate->copy()
+                    ->addMonths($m)
+                    ->day(15);
 
                 $schedule = PaluwaganSchedule::create([
                     'paluwaganEntryID' => $entry->paluwaganEntryID,
-                    'dueDate' => $dueDate->format('Y-m-d'),
+                    'dueDate' => $dueDate,
                     'amountDue' => $package->monthlyPayment,
                     'amountPaid' => 0,
-                    'status' => 'pending',
-                    'isPaid' => 0
+                    'status' => 'pending'
                 ]);
 
-                // 5️⃣ Create Eloquent payment linked to this schedule
+                if (!$schedule) {
+                    throw new \Exception("Schedule creation failed");
+                }
+
                 Payment::create([
                     'paluwaganEntryID' => $entry->paluwaganEntryID,
-                    'orderID' => null,
+                    'scheduleID' => $schedule->scheduleID,
                     'contextType' => 'paluwagan',
-                    'paymentType' => 'installment',
+                    'paymentType' => 'downpayment',
                     'amount' => 0,
                     'paymentDate' => now(),
                     'method' => 'GCash',

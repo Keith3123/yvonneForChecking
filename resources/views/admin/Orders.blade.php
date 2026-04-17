@@ -498,6 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     : 'N/A'
                             }</p>
                             <p><strong>Delivery Address:</strong> ${order.deliveryAddress ?? 'N/A'}</p>
+                            <p><strong>Order Message:</strong> ${order.remarks ?? 'N/A'}</p>
                         </div>
                     </div>
                 `;

@@ -37,4 +37,16 @@ class PaluwaganPackage extends Model
             'paluwaganEntryID' // Local key on entries table
         );
     }
+
+public function monthAvailability()
+{
+    return $this->hasMany(PaluwaganMonthAvailability::class, 'packageID', 'packageID');
+}
+
+    public function activeMonths()
+{
+    return $this->hasMany(PaluwaganMonthAvailability::class, 'packageID', 'packageID')
+                ->where('status', 'active')
+                ->orderBy('month', 'asc');
+}
 }

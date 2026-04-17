@@ -118,11 +118,10 @@ class OrdersPageController extends Controller
             ->first();
 
         if (!$order) {
-            return back()->with('error', 'Invalid order.');
-        }
+ return response()->json(['status' => 'error', 'message' => 'Invalid order.']);        }
 
         if ($order->status !== 'Done') {
-            return back()->with('error', 'You can only rate completed orders.');
+        return response()->json(['status' => 'error', 'message' => 'You can only rate completed orders.']);
         }
 
         Rating::updateOrCreate(
@@ -133,8 +132,11 @@ class OrdersPageController extends Controller
             ]
         );
 
-        return back()->with('success', 'Thank you for your feedback!');
-    }
+          return response()->json([
+        'status' => 'success',
+        'message' => 'Thank you for your feedback!'
+    ]);
+}
 
     public function exportReceiptPDF($orderID)
     {

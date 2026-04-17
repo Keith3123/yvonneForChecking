@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Customer;
+use App\Models\DeliveryAddress;
 
 class CheckoutPageController extends Controller
 {
@@ -233,6 +234,42 @@ public function payWithGcash(Request $request)
     public function paymentFailed()
     {
         return view('payment.failed');
+    }
+
+    public function getSavedAddresses()
+    {
+        $user = session('logged_in_user');
+
+        if (!$user) {
+            return response()->json([]);
+        }
+
+        return DeliveryAddress::where('customerID', $user['customerID'])->get();
+    }
+
+    public function saveAddress(Request $request)
+    {
+        $request->validate([
+            'label' => 'nullable|string|max:50',
+            'address' => 'required|string|max:255',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+        ]);
+
+        $user = session('logged_in_user');
+
+        DeliveryAddress::create([
+            'customerID' => $user['customerID'],
+            'label' => $request->label,
+            'address' => $request->address,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Address saved!'
+        ]);
     }
     
 }

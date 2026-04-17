@@ -19,7 +19,8 @@
     </div>
     <div>
         <p class="text-gray-700"><span id="sched-start-month" class="font-bold"></span></p>
-        <p class="text-gray-700"><span class="font-semibold">Months Paid:</span> <span id="sched-months-paid"></span> / <span id="sched-total-months"></span></p>
+            <span class="font-semibold">Months Paid:</span>
+            <span id="sched-months-paid"></span> / <span id="sched-total-months"></span>
         <!-- Progress bar removed -->
     </div>
 </div>
