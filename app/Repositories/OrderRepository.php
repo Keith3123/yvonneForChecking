@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 class OrderRepository implements OrderRepositoryInterface
 {
-    public function create(CreateOrderDTO $dto): int
+    public function create(CreateOrderDTO $dto): Order
     {
         $order = Order::create([
             'customerID'      => $dto->customerID,
@@ -24,7 +24,7 @@ class OrderRepository implements OrderRepositoryInterface
             'deliveryTime'    => $dto->deliveryTime,
         ]);
 
-        return $order->orderID;
+        return $order;
     }
 
     public function addItems(int $orderID, array $items): void
@@ -57,18 +57,28 @@ class OrderRepository implements OrderRepositoryInterface
     }
 
     public function addPayment(int $orderID, CreateOrderDTO $dto): void
-    {
-        Payment::create([
-            'orderID'          => $orderID,
-            'paluwaganEntryID' => null,
-            'contextType'      => 'order',
-            'paymentType'      => 'fullpayment',
-            'amount'           => collect($dto->items)->sum(fn($i) => $i['price'] * $i['qty']),
-            'paymentDate'      => now(),
-            'method'           => strtolower($dto->payment) === 'gcash' ? 'GCash' : 'COD',
-            'proofURL'         => $dto->paymentProof ?? '',
-        ]);
-    }
+{
+    $amount = collect($dto->items)
+        ->sum(fn($i) => $i['price'] * $i['qty']);
+
+    Log::info('💰 PAYMENT COMPUTED', [
+        'orderID' => $orderID,
+        'items' => $dto->items,
+        'amount' => $amount
+    ]);
+
+    Payment::create([
+        'orderID'          => $orderID,
+        'paluwaganEntryID' => null,
+        'contextType'      => 'order',
+        'paymentType'      => 'fullpayment', // force correct enum
+        'amount'           => $amount,
+        'paymentDate'      => now(),
+        'method'           => strtolower($dto->payment) === 'gcash' ? 'GCASH' : 'COD',
+        'status'           => 'pending',
+        'meta'             => json_encode([]),
+    ]);
+}
 
     public function getByCustomer(int $customerID): array
     {

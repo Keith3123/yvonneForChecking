@@ -49,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        if (app()->environment('production') || str_contains(config('app.url'), 'ngrok')) {
+        URL::forceScheme('https');
+    }
+    
     }
 }

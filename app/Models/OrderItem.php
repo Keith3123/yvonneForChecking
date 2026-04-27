@@ -15,13 +15,11 @@ class OrderItem extends Model
         'productID',
         'price',
         'qty',
-        'subtotal'
     ];
 
     protected $casts = [
-        'price'    => 'float',
-        'qty'      => 'integer',
-        'subtotal' => 'float',
+        'price' => 'float',
+        'qty'   => 'integer',
     ];
 
     public function product()

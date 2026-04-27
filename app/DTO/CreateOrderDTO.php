@@ -23,7 +23,7 @@ class CreateOrderDTO
         $this->items           = $data['items'];
         $this->deliveryDate    = $data['deliveryDate'];
         $this->deliveryTime    = $data['deliveryTime'];
-        $this->payment         = $data['payment'];
+        $this->payment         = strtoupper($data['payment']);
         $this->paymentProof    = $data['paymentProof'] ?? null;
     }
 }

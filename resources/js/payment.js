@@ -15,61 +15,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const formData = new FormData(form);
-        formData.append('payment', payment); // ✅ append selected payment
+        formData.append('payment', payment);
 
-        // Disable button to prevent multiple clicks
         btn.disabled = true;
         btn.innerText = 'Processing...';
 
         try {
-            let res, data;
 
-            // COD
-            if (payment === 'cod') {
-                res = await fetch(window.checkoutRoutes.placeOrder, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
-                    body: formData
-                });
+            let endpoint = payment === 'cod'
+                ? window.checkoutRoutes.placeOrder
+                : window.checkoutRoutes.paymongo;
 
-                data = await res.json();
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json'
+                },
+                body: formData
+            });
 
-                if (data.success) {
-                    showToast(data.message, 'success');
-                    setTimeout(() => {
-                    window.location.href = '/orders';
-                    }, 1500);
-                } else {
-                    showToast(data.error || 'Error', 'error');
-                }
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Request failed');
             }
 
-            // GCASH
+            if (payment === 'cod') {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.href = '/orders', 1500);
+            }
+
             if (payment === 'gcash') {
-                res = await fetch(window.checkoutRoutes.paymongo, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
-                    body: formData
-                });
-
-                data = await res.json();
-
                 if (data.checkout_url) {
                     window.location.href = data.checkout_url;
                 } else {
-                    showToast(data.error || 'GCash error', 'error');
+                    throw new Error('No checkout URL returned');
                 }
             }
 
         } catch (err) {
             console.error(err);
-            showToast('Something went wrong. Please try again.', 'error');
+            showToast(err.message || 'Something went wrong', 'error');
 
-            // Re-enable button on error
             btn.disabled = false;
             btn.innerText = 'Place Order';
-
-            
         }
     });
 

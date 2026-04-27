@@ -19,7 +19,8 @@ use App\Http\Controllers\{
     AdminPaluwaganController,
     AdminInventoryController,
     AdminProductController,
-    MyRatingPageController
+    MyRatingPageController,
+    PaymongoWebhookController
 };
 
 // ------------------- USER PAGES -------------------
@@ -73,18 +74,14 @@ Route::get('/orders/{orderID}/receipt/pdf', [OrdersPageController::class, 'expor
 // PAYMONGO GCASH FLOW - CHECKOUT PAGE
 Route::post('/checkout/paymongo', [CheckoutPageController::class, 'payWithGcash'])->name('checkout.paymongo');
 Route::post('/checkout/pay-gcash', [CheckoutPageController::class, 'payWithGcash'])->name('checkout.pay');
-Route::get('/checkout/status/{sourceId}', [CheckoutPageController::class, 'checkPaymentStatus']);
+
 
 Route::get('/checkout/success', [CheckoutPageController::class, 'paymentSuccess'])->name('checkout.payment.success');
-Route::get('/checkout/processing', [CheckoutPageController::class, 'processing'])->name('checkout.payment.processing');
 Route::get('/checkout/failed', [CheckoutPageController::class, 'paymentFailed'])->name('checkout.payment.failed');
-Route::get('/payment/failed', [CheckoutPageController::class, 'paymentFailed'])->name('checkout.payment.failed');
 
-Route::get('/checkout/payment/success', [CheckoutPageController::class, 'paymentSuccessRedirect'])
-    ->name('checkout.payment.success');
 
-Route::get('/checkout/payment/failed', [CheckoutPageController::class, 'paymentFailed'])
-    ->name('checkout.payment.failed');
+Route::post('/paymongo/webhook', [PaymongoWebhookController::class, 'handle']);
+
 
 //Profile Page
 Route::get('/profile', [ProfilePageController::class, 'index'])->name('profile');

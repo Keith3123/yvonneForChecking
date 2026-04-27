@@ -3,8 +3,7 @@
 @section('no-footer')
 @endsection
 
-<!-- <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] space-y-3 flex flex-col items-center"></div> -->
-
+<!-- J
 @section('content')
 <div id="cancelModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 backdrop-blur-sm">
 

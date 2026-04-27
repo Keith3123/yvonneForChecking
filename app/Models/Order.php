@@ -20,6 +20,8 @@ class Order extends Model
         'paymentStatus',
         'deliveryDate',
         'deliveryTime',
+        'payment_reference', // For storing PayMongo source/payment ID
+        'payment_provider',  // e.g. 'PayMongo'
     ];
 
     protected $casts = [

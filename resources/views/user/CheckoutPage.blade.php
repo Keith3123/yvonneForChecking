@@ -503,8 +503,8 @@
 </script>
 <script>
     window.checkoutRoutes = {
-        paymongo: "{{ route('checkout.paymongo') }}",
-        placeOrder: "{{ route('checkout.placeOrder') }}",
+        paymongo: "{{ route('checkout.paymongo', [], true) }}",
+        placeOrder: "{{ route('checkout.placeOrder', [], true) }}",
         success: "{{ route('checkout.payment.success') }}"
     };
 </script>

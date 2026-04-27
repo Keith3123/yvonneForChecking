@@ -14,16 +14,22 @@ class Payment extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'orderID',
-        'paluwaganEntryID',
-        'contextType',   // 'order' | 'paluwagan'
-        'paymentType',   // 'fullpayment' | 'partial'
-        'amount',
-        'paymentDate',
-        'method',        // 'GCash' | 'COD' | etc
-        'proofURL',
-        'source_id'     // For PayMongo payments
-    ];
+    'orderID',
+    'paluwaganEntryID',
+    'contextType',
+    'paymentType',
+    'amount',
+    'paymentDate',
+    'method',
+    'scheduleID',
+    'checkout_session_id',
+    'checkout_url',            // ✅ NEW
+    'reference_number',        // ✅ NEW
+    'paymongo_source_id',      // ✅ NEW
+    'status',
+    'paymongo_payment_id',
+    'meta',
+];
 
     protected $casts = [
         'amount'      => 'float',

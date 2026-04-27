@@ -16,29 +16,23 @@ class OrderService
         $this->repo = $repo;
     }
 
-    public function createOrder(CreateOrderDTO $dto)
-    {
-        Log::info('Starting createOrder');
+public function createOrder(CreateOrderDTO $dto)
+{
+    return DB::transaction(function () use ($dto) {
 
-        return DB::transaction(function () use ($dto) {
-            // Create order
-            $orderID = $this->repo->create($dto);
-            Log::info("Order created: {$orderID}");
+        // ✅ get FULL MODEL
+        $order = $this->repo->create($dto);
 
-            // Add items
-            $this->repo->addItems($orderID, $dto->items);
-            Log::info("Order items added");
+        // use ID when needed
+        $this->repo->addItems($order->orderID, $dto->items);
 
-            // Update totalAmount after items
-            $this->repo->updateTotalAmount($orderID);
+        $this->repo->updateTotalAmount($order->orderID);
 
-            // Add payment
-            $this->repo->addPayment($orderID, $dto);
-            Log::info("Payment added");
+        $this->repo->addPayment($order->orderID, $dto);
 
-            return $orderID;
-        });
-    }
+        return $order; // ✅ return model
+    });
+}
 
     public function getCustomerOrders(int $customerID)
     {

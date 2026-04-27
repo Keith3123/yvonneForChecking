@@ -11,7 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // ✅ EXCLUDE webhook from CSRF
+        $middleware->validateCsrfTokens(except: [
+            'paymongo/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

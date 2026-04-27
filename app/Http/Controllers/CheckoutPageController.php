@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\DeliveryAddress;
 
 class CheckoutPageController extends Controller
@@ -106,135 +107,114 @@ public function payWithGcash(Request $request)
             'deliveryTime' => 'required|string',
         ]);
 
-        $total = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
+        // =========================
+        // PREPARE ITEMS
+        // =========================
+        $items = array_map(fn($item) => [
+            'productID' => $item['productID'] ?? $item['id'],
+            'qty' => $item['quantity'],
+            'price' => $item['price'],
+        ], $cart);
 
-        // ✅ Store payload in session
-        session([
-            'paymongo_payload' => [
-                'customerID' => $customer['customerID'],
-                'deliveryAddress' => $validated['deliveryAddress'],
-                'remarks' => $validated['remarks'] ?? '',
-                'deliveryDate' => $validated['deliveryDate'],
-                'deliveryTime' => $validated['deliveryTime'],
-                'cart' => $cart,
-            ]
+        $dto = new CreateOrderDTO([
+            'customerID' => $customer['customerID'],
+            'deliveryAddress' => $validated['deliveryAddress'],
+            'remarks' => $validated['remarks'] ?? '',
+            'items' => $items,
+            'deliveryDate' => Carbon::parse($validated['deliveryDate'].' '.$validated['deliveryTime']),
+            'deliveryTime' => $validated['deliveryTime'],
+            'payment' => 'gcash',
         ]);
 
-        // ✅ Correct redirect object keys for PayMongo
+        // ✅ CREATE ORDER
+        $order = $this->orderService->createOrder($dto);
+
+        // =========================
+        // TOTAL
+        // =========================
+        $total = collect($cart)->sum(fn($i) => $i['price'] * $i['quantity']);
+
+        if ($total <= 0) {
+            return response()->json(['error' => 'Invalid total'], 400);
+        }
+
+        // =========================
+        // CREATE CHECKOUT SESSION
+        // =========================
         $response = Http::withBasicAuth(config('services.paymongo.secret'), '')
-            ->post('https://api.paymongo.com/v1/sources', [
+            ->post('https://api.paymongo.com/v1/checkout_sessions', [
                 'data' => [
                     'attributes' => [
-                        'type' => 'gcash',
-                        'amount' => intval($total * 100),
-                        'currency' => 'PHP',
-                        'redirect' => [
-                            'success' => route('checkout.payment.processing'),
-                            'failed' => route('checkout.payment.failed'),
+                        'line_items' => [[
+                            'name' => 'Order #' . $order->orderID,
+                            'amount' => intval($total * 100),
+                            'currency' => 'PHP',
+                            'quantity' => 1,
+                        ]],
+                        'payment_method_types' => ['gcash'],
+                        'success_url' => route('checkout.payment.success'),
+                        'cancel_url' => route('checkout.payment.failed'),
+                        'metadata' => [
+                            'order_id' => (string)$order->orderID
                         ]
                     ]
                 ]
             ]);
 
         if (!$response->successful()) {
-            Log::error('PayMongo failed: ' . json_encode($response->json()));
+            Log::error('PayMongo error', $response->json());
             return response()->json(['error' => 'PayMongo failed'], 500);
         }
 
-        $sourceId = $response->json()['data']['id'];
-        session(['paymongo_source_id' => $sourceId]);
+$data = $response->json()['data'];
+
+$checkoutId = $data['id'];
+$checkoutUrl = $data['attributes']['checkout_url'] ?? null;
+
+// ✅ SAVE IMMEDIATELY
+Payment::where('orderID', $order->orderID)
+->update([
+    'checkout_session_id' => $checkoutId,
+    'checkout_url'        => $checkoutUrl,
+    'status'              => 'pending',
+    'meta'                => json_encode([
+        'stage' => 'checkout_created'
+    ])
+]);
 
         return response()->json([
-            'checkout_url' => $response->json()['data']['attributes']['redirect']['checkout_url']
+            'checkout_url' => $data['attributes']['checkout_url']
         ]);
 
     } catch (\Throwable $e) {
-        Log::error('PayMongo Exception: ' . $e->getMessage());
+        Log::error('💥 GCASH ERROR', [
+            'message' => $e->getMessage(),
+        ]);
+
         return response()->json(['error' => 'Server error'], 500);
     }
 }
 
     // ==============================
-    // PROCESSING PAGE
+    // PAYMENT RESULT PAGES
     // ==============================
-    public function processing()
-    {
-        return view('payment.processing', [
-            'sourceId' => session('paymongo_source_id')
-        ]);
-    }
-
-    // ==============================
-    // CHECK STATUS (CORE LOGIC)
-    // ==============================
-    public function checkPaymentStatus($sourceId)
-    {
-        try {
-            $response = Http::withBasicAuth(config('services.paymongo.secret'), '')
-                ->get("https://api.paymongo.com/v1/sources/$sourceId");
-
-            $status = $response->json()['data']['attributes']['status'];
-
-            if ($status === 'chargeable') {
-
-                // STEP 1: CREATE PAYMENT
-                Http::withBasicAuth(config('services.paymongo.secret'), '')
-                    ->post('https://api.paymongo.com/v1/payments', [
-                        'data' => [
-                            'attributes' => [
-                                'amount' => $response->json()['data']['attributes']['amount'],
-                                'currency' => 'PHP',
-                                'source' => [
-                                    'id' => $sourceId,
-                                    'type' => 'source',
-                                ],
-                            ]
-                        ]
-                    ]);
-
-                // STEP 2: CREATE ORDER
-                $payload = session('paymongo_payload');
-
-                $items = array_map(fn($item) => [
-                    'productID' => $item['productID'] ?? $item['id'],
-                    'qty' => $item['quantity'],
-                    'price' => $item['price'],
-                ], $payload['cart']);
-
-                $dto = new CreateOrderDTO([
-                    'customerID' => $payload['customerID'],
-                    'deliveryAddress' => $payload['deliveryAddress'],
-                    'remarks' => $payload['remarks'],
-                    'items' => $items,
-                    'deliveryDate' => Carbon::parse($payload['deliveryDate'].' '.$payload['deliveryTime']),
-                    'deliveryTime' => $payload['deliveryTime'],
-                    'payment' => 'gcash',
-                ]);
-
-                $this->orderService->createOrder($dto);
-
-                session()->forget(['cart', 'paymongo_payload', 'paymongo_source_id']);
-
-                return response()->json(['status' => 'paid']);
-            }
-
-            return response()->json(['status' => $status]);
-
-        } catch (\Throwable $e) {
-            Log::error($e->getMessage());
-            return response()->json(['status' => 'error']);
-        }
-    }
-
+    
     public function paymentSuccess()
-    {
-        return view('payment.success');
-    }
+{
+    session()->forget('cart');
+    return view('payment.success');
+}
+
 
     public function paymentFailed()
     {
         return view('payment.failed');
     }
+
+
+    // ==============================
+    // ADDRESS BOOK
+    // ==============================
 
     public function getSavedAddresses()
     {
