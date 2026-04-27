@@ -37,34 +37,43 @@ class AdminPaluwaganController extends AdminBaseController
 
         // Subscriptions
         $subscriptions = PaluwaganEntry::with(['package', 'schedules', 'customer'])->get()->map(function($entry) {
-            $package = $entry->package;
-            $schedules = $entry->schedules ?? collect();
+    $package = $entry->package;
+    $schedules = $entry->schedules ?? collect();
 
-            $totalPaid = $schedules->sum('amountPaid');
-            $totalMonths = $schedules->count();
-            $monthsPaid = $schedules->where('status', 'paid')->count();
-            $monthsLeft = $totalMonths - $monthsPaid;
-            $nextSchedule = $schedules
-            ->whereIn('status', ['pending', 'partial', 'late'])
-            ->sortBy('dueDate')
-            ->first();
+    $totalPaid = $schedules->sum('amountPaid');
+    $totalMonths = $schedules->count();
+    
+    // ✅ Count months where amountPaid >= amountDue (not just status = 'paid')
+    $monthsPaid = $schedules->filter(function($s) {
+        return (float)$s->amountPaid >= (float)$s->amountDue && (float)$s->amountDue > 0;
+    })->count();
+    
+    $monthsLeft = $totalMonths - $monthsPaid;
+    
+    $nextSchedule = $schedules
+        ->filter(function($s) {
+            return in_array($s->status, ['pending', 'partial', 'late']) 
+                   && (float)$s->amountPaid < (float)$s->amountDue;
+        })
+        ->sortBy('dueDate')
+        ->first();
 
-            return [
-                'entryID' => $entry->paluwaganEntryID,
-                'packageName' => $package?->packageName ?? 'N/A',
-                'totalMonths' => $totalMonths,
-                'monthsPaid' => $monthsPaid,
-                'monthsLeft' => $monthsLeft,
-                'monthlyPayment' => $package?->monthlyPayment ?? 0,
-                'totalPaid' => $totalPaid,
-                'totalAmount' => $package?->totalAmount ?? 0,
-                'nextDueDate' => $nextSchedule?->dueDate,
-                'status' => $entry->status,
-                'customerName' => trim(
-                    ($entry->customer->firstName ?? '') . ' ' . ($entry->customer->lastName ?? '')
-                ) ?: 'N/A',
-            ];
-        });
+    return [
+        'entryID'        => $entry->paluwaganEntryID,
+        'packageName'    => $package?->packageName ?? 'N/A',
+        'totalMonths'    => $totalMonths,
+        'monthsPaid'     => $monthsPaid,
+        'monthsLeft'     => $monthsLeft,
+        'monthlyPayment' => $package?->monthlyPayment ?? 0,
+        'totalPaid'      => $totalPaid,
+        'totalAmount'    => $package?->totalAmount ?? 0,
+        'nextDueDate'    => $nextSchedule?->dueDate,
+        'status'         => $entry->status,
+        'customerName'   => trim(
+            ($entry->customer->firstName ?? '') . ' ' . ($entry->customer->lastName ?? '')
+        ) ?: 'N/A',
+    ];
+});
 
         return view('admin.paluwagan', [
             'packages' => $packages,
@@ -301,47 +310,135 @@ public function complete($id)
 public function reassign(Request $request, $entryID)
 {
     try {
-        // $customerName = $request->input('customer');
-
-//         $customer = \App\Models\Customer::whereRaw("
-//     BINARY CONCAT(firstName, ' ', lastName) = ?
-// ", [$customerName])->first();
         $customerID = $request->input('customerID');
-
-$customer = \App\Models\Customer::find($customerID);
-        // $customer = \App\Models\Customer::where('firstName', $firstName)
-        //     ->where('lastName', $lastName)
-        //     ->first();
+        $customer = \App\Models\Customer::find($customerID);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Customer not found'
-            ]);
+            return response()->json(['success' => false, 'message' => 'Customer not found']);
         }
 
-$entry = \App\Models\PaluwaganEntry::where('paluwaganEntryID', $entryID)->first();
+        $entry = PaluwaganEntry::where('paluwaganEntryID', $entryID)->first();
         if (!$entry) {
+            return response()->json(['success' => false, 'message' => 'Entry not found']);
+        }
+
+        // ✅ Check duplicate enrollment
+        $alreadyEnrolled = PaluwaganEntry::where('customerID', $customerID)
+            ->where('packageID', $entry->packageID)
+            ->where('status', 'active')
+            ->exists();
+
+        if ($alreadyEnrolled) {
             return response()->json([
                 'success' => false,
-                'message' => 'Entry not found'
+                'message' => 'This customer already has an active subscription for this package'
             ]);
         }
 
+        // ✅ Change customer and reactivate entry
         $entry->customerID = $customer->customerID;
         $entry->status = 'active';
         $entry->save();
 
+        // ✅ Only reactivate CANCELLED schedules (unpaid ones)
+        // Paid schedules remain 'paid' — progress preserved!
+        \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $entryID)
+            ->where('status', 'cancelled')
+            ->update(['status' => 'pending']);
+
         return response()->json([
-            'success' => true
+            'success' => true,
+            'message' => 'Customer replaced successfully. Previous payments retained.'
         ]);
 
     } catch (\Exception $e) {
+        \Log::error('Reassign error: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+/**
+ * Get payment history for an entry
+ */
+public function getPayments($entryID)
+{
+    try {
+        // ✅ Use where() instead of findOrFail() since custom primary key
+        $entry = PaluwaganEntry::with(['schedules', 'package'])
+            ->where('paluwaganEntryID', $entryID)
+            ->firstOrFail();
+
+        $payments = $entry->schedules->sortBy('dueDate')->values()->map(function($schedule) {
+            return [
+                'monthLabel'  => Carbon::parse($schedule->dueDate)->format('F Y'),
+                'dueDate'     => Carbon::parse($schedule->dueDate)->format('M d, Y'),
+                'amountDue'   => (float) $schedule->amountDue,
+                'amountPaid'  => (float) $schedule->amountPaid,
+                'status'      => $schedule->amountPaid >= $schedule->amountDue ? 'paid' : $schedule->status,
+                'paidAt'      => $schedule->status === 'paid' && $schedule->updated_at
+                                    ? Carbon::parse($schedule->updated_at)->format('M d, Y') 
+                                    : null,
+            ];
+        });
+
+        return response()->json([
+            'success'     => true,
+            'payments'    => $payments,
+            'totalPaid'   => (float) $entry->schedules->sum('amountPaid'),
+            'totalAmount' => (float) ($entry->package->totalAmount ?? 0),
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('getPayments error: ' . $e->getMessage());
         return response()->json([
             'success' => false,
             'message' => $e->getMessage()
-        ]);
+        ], 500);
     }
+}
 
+/**
+ * Search ALL customers for replacement
+ */
+public function searchCustomers(Request $request)
+{
+    try {
+        $query = $request->input('q', '');
+
+        $customersQuery = \App\Models\Customer::query();
+
+        // Only apply name filter if query is not empty
+        if (!empty($query)) {
+            $customersQuery->where(function($q) use ($query) {
+                $q->where('firstName', 'like', "%{$query}%")
+                  ->orWhere('lastName', 'like', "%{$query}%")
+                  ->orWhereRaw("CONCAT(firstName, ' ', lastName) LIKE ?", ["%{$query}%"]);
+            });
+        }
+
+        // ✅ No more exclusions — fetch ALL customers
+        $customers = $customersQuery
+            ->orderBy('firstName')
+            ->limit(50)
+            ->get()
+            ->map(function($c) {
+                return [
+                    'customerID' => $c->customerID,
+                    'name'       => trim($c->firstName . ' ' . $c->lastName),
+                    'email'      => $c->email ?? '',
+                ];
+            });
+
+        return response()->json([
+            'success'   => true,
+            'customers' => $customers,
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('searchCustomers error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
+    }
 }
 }

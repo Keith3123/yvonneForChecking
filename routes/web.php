@@ -95,6 +95,9 @@ Route::get('/paluwagan/schedule/{entryID}', [PaluwaganPageController::class, 'vi
 Route::get('/user/paluwagan/available-months/{packageID}', [PaluwaganPageController::class, 'availableMonths'])->name('user.paluwagan.available-months');
 Route::post('/paluwagan/cancel/{id}', [PaluwaganPageController::class, 'cancel']);
 
+// PALUWAGAN GCASH
+Route::post('/paluwagan/pay-gcash', [PaluwaganPageController::class, 'payWithGcash'])->name('paluwagan.pay.gcash');
+
 // ------------------- ADMIN PAGES -------------------
 Route::prefix('admin')->group(function() {
 
@@ -132,6 +135,9 @@ Route::prefix('admin')->group(function() {
     Route::post('/paluwagan/month/toggle', [AdminPaluwaganController::class,'toggleMonth']);
     Route::post('/paluwagan/entry/{id}/complete', [AdminPaluwaganController::class, 'complete'])->name('admin.paluwagan.complete');
     Route::post('/paluwagan/entry/{entryID}/reassign', [AdminPaluwaganController::class, 'reassign']);
+
+    Route::get('/paluwagan/entry/{id}/payments', [AdminPaluwaganController::class, 'getPayments']);
+    Route::get('/paluwagan/customers/search', [AdminPaluwaganController::class, 'searchCustomers']);
 
     // Inventory Routes
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('admin.inventory');

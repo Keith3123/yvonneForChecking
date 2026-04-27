@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Services\PaluwaganService;
 use App\Models\PaluwaganEntry;
+use App\Models\PaluwaganSchedule;
+use App\Models\Payment;  
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log; 
 use Illuminate\Http\Request;
 
 class PaluwaganPageController extends Controller
@@ -92,23 +96,23 @@ class PaluwaganPageController extends Controller
         ]);
     }
 
-    $mapped = $schedules
-        ->sortBy('dueDate')
-        ->values()
-        ->map(function ($sched) {
+$mapped = $schedules
+    ->sortBy('dueDate')
+    ->values()
+    ->map(function ($sched) {
+        // ✅ Check by actual amount, not just status
+        $isPaid = (float)$sched->amountPaid >= (float)$sched->amountDue && (float)$sched->amountDue > 0;
 
-            $isPaid = (float)$sched->amountPaid >= (float)$sched->amountDue;
-
-            return [
-                'scheduleID' => $sched->scheduleID,
-                'monthName' => \Carbon\Carbon::parse($sched->dueDate)->format('F'),
-                'dueDate' => $sched->dueDate,
-                'amountDue' => (float) $sched->amountDue,
-                'amountPaid' => (float) $sched->amountPaid,
-                'isPaid' => $isPaid,
-                'status' => $isPaid ? 'paid' : $sched->status,
-            ];
-        });
+        return [
+            'scheduleID' => $sched->scheduleID,
+            'monthName'  => \Carbon\Carbon::parse($sched->dueDate)->format('F'),
+            'dueDate'    => $sched->dueDate,
+            'amountDue'  => (float) $sched->amountDue,
+            'amountPaid' => (float) $sched->amountPaid,
+            'isPaid'     => $isPaid,
+            'status'     => $isPaid ? 'paid' : $sched->status,
+        ];
+    });
 
     return response()->json([
         'entry' => [
@@ -155,50 +159,127 @@ class PaluwaganPageController extends Controller
     }
 }
 
-public function pay(Request $request)
-{
-    $entryID = $request->entryID;
-    $amount = floatval($request->amount);
+// ==============================
+    // GCASH PAYMENT FOR PALUWAGAN
+    // ==============================
+    public function payWithGcash(Request $request)
+    {
+        try {
+            $customer = session('logged_in_user');
+            if (!$customer) {
+                return response()->json(['error' => 'Login required'], 401);
+            }
 
-    $schedules = PaluwaganSchedule::where('paluwaganEntryID', $entryID)
-        ->orderBy('dueDate')
-        ->get();
+            $validated = $request->validate([
+                'entryID'  => 'required|integer',
+                'amount'   => 'required|numeric|min:1',
+            ]);
 
-    foreach ($schedules as $sched) {
+            $entryID = $validated['entryID'];
+            $amount  = floatval($validated['amount']);
 
-        if ($amount <= 0) break;
+            // =========================
+            // VERIFY ENTRY BELONGS TO CUSTOMER
+            // =========================
+            $entry = PaluwaganEntry::with('package')
+                ->where('paluwaganEntryID', $entryID)
+                ->where('customerID', $customer['customerID'])
+                ->first();
 
-        $remaining = $sched->amountDue - $sched->amountPaid;
+            if (!$entry) {
+                return response()->json(['error' => 'Entry not found'], 404);
+            }
 
-        if ($remaining <= 0) continue;
+            // =========================
+            // GET PENDING SCHEDULES
+            // =========================
+            $pendingSchedules = PaluwaganSchedule::where('paluwaganEntryID', $entryID)
+                ->whereIn('status', ['pending', 'late'])
+                ->orderBy('dueDate')
+                ->get();
 
-        $paying = min($remaining, $amount);
+            if ($pendingSchedules->isEmpty()) {
+                return response()->json(['error' => 'No pending payments'], 400);
+            }
 
-        $sched->amountPaid += $paying;
-        $amount -= $paying;
+            // Validate amount doesn't exceed total remaining
+            $totalRemaining = $pendingSchedules->sum(fn($s) => $s->amountDue - $s->amountPaid);
+            if ($amount > $totalRemaining) {
+                return response()->json([
+                    'error' => 'Amount exceeds total remaining balance of ₱' . number_format($totalRemaining, 2)
+                ], 400);
+            }
 
-        if ($sched->amountPaid >= $sched->amountDue) {
-            $sched->status = 'paid';
-        } else {
-            $sched->status = 'partial';
+            // =========================
+            // CREATE CHECKOUT SESSION
+            // =========================
+            $response = Http::withBasicAuth(config('services.paymongo.secret'), '')
+                ->post('https://api.paymongo.com/v1/checkout_sessions', [
+                    'data' => [
+                        'attributes' => [
+                            'line_items' => [[
+                                'name'     => 'Paluwagan Payment - ' . $entry->package->packageName,
+                                'amount'   => intval($amount * 100),
+                                'currency' => 'PHP',
+                                'quantity' => 1,
+                            ]],
+                            'payment_method_types' => ['gcash'],
+                            'success_url' => route('checkout.payment.success'),
+                            'cancel_url'  => route('checkout.payment.failed'),
+                            'metadata'    => [
+                                'context'  => 'paluwagan',
+                                'entry_id' => (string) $entryID,
+                                'amount'   => (string) $amount,
+                            ],
+                        ],
+                    ],
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('PayMongo Paluwagan error', $response->json());
+                return response()->json(['error' => 'PayMongo failed'], 500);
+            }
+
+            $data            = $response->json()['data'];
+            $checkoutId      = $data['id'];
+            $checkoutUrl     = $data['attributes']['checkout_url'] ?? null;
+
+            // =========================
+            // CREATE PENDING PAYMENT RECORD
+            // =========================
+            // Use the first pending schedule
+            $firstSchedule = $pendingSchedules->first();
+
+            Payment::create([
+                'paluwaganEntryID'   => $entryID,
+                'scheduleID'         => $firstSchedule->scheduleID,
+                'contextType'        => 'paluwagan',
+                'paymentType'        => 'downpayment',
+                'amount'             => $amount,
+                'paymentDate'        => now(),
+                'method'             => 'GCASH',
+                'status'             => 'pending',
+                'checkout_session_id'=> $checkoutId,
+                'checkout_url'       => $checkoutUrl,
+                'meta'               => json_encode(['stage' => 'checkout_created']),
+            ]);
+
+            Log::info('💰 PALUWAGAN CHECKOUT CREATED', [
+                'entryID'    => $entryID,
+                'amount'     => $amount,
+                'checkoutId' => $checkoutId,
+            ]);
+
+            return response()->json(['checkout_url' => $checkoutUrl]);
+
+        } catch (\Throwable $e) {
+            Log::error('💥 PALUWAGAN GCASH ERROR', [
+                'message' => $e->getMessage(),
+                'line'    => $e->getLine(),
+            ]);
+            return response()->json(['error' => 'Server error'], 500);
         }
-
-        $sched->save();
-
-        Payment::create([
-            'paluwaganEntryID' => $entryID,
-            'scheduleID' => $sched->scheduleID,
-            'contextType' => 'paluwagan',
-            'paymentType' => 'partial',
-            'amount' => $paying,
-            'paymentDate' => now(),
-            'method' => 'GCash',
-            'proofURL' => ''
-        ]);
     }
-
-    return response()->json(['success' => true]);
-}
 
 public function cancel($id)
 {
@@ -222,17 +303,20 @@ public function cancel($id)
         $entry->status = 'cancelled';
         $entry->save();
 
-        // safer query instead of relationship dependency
         $schedules = \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $id)->get();
 
         foreach ($schedules as $schedule) {
-            $schedule->status = 'cancelled';
-            $schedule->save();
+            // ✅ Only cancel UNPAID schedules — preserve paid progress!
+            if ($schedule->status !== 'paid' && $schedule->amountPaid < $schedule->amountDue) {
+                $schedule->status = 'cancelled';
+                $schedule->save();
+            }
+            // ✅ Paid schedules stay as 'paid' — progress preserved!
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Subscription cancelled successfully'
+            'message' => 'Subscription cancelled successfully. Payment progress preserved.'
         ]);
 
     } catch (\Throwable $e) {
