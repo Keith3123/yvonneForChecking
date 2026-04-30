@@ -15,47 +15,36 @@ class CartPageController extends Controller
 
     // Add product to cart
     public function add(Request $request)
-    {
-        $cart = session('cart', []);
-        $id = $request->id;
+{
+    $cart = session('cart', []);
 
-        if (!is_numeric($id)) {
-            return response()->json(['error' => 'Invalid product ID.'], 400);
-        }
+    $id = $request->input('id');
+    $name = $request->input('name');
+    $price = $request->input('price'); // ← This is already the DISCOUNTED price
+    $quantity = $request->input('quantity', 1);
+    $image = $request->input('image');
+    $productType = $request->input('productType');
 
-        $product = [
-            'id' => (int)$id,
-            'name' => $request->name,
-            'price' => $request->price,
-            'quantity' => $request->quantity ?? 1,
-            'image' => $request->image,
-            'customization' => $request->customization ?? null,
-            'productType' => $request->productType ?? '',
+    $key = $id . '_' . $price; // unique key per product+price combo
+
+    if (isset($cart[$key])) {
+        $cart[$key]['quantity'] += $quantity;
+    } else {
+        $cart[$key] = [
+            'id' => $id,
+            'productID' => $id,
+            'name' => $name,
+            'price' => (float) $price, // Already discounted
+            'quantity' => (int) $quantity,
+            'image' => $image,
+            'productType' => $productType,
         ];
-
-        // Unique key if customization exists
-        $key = $product['id'];
-        if (!empty($product['customization'])) {
-            $key = $product['id'] . '-' . md5(json_encode($product['customization']));
-        }
-
-        if (isset($cart[$key])) {
-            $cart[$key]['quantity'] += $product['quantity'];
-        } else {
-            $cart[$key] = $product;
-        }
-
-        session(['cart' => $cart]);
-
-        if ($request->ajax()) {
-            return view('partials.cart-sidebar')->render();
-        }
-
-        return response()->json([
-            'success' => true,
-            'cartCount' => array_sum(array_column($cart, 'quantity'))
-        ]);
     }
+
+    session(['cart' => $cart]);
+
+    return response()->json(['success' => true, 'cart' => $cart]);
+}
 
     // Update quantity (+ / -)
     public function update(Request $request)

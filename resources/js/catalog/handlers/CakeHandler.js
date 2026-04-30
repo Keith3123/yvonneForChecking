@@ -16,8 +16,12 @@ export default class CakeHandler {
         const customizationCard = modal.querySelector('#cake-customization');
         const imageEl = modal.querySelector('#cake-image');
         const isCustomization = card.dataset.customization === 'true';
+        const promo = parseFloat(card.dataset.promo || 0);
 
         modal.querySelector('#cake-name').textContent = card.dataset.name;
+
+        // Show promo badge
+        this.showPromoBadge(modal, promo);
 
         if (isCustomization) {
             customizationCard.classList.remove('hidden');
@@ -35,7 +39,12 @@ export default class CakeHandler {
 
             const servings = JSON.parse(card.dataset.servings || '[]');
             servings.forEach(s => {
-                if (s.size) sizeSelect.innerHTML += `<option value="${s.price}">${s.size}</option>`;
+                if (s.size) {
+                    const label = promo > 0 && s.originalPrice && s.originalPrice !== s.price
+                        ? `${s.size} - ₱${parseFloat(s.price).toFixed(2)} (was ₱${parseFloat(s.originalPrice).toFixed(2)})`
+                        : s.size;
+                    sizeSelect.innerHTML += `<option value="${s.price}">${label}</option>`;
+                }
                 if (s.flavor) flavorSelect.innerHTML += `<option value="${s.flavor}">${s.flavor}</option>`;
                 if (s.shape) shapeSelect.innerHTML += `<option value="${s.shape}">${s.shape}</option>`;
                 if (s.icing) icingSelect.innerHTML += `<option value="${s.icing}">${s.icing}</option>`;
@@ -48,23 +57,48 @@ export default class CakeHandler {
             imageEl.src = card.dataset.image;
 
             const price = parseFloat(card.dataset.price || 0);
-            modal.querySelector('#cake-price').textContent = `₱${price.toFixed(2)}`;
+            const servings = JSON.parse(card.dataset.servings || '[]');
+            const originalPrice = servings[0]?.originalPrice || price;
+
+            // Show original price crossed out
+            const priceEl = modal.querySelector('#cake-price');
+            if (promo > 0 && originalPrice !== price) {
+                priceEl.innerHTML = `<span class="line-through text-gray-400 text-sm mr-1">₱${originalPrice.toFixed(2)}</span> ₱${price.toFixed(2)}`;
+            } else {
+                priceEl.textContent = `₱${price.toFixed(2)}`;
+            }
+
             this.setupQuantity(modal, { value: price }, '#cake-price', '#cake-total', '#quantity-cake');
         }
 
         this.bindAddToCart(modal);
     }
 
+    showPromoBadge(modal, promo) {
+        let badge = modal.querySelector('.promo-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'promo-badge mb-2';
+            const nameEl = modal.querySelector('#cake-name');
+            if (nameEl) nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+        }
+
+        if (promo > 0) {
+            badge.innerHTML = `<span class="inline-block bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">${promo}% OFF</span>`;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
     setupQuantity(modal, priceSource, priceSelector, totalSelector, qtySelector) {
         let qty = 1;
         const qtyEl = modal.querySelector(qtySelector);
-        const priceEl = modal.querySelector(priceSelector);
         const totalEl = modal.querySelector(totalSelector);
 
         const updateTotal = () => {
             const price = parseFloat(priceSource.value || priceSource) || 0;
             qtyEl.textContent = qty;
-            priceEl.textContent = `₱${price.toFixed(2)}`;
             totalEl.textContent = `₱${(price * qty).toFixed(2)}`;
         };
 
@@ -83,11 +117,16 @@ export default class CakeHandler {
 
             const isCustomization = !modal.querySelector('#cake-customization').classList.contains('hidden');
 
+            // Extract numeric price from potentially HTML content
+            const priceText = modal.querySelector('#cake-price').textContent || modal.querySelector('#cake-price').innerText;
+            const priceMatch = priceText.match(/₱([\d,.]+)$/);
+            const price = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : 0;
+
             this.cartService.sendToCart({
                 id: parseInt(modal.querySelector('#cake-id').value),
                 name: modal.querySelector('#cake-name').textContent,
                 image: modal.querySelector('#cake-image')?.src ?? null,
-                price: parseFloat(modal.querySelector('#cake-price').textContent.replace('₱', '')),
+                price: price,
                 quantity: parseInt(modal.querySelector('#quantity-cake').textContent),
                 productType: 'Cake',
                 customization: isCustomization ? {

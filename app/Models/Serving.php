@@ -16,11 +16,16 @@ class Serving extends Model
         'servingSize',
         'unit',
         'price',
-        'qtyNeeded'
+        'qtyNeeded',
     ];
 
     public function product()
     {
         return $this->belongsTo(Product::class, 'productID', 'productID');
+    }
+
+    public function ingredientsList()
+    {
+        return $this->hasMany(ListOfIngredient::class, 'servingID', 'servingID');
     }
 }

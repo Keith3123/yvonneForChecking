@@ -104,12 +104,13 @@ Route::prefix('admin')->group(function() {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     // Product Management Routes
-    Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products');
-    Route::get('/products/ajax/fetch', [AdminProductController::class, 'ajaxFetch']);
-    Route::post('/products/store', [AdminProductController::class, 'store'])->name('admin.products.store');
-    Route::put('/products/{id}', [AdminProductController::class, 'update'])->name('admin.products.update');    
-    Route::delete('/products/{id}/delete', [AdminProductController::class, 'destroy'])->name('admin.products.delete');
-    Route::get('/products/modal/edit/{id}', [AdminProductController::class, 'modalEdit']);
+// ✅ CORRECT ORDER — specific routes first
+Route::get('/products/modal/edit/{id}', [AdminProductController::class, 'modalEdit']);
+Route::get('/products/ajax/fetch', [AdminProductController::class, 'ajaxFetch']);
+Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products');
+Route::post('/products/store', [AdminProductController::class, 'store'])->name('admin.products.store');
+Route::put('/products/{id}', [AdminProductController::class, 'update'])->name('admin.products.update');
+Route::post('/products/{id}/toggle', [AdminProductController::class, 'toggleAvailability'])->name('admin.products.toggle');
 
 
     // Orders Management

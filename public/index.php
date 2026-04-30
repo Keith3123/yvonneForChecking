@@ -10,6 +10,11 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
     require $maintenance;
 }
 
+// Allow ngrok to serve all file types without 403
+if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    header('ngrok-skip-browser-warning: true');
+}
+
 // Register the Composer autoloader...
 require __DIR__.'/../vendor/autoload.php';
 

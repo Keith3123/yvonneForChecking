@@ -16,19 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const category = btn.dataset.category;
 
-            // Active state
             categoryButtons.forEach(b => b.classList.remove('active-category'));
             btn.classList.add('active-category');
 
-            // Filter products
             productCards.forEach(card => {
                 if (category === 'all') {
                     card.classList.remove('hidden');
                 } else {
-                    card.classList.toggle(
-                        'hidden',
-                        card.dataset.category !== category
-                    );
+                    card.classList.toggle('hidden', card.dataset.category !== category);
                 }
             });
         });
@@ -39,11 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartService = new CartService('/cart/add', '/cart/sidebar');
 
     const handlers = {
-        foodtray: new FoodTrayHandler(cartService),
+        foodtray:    new FoodTrayHandler(cartService),
         foodpackage: new FoodPackageHandler(cartService),
-        cake: new CakeHandler(cartService),
-        cupcake: new CupcakeHandler(cartService),
-        paluwagan: new PaluwaganHandler(cartService)
+        cake:        new CakeHandler(cartService),
+        cupcake:     new CupcakeHandler(cartService),
+        paluwagan:   new PaluwaganHandler(cartService)
     };
     
     // ================= PRODUCT CARD CLICK =================
@@ -52,10 +47,16 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
 
             const handler = handlers[card.dataset.category];
-            if (!handler) return;
+            if (!handler) {
+                console.warn('No handler for category:', card.dataset.category);
+                return;
+            }
 
             const modal = ProductModalFactory.getModal(card.dataset.category);
-            if (!modal) return;
+            if (!modal) {
+                console.warn('No modal for category:', card.dataset.category);
+                return;
+            }
 
             handler.populateModal(card, modal);
             handler.openModal(modal);
@@ -80,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobileCartBtn && mobileCartModal) {
         mobileCartBtn.addEventListener('click', e => {
             e.stopPropagation();
-            refreshCart(); // ✅ always fresh when opened
+            refreshCart();
             mobileCartModal.classList.remove('hidden');
         });
     }
@@ -124,9 +125,7 @@ function addOutsideClickListener(modal) {
 
 // ================= CART AJAX =================
 function bindCartEvents() {
-
     document.addEventListener('click', e => {
-
         const btn = e.target.closest('button');
         if (!btn || !btn.dataset.url) return;
 
@@ -170,5 +169,3 @@ function refreshCart() {
         })
         .catch(err => console.error('Cart refresh failed:', err));
 }
-
-

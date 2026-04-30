@@ -16,7 +16,12 @@ export default class FoodPackageHandler {
         this.populateDescription(modal.querySelector('#foodpackage-includes'), card.dataset.description);
 
         const servings = JSON.parse(card.dataset.servings || '[]');
+        const promo = parseFloat(card.dataset.promo || 0);
         const price = servings[0]?.price || 0;
+        const originalPrice = servings[0]?.originalPrice || price;
+
+        // Show promo in modal
+        this.showPromoBadge(modal, promo, originalPrice, price);
 
         modal.querySelector('#foodpackage-price').textContent = `₱${parseFloat(price).toFixed(2)}`;
         modal.querySelector('#foodpackage-total').textContent = `₱${parseFloat(price).toFixed(2)}`;
@@ -34,6 +39,26 @@ export default class FoodPackageHandler {
                 ulEl.appendChild(li);
             }
         });
+    }
+
+    showPromoBadge(modal, promo, originalPrice, discountedPrice) {
+        let badge = modal.querySelector('.promo-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'promo-badge mb-2';
+            const nameEl = modal.querySelector('#foodpackage-name');
+            if (nameEl) nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+        }
+
+        if (promo > 0 && originalPrice !== discountedPrice) {
+            badge.innerHTML = `
+                <span class="inline-block bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full mr-2">${promo}% OFF</span>
+                <span class="text-gray-400 line-through text-sm">₱${parseFloat(originalPrice).toFixed(2)}</span>
+            `;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
     }
 
     setupQuantity(modal, price) {

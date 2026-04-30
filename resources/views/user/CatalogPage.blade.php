@@ -92,38 +92,78 @@
             </nav>
         </div>
 
+        @php
+            function getProductImageUrl($imageURL) {
+                if (!$imageURL) return asset('storage/products/default-product.png');
+                if (file_exists(storage_path('app/public/products/' . $imageURL))) {
+                    return asset('storage/products/' . $imageURL);
+                }
+                if (file_exists(public_path('images/products/' . $imageURL))) {
+                    return asset('images/products/' . $imageURL);
+                }
+                return asset('storage/products/default-product.png');
+            }
+        @endphp
+
         {{-- PRODUCT GRID --}}
         <div
             id="product-grid"
             class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4
-                   gap-5 mt-6 px-4 sm:px-6 ml-12 mb-10"
+                gap-5 mt-6 px-4 sm:px-6 ml-12 mb-10"
         >
             @foreach ($products as $product)
+                @php
+                    $productImage = getProductImageUrl($product['imageURL']);
+                    $promo = $product['promo'] ?? 0;
+                    $firstServing = $product['servings'][0] ?? null;
+                    $displayPrice = $firstServing['price'] ?? 0;
+                    $originalPrice = $firstServing['originalPrice'] ?? $displayPrice;
+                    $hasPromo = $promo > 0 && $originalPrice != $displayPrice;
+                @endphp
                 <div
                     class="product-card bg-white rounded-lg shadow
                         transition-all duration-300
                         hover:-translate-y-2 hover:shadow-2xl
-                        cursor-pointer overflow-hidden"
+                        cursor-pointer overflow-hidden relative"
                     data-id="{{ $product['id'] }}"
                     data-category="{{ strtolower(preg_replace('/[^a-z]/', '', $product['productType'])) }}"
                     data-name="{{ $product['name'] }}"
                     data-description="{{ $product['description'] }}"
-                    data-image="{{ asset('storage/products/' . $product['imageURL']) }}"
+                    data-image="{{ $productImage }}"
                     data-servings='@json($product['servings'])'
-                    data-price="{{ $product['servings'][0]['price'] ?? 0 }}"
+                    data-price="{{ $displayPrice }}"
+                    data-promo="{{ $promo }}"
                 >
+                    {{-- PROMO BADGE --}}
+                    @if($hasPromo)
+                        <div class="absolute top-2 left-2 z-10 bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                            {{ $promo }}% OFF
+                        </div>
+                    @endif
+
                     <img
-                        src="{{ asset('storage/products/' . $product['imageURL']) }}"
+                        src="{{ $productImage }}"
                         class="w-full h-40 object-cover transition-transform duration-500 hover:scale-105"
+                        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22><rect fill=%22%23f3f4f6%22 width=%22400%22 height=%22300%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2216%22>No Image</text></svg>'"
                     >
 
                     <div class="p-4">
-                        <h3 class="font-semibold text-lg text-center">
+                        <h3 class="font-semibold text-base text-center text-gray-800 mb-1">
                             {{ $product['name'] }}
                         </h3>
-                        <p class="text-pink-600 font-semibold text-center">
-                            ₱ {{ number_format($product['servings'][0]['price'] ?? 0, 2) }}
-                        </p>
+
+                        @if($hasPromo)
+                            <p class="text-center text-gray-400 line-through text-sm">
+                                ₱ {{ number_format($originalPrice, 2) }}
+                            </p>
+                            <p class="text-pink-600 font-bold text-center text-lg">
+                                ₱ {{ number_format($displayPrice, 2) }}
+                            </p>
+                        @else
+                            <p class="text-pink-600 font-semibold text-center">
+                                ₱ {{ number_format($originalPrice, 2) }}
+                            </p>
+                        @endif
                     </div>
                 </div>
             @endforeach
