@@ -104,13 +104,12 @@ Route::prefix('admin')->group(function() {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     // Product Management Routes
-// ✅ CORRECT ORDER — specific routes first
-Route::get('/products/modal/edit/{id}', [AdminProductController::class, 'modalEdit']);
-Route::get('/products/ajax/fetch', [AdminProductController::class, 'ajaxFetch']);
-Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products');
-Route::post('/products/store', [AdminProductController::class, 'store'])->name('admin.products.store');
-Route::put('/products/{id}', [AdminProductController::class, 'update'])->name('admin.products.update');
-Route::post('/products/{id}/toggle', [AdminProductController::class, 'toggleAvailability'])->name('admin.products.toggle');
+    Route::get('/products/modal/edit/{id}', [AdminProductController::class, 'modalEdit']);
+    Route::get('/products/ajax/fetch', [AdminProductController::class, 'ajaxFetch']);
+    Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products');
+    Route::post('/products/store', [AdminProductController::class, 'store'])->name('admin.products.store');
+    Route::put('/products/{id}', [AdminProductController::class, 'update'])->name('admin.products.update');
+    Route::post('/products/{id}/toggle', [AdminProductController::class, 'toggleAvailability'])->name('admin.products.toggle');
 
 
     // Orders Management
@@ -120,6 +119,9 @@ Route::post('/products/{id}/toggle', [AdminProductController::class, 'toggleAvai
 
     // Sales Report
     Route::get('/salesreport', [AdminSalesReportController::class, 'index'])->name('admin.salesreport');
+    // Sales Report - AJAX data + Export
+    // Route::get('/salesreport/data', [AdminSalesReportController::class, 'getReportData'])->name('admin.salesreport.data');
+    Route::get('/salesreport/export-csv', [AdminSalesReportController::class, 'exportCSV'])->name('admin.salesreport.export.csv');
 
     // User Management
     Route::get('/users', [AdminUsersController::class, 'index'])->name('admin.users');
@@ -150,4 +152,5 @@ Route::post('/products/{id}/toggle', [AdminProductController::class, 'toggleAvai
     Route::put('/inventory/{id}', [AdminInventoryController::class, 'update'])->name('inventory.update');
 
     Route::post('/admin/logout', [LoginPageController::class, 'logout'])->name('admin.logout');
+
 });
