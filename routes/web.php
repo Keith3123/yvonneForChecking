@@ -38,8 +38,11 @@ Route::post('/logout', [LoginPageController::class, 'logout'])->name('logout');
 //My Rating Page
 Route::get('/my-ratings', [MyRatingPageController::class, 'index'])->name('my.ratings');
 
+// Registration Routes
 Route::get('/register', [RegisterPageController::class, 'show'])->name('register');
 Route::post('/register', [RegisterPageController::class, 'store'])->name('register.store');
+Route::post('/register/send-otp', [RegisterPageController::class, 'sendOtp'])->name('register.sendOtp');
+Route::post('/register/verify-otp', [RegisterPageController::class, 'verifyOtp'])->name('register.verifyOtp');
 
 Route::post('/check-username', [RegisterPageController::class, 'checkUsername']);
 Route::post('/check-email', [RegisterPageController::class, 'checkEmail']);

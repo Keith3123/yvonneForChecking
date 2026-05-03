@@ -326,19 +326,6 @@
             </div>
         </div>
 
-        {{-- ========== DEBUG INFO (remove this later) ========== --}}
-        <div class="border rounded-xl p-4 bg-gray-50 shadow-sm mb-8 border-gray-200">
-            <h4 class="font-semibold text-gray-600 mb-2 text-sm">🔧 Debug Info (Remove after confirming it works)</h4>
-            <div class="text-xs text-gray-500 space-y-1">
-                <p><strong>Period:</strong> {{ $period }}</p>
-                <p><strong>Date Range:</strong> {{ $from->format('Y-m-d H:i:s') }} → {{ $to->format('Y-m-d H:i:s') }}</p>
-                <p><strong>Total Orders Found:</strong> {{ $totalOrders }}</p>
-                <p><strong>Total Revenue:</strong> ₱{{ number_format($totalRevenue, 2) }}</p>
-                <p><strong>Top Products Count:</strong> {{ $topProducts->count() }}</p>
-                <p><strong>Status Breakdown:</strong> {{ json_encode($statusBreakdown) }}</p>
-            </div>
-        </div>
-
     </div>
 </main>
 

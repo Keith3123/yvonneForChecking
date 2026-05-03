@@ -108,10 +108,28 @@
                     </div>
 
                     <div>
-                        <label class="font-medium text-gray-700 mb-1 block">Email Address</label>
-                        <input name="email" value="{{ $user['email'] }}" readonly
-                            class="profile-field w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
-                    </div>
+    <label class="font-medium text-gray-700 mb-1 block">Email Address</label>
+
+    <div class="flex items-center gap-3">
+        <input id="currentEmail" name="email" value="{{ $user['email'] }}" readonly
+            class="w-full rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
+
+       <span id="emailStatusBadge"
+    class="px-3 py-2 text-xs font-semibold rounded-lg bg-yellow-100 text-yellow-700 whitespace-nowrap">
+    ⚠ Not Verified
+</span>
+
+        <button type="button"
+            id="changeEmailBtn"
+            class="px-4 py-2 rounded-lg bg-pink-100 text-pink-700 hover:bg-pink-200 transition whitespace-nowrap">
+            Bind Email
+        </button>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-1">
+        Changing your email requires OTP verification
+    </p>
+</div>
 
                     <div>
                         <label class="font-medium text-gray-700 mb-1 block">Contact Number</label>
@@ -235,6 +253,61 @@
             </div>
         </div>
 
+        {{-- CHANGE EMAIL MODAL --}}
+<div id="changeEmailModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">Change Email Address</h2>
+            <button type="button" id="closeEmailModal"
+                class="text-gray-400 hover:text-gray-600 text-2xl">
+                &times;
+            </button>
+        </div>
+
+        <p class="text-sm text-gray-500 mb-4">
+            Enter your new email and verify it using OTP.
+        </p>
+
+        {{-- STEP 1 --}}
+        <div id="emailStep1">
+            <input type="email" id="newEmail"
+                placeholder="Enter new email"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
+
+            <input type="email" id="confirmNewEmail"
+                placeholder="Confirm new email"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 mb-2 focus:ring-2 focus:ring-pink-300 outline-none">
+
+            <p id="emailMatchError" class="text-red-500 text-sm hidden mb-3">
+                Emails do not match
+            </p>
+
+            <button type="button" id="sendEmailOtpBtn"
+                class="w-full py-3 rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition">
+                Send Verification Code
+            </button>
+        </div>
+
+        {{-- STEP 2 --}}
+        <div id="emailStep2" class="hidden">
+            <input type="text" id="emailOtpInput" maxlength="6"
+                placeholder="Enter 6-digit OTP"
+                class="w-full rounded-lg border border-gray-300 px-3 py-3 text-center tracking-widest mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
+
+            <p id="emailOtpTimer" class="text-sm text-gray-500 text-center">
+                OTP expires in: 05:00
+            </p>
+
+            <button type="button" id="verifyEmailOtpBtn"
+                class="w-full mt-4 py-3 rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition">
+                Verify & Update Email
+            </button>
+        </div>
+
+    </div>
+</div>
+
     </div>
 </div>
 
@@ -304,7 +377,7 @@
     }
 // Edit Profile Logic
     document.getElementById('editBtn').addEventListener('click', function() {
-        document.querySelectorAll('.profile-field').forEach(el => {
+        document.querySelectorAll('.profile-field:not([name="email"])').forEach(el => {
             el.removeAttribute('readonly');
             el.classList.replace('bg-gray-100', 'bg-white');
         });
@@ -320,6 +393,60 @@
             openPasswordModal();
         };
     @endif
+
+    // =========================
+// EMAIL BINDING UI ONLY
+// =========================
+const changeEmailBtn = document.getElementById('changeEmailBtn');
+const changeEmailModal = document.getElementById('changeEmailModal');
+const closeEmailModal = document.getElementById('closeEmailModal');
+
+const emailStep1 = document.getElementById('emailStep1');
+const emailStep2 = document.getElementById('emailStep2');
+
+const newEmail = document.getElementById('newEmail');
+const confirmNewEmail = document.getElementById('confirmNewEmail');
+const emailMatchError = document.getElementById('emailMatchError');
+
+const sendEmailOtpBtn = document.getElementById('sendEmailOtpBtn');
+const verifyEmailOtpBtn = document.getElementById('verifyEmailOtpBtn');
+
+// OPEN MODAL
+changeEmailBtn?.addEventListener('click', () => {
+    changeEmailModal.classList.remove('hidden');
+    changeEmailModal.classList.add('flex');
+});
+
+// CLOSE MODAL
+closeEmailModal?.addEventListener('click', () => {
+    changeEmailModal.classList.add('hidden');
+    changeEmailModal.classList.remove('flex');
+
+    emailStep1.classList.remove('hidden');
+    emailStep2.classList.add('hidden');
+
+    newEmail.value = '';
+    confirmNewEmail.value = '';
+});
+
+// SEND OTP UI ONLY
+sendEmailOtpBtn?.addEventListener('click', () => {
+    if (newEmail.value !== confirmNewEmail.value) {
+        emailMatchError.classList.remove('hidden');
+        return;
+    }
+
+    emailMatchError.classList.add('hidden');
+
+    emailStep1.classList.add('hidden');
+    emailStep2.classList.remove('hidden');
+});
+
+// VERIFY OTP UI ONLY
+verifyEmailOtpBtn?.addEventListener('click', () => {
+    changeEmailModal.classList.add('hidden');
+    changeEmailModal.classList.remove('flex');
+});
     
 </script>
 @endsection

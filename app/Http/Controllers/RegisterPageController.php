@@ -28,8 +28,16 @@ class RegisterPageController extends Controller
             'firstName' => 'required|string|max:255',
             'lastName'  => 'required|string|max:255',
             'mi'        => 'nullable|string|max:1',
-            'phone'     => 'required|digits:11',
-            'email'     => 'required|email|unique:customer,email',
+            'phone' => [
+                        'required',
+                        'digits:11',
+                        function ($attribute, $value, $fail) {
+                        if (\App\Models\Customer::where('phone', $value)->count() >= 5) {
+                        $fail('This phone number has reached the maximum of 5 accounts.');
+                    }
+                },
+            ],
+            'email'     => 'nullable|email|unique:customer,email',
             'address'   => 'required|string|max:255',
             'username'  => 'required|string|max:255|unique:customer,username',
             'password'  => 'required|string|min:8|confirmed',
@@ -47,8 +55,21 @@ class RegisterPageController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        if (!session('phone_verified') || session('register_phone') !== $request->phone) {
+        return redirect()->back()
+        ->withErrors(['phone' => 'Please verify your phone number first.'])
+        ->withInput();
+        }
+
         $customerDTO = new CustomerDTO($request->all());
         $this->customerService->register($customerDTO);
+
+        session()->forget([
+        'register_phone',
+        'register_phone_otp',
+        'register_phone_otp_expires_at',
+        'phone_verified'
+]);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -75,6 +96,77 @@ class RegisterPageController extends Controller
 
         return response()->json([
             'exists' => $exists
+        ]);
+    }
+
+    public function sendOtp(Request $request)
+    {
+        $request->validate([
+        'phone' => 'required|digits:11',
+    ]);
+
+    $count = Customer::where('phone', $request->phone)->count();
+
+        if ($count >= 5) {
+            return response()->json([
+            'success' => false,
+            'message' => 'This phone number has reached the maximum of 5 accounts.'
+        ], 422);
+    }
+
+        $otp = rand(100000, 999999);
+
+        session([
+        'register_phone' => $request->phone,
+        'register_phone_otp' => $otp,
+        'register_phone_otp_expires_at' => now()->addMinutes(5),
+        ]);
+
+        \Log::info("Phone OTP for {$request->phone}: {$otp}");
+
+        return response()->json([
+        'success' => true,
+        'message' => 'OTP sent successfully.'
+        ]);
+    }
+    
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+        'otp' => 'required|digits:6'
+    ]);
+
+        if (!session('register_phone_otp')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No OTP session found.'
+        ], 422);
+    }
+
+        if (now()->gt(session('register_phone_otp_expires_at'))) {
+        return response()->json([
+            'success' => false,
+            'message' => 'OTP expired.'
+        ], 422);
+    }
+
+        if ($request->otp != session('register_phone_otp')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid OTP.'
+        ], 422);
+    }
+
+        session(['phone_verified' => true,  'verified_phone' => session('register_phone')]);
+
+        session()->forget([
+        'register_phone_otp',
+        'register_phone_otp_expires_at',
+        ]);
+
+        return response()->json([
+        'success' => true,
+        'message' => 'Phone verified successfully.'
         ]);
     }
 }

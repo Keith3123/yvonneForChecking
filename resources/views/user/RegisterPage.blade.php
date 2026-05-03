@@ -82,7 +82,7 @@
 
             <div class="flex flex-col gap-3 mb-6 text-sm">
                 <label>Email Address
-                    <input type="email" name="email" value="{{ old('email') }}" required
+                    <input type="email" name="email" value="{{ old('email') }}"
                         class="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-pink-300 outline-none">
                 </label>
 
@@ -177,9 +177,51 @@
             </div>
         </div>
     </form>
+    <div id="otpModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <h2 class="text-lg font-semibold text-center mb-2">Phone Verification</h2>
+        <p class="text-sm text-gray-500 text-center mb-4">
+            Enter the 6-digit OTP sent to your phone
+        </p>
+
+        <input
+            type="text"
+            id="otpInput"
+            maxlength="6"
+            class="w-full border border-gray-300 rounded-xl p-3 text-center text-lg tracking-widest focus:ring-2 focus:ring-pink-300 outline-none"
+            placeholder="000000">
+
+        <p id="otpError" class="text-red-500 text-sm mt-2 hidden text-center"></p>
+        <p id="otpTimer"
+   data-duration="300"
+   class="text-gray-500 text-sm mt-2 text-center">
+   OTP expires in: 05:00
+</p>
+
+<button type="button"
+    id="resendOtpBtn"
+    class="w-full mt-3 text-pink-500 hover:text-pink-600 text-sm font-medium">
+    Resend OTP
+</button>
+
+        <div class="flex gap-3 mt-4">
+            <button type="button"
+                id="closeOtpModal"
+                class="w-1/2 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-xl">
+                Cancel
+            </button>
+
+            <button type="button"
+                id="verifyOtpBtn"
+                class="w-1/2 bg-pink-500 hover:bg-pink-600 text-white py-2 rounded-xl">
+                Verify
+            </button>
+        </div>
+    </div>
 </div>
-<script>
-<script>
+</div>
+
+<!-- <script>
     let currentStep = 0;
 
     @if ($errors->any())
@@ -194,6 +236,6 @@
     @endif
 
     showStep(currentStep);
-</script>
+</script> -->
 @vite('resources/js/register.js')
 @endsection
