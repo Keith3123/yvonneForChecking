@@ -76,7 +76,7 @@ class AdminInventoryController extends AdminBaseController
         ));
     }
 
- public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
             'name'        => 'required',
@@ -102,17 +102,34 @@ class AdminInventoryController extends AdminBaseController
             'name'        => 'required',
             'description' => 'required',
             'unit'        => 'required',
-            'min_stock'   => 'required|integer',
+            'min_stock'   => 'required|numeric',
         ]);
 
         Ingredient::where('ingredientID', $id)->update([
             'name'          => $request->name,
             'description'   => $request->description,
             'unit'          => $request->unit,
-            'minStockLevel' => $request->min_stock,
+            'minStockLevel' => (int) $request->min_stock,
         ]);
 
         return redirect()->route('admin.inventory')->with('success', 'Ingredient updated!');
+    }
+
+    public function destroy($id)
+    {
+        $ingredient = Ingredient::where('ingredientID', $id)->firstOrFail();
+
+        // Check if ingredient has transaction history
+        $hasTransactions = DeliveryReceiptDetail::where('ingredientID', $id)->exists() ||
+                        PullOutDetail::where('ingredientID', $id)->exists();
+
+        if ($hasTransactions) {
+            return redirect()->route('admin.inventory')->with('error', 'Cannot delete ingredient with existing transaction history.');
+        }
+
+        $ingredient->delete();
+
+        return redirect()->route('admin.inventory')->with('success', 'Ingredient deleted.');
     }
 
     public function receive(Request $request)

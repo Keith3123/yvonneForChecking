@@ -13,6 +13,7 @@ class Ingredient extends Model
     protected $fillable = [
         'name',
         'description',
+        'unit',
         'minStockLevel',
         'currentStock'
     ];

@@ -217,13 +217,25 @@
                             <span class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">Available</span>
                         @endif
                     </td>
-                     <td class="py-3">
-                        <button 
-                            class="text-blue-500 hover:text-blue-700 text-xs font-medium" 
-                            @click="showEditModal = true; selectedIngredient = {{ $ingredient->toJson() }}"
-                        >
-                            Edit
-                        </button>
+                    <td class="py-3">
+                        <div class="flex items-center gap-3">
+                            <button 
+                                class="text-blue-500 hover:text-blue-700 text-xs font-medium" 
+                                @click="showEditModal = true; selectedIngredient = {{ $ingredient->toJson() }}"
+                            >
+                                Edit
+                            </button>
+                            <form method="POST" action="/admin/inventory/{{ $ingredient->ingredientID }}"
+                                onsubmit="return confirm('Are you sure you want to delete {{ $ingredient->name }}?')"
+                                class="m-0"
+                            >
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-medium">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 @empty
@@ -359,7 +371,7 @@
                 <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Edit Ingredient</h2>
                 <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
-            <form method="POST" :action="'/admin/inventory/' + selectedIngredient.id">
+            <form method="POST" :action="'/admin/inventory/' + selectedIngredient.ingredientID">
                 @csrf
                 @method('PUT')
                 <div class="space-y-3">
@@ -382,7 +394,11 @@
                 </div>
                  <div class="flex justify-end gap-2 mt-6">
                     <button type="button" @click="showEditModal = false" class="px-4 py-2 rounded-lg border text-sm">Cancel</button>
-                      <button type="submit" class="px-6 py-2 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold text-sm transition">Save</button>
+                    <button 
+                        type="submit" 
+                        @click.stop
+                        class="px-6 py-2 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold text-sm transition"
+                    >Save</button>
                 </div>
             </form>
         </div>

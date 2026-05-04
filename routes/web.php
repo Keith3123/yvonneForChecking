@@ -156,6 +156,9 @@ Route::prefix('admin')->group(function() {
     // POST route for adding ingredients (fetch/JSON)
     Route::post('/inventory/store', [AdminInventoryController::class, 'store'])->name('inventory.store');
 
+    // DELETE route for editing ingredients (fetch/JSON)
+    Route::delete('/inventory/{id}', [AdminInventoryController::class, 'destroy'])->name('inventory.destroy');
+    
     // PUT route for editing ingredients (fetch/JSON)
     Route::put('/inventory/{id}', [AdminInventoryController::class, 'update'])->name('inventory.update');
 
