@@ -147,6 +147,11 @@ Route::prefix('admin')->group(function() {
 
     // Inventory Routes
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('admin.inventory');
+    Route::post('/inventory/receive', [AdminInventoryController::class, 'receive'])->name('inventory.receive');
+    Route::post('/inventory/pullout', [AdminInventoryController::class, 'pullout'])->name('inventory.pullout');
+
+    Route::post('/inventory/supplier', [AdminInventoryController::class, 'storeSupplier'])->name('inventory.supplier.store');
+    Route::put('/inventory/supplier/{id}', [AdminInventoryController::class, 'updateSupplier'])->name('inventory.supplier.update');
 
     // POST route for adding ingredients (fetch/JSON)
     Route::post('/inventory/store', [AdminInventoryController::class, 'store'])->name('inventory.store');
