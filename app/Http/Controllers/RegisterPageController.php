@@ -62,7 +62,15 @@ class RegisterPageController extends Controller
         }
 
         $customerDTO = new CustomerDTO($request->all());
-        $this->customerService->register($customerDTO);
+        $customer = $this->customerService->register($customerDTO);
+
+        //After Create
+        $customer->update([
+            'phone_verified_at' => now(),
+            'phone_otp' => null,
+            "phone_otp_expires_at" => null,
+        ]);
+
 
         session()->forget([
         'register_phone',
@@ -122,6 +130,13 @@ class RegisterPageController extends Controller
         'register_phone_otp_expires_at' => now()->addMinutes(5),
         ]);
 
+        //Store OTP in DB for verification
+        Customer::where('phone', $request->phone)->update([
+        'phone_otp' => $otp,
+        'phone_otp_expires_at' => now()->addMinutes(5),
+        ]);
+
+
         \Log::info("Phone OTP for {$request->phone}: {$otp}");
 
         return response()->json([
@@ -157,7 +172,7 @@ class RegisterPageController extends Controller
         ], 422);
     }
 
-        session(['phone_verified' => true,  'verified_phone' => session('register_phone')]);
+        session(['phone_verified' => true,  'verified_phone' => session('register_phone'), 'verified_at' => now()]);
 
         session()->forget([
         'register_phone_otp',

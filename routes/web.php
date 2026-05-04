@@ -90,6 +90,17 @@ Route::post('/paymongo/webhook', [PaymongoWebhookController::class, 'handle']);
 Route::get('/profile', [ProfilePageController::class, 'index'])->name('profile');
 Route::post('/profile/update', [ProfilePageController::class, 'update'])->name('profile.update');
 Route::post('/password/update', [ProfilePageController::class, 'updatePassword'])->name('profile.password.update');
+// ─── NEW: Email OTP routes ───
+Route::post('/profile/email/send-otp', [ProfilePageController::class, 'sendEmailOtp'])->name('profile.email.send-otp');
+Route::post('/profile/email/verify-otp', [ProfilePageController::class, 'verifyEmailOtp'])->name('profile.email.verify-otp');
+ 
+// ─── NEW: Google OAuth routes ───
+// These go OUTSIDE any auth middleware (Socialite needs open access for callback)
+Route::get('/auth/google/bind', [ProfilePageController::class, 'redirectToGoogle'])->name('google.bind');
+Route::get('/auth/google/callback', [ProfilePageController::class, 'handleGoogleCallback'])->name('google.callback');
+ 
+// ─── NEW: Unlink Google ───
+Route::post('/profile/google/unlink', [ProfilePageController::class, 'unlinkGoogle'])->name('google.unlink');
 
 // ------------------- PALUWAGAN -------------------
 Route::get('/paluwagan', [PaluwaganPageController::class, 'index'])->name('paluwagan'); 

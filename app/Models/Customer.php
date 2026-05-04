@@ -29,6 +29,8 @@ class Customer extends Model
         'username',
         'password',
         'isActive',
+        'google_id',
+        'google_avatar',
     ];
 
     protected $hidden = ['password'];
