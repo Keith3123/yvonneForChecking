@@ -5,18 +5,66 @@
 @section('content')
 
 <div 
-        x-data="{ 
-            showDetails:false, 
-            showAdd:false,
-            showConfirm:false,
-            user: {},
-            actionType: '', // 'deactivate' or 'reactivate'
-            search: '',
-            statusFilter: 'all',
-            roleFilter: 'all'
-        }" 
+    x-data="{ 
+        showDetails: false, 
+        showAdd: false,
+        showConfirm: false,
+        user: {},
+        actionType: '',
+        search: '',
+        statusFilter: 'all',
+        roleFilter: 'all',
+        toast: { show: false, message: '', type: 'success' },
+        showToast(message, type = 'success') {
+            this.toast = { show: true, message, type };
+            setTimeout(() => this.toast.show = false, 3500);
+        }
+    }" 
     class="px-4 md:px-10 py-6"
 >
+
+{{-- Centered Top Toast --}}
+<div
+    x-show="toast.show"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0 -translate-y-4"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-bounce"
+    x-cloak
+>
+    <div
+        :class="toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'"
+        class="text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 border-2 border-white/20"
+    >
+        <i :class="toast.type === 'success' ? 'fas fa-check-circle' : 'fas fa-circle-xmark'" class="text-xl"></i>
+        <span x-text="toast.message" class="font-bold whitespace-nowrap"></span>
+    </div>
+</div>
+
+{{-- Blade flash (Add User redirect) --}}
+@if(session('success'))
+<div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3500)"
+     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-bounce">
+    <div class="bg-green-600 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 border-2 border-white/20">
+        <i class="fas fa-check-circle text-xl"></i>
+        <span class="font-bold whitespace-nowrap">{{ session('success') }}</span>
+    </div>
+</div>
+@endif
+@if(session('error'))
+<div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
+     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-bounce">
+    <div class="bg-red-600 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 border-2 border-white/20">
+        <i class="fas fa-circle-xmark text-xl"></i>
+        <span class="font-bold whitespace-nowrap">{{ session('error') }}</span>
+    </div>
+</div>
+@endif
 
 {{-- Header --}}
 <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
@@ -179,72 +227,6 @@
                 </span>
             </div>
         </div>
-        
-        {{-- CONFIRMATION MODAL --}}
-        <div 
-            x-show="showConfirm"
-            x-transition
-            class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 overflow-auto"
-            x-cloak
-        >
-            <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
-
-                <h2 class="text-xl font-bold mb-2">
-                    <span x-text="actionType == 'deactivate' ? 'Deactivate User' : 'Reactivate User'"></span>
-                </h2>
-
-                <p class="text-gray-600 mb-6">
-                    Are you sure you want to 
-                    <strong x-text="actionType"></strong> 
-                    this account?
-                </p>
-
-                <div class="flex justify-end gap-2">
-                    <button 
-                        @click="showConfirm = false"
-                        class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
-                    >
-                        Cancel
-                    </button>
-
-                    <button 
-                        @click="
-                            fetch('/admin/users/toggle-status/' + user.userID, {
-                                method: 'PATCH',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                }
-                            })
-                            .then(res => res.json())
-                            .then(data => {
-                                user.status = data.status;
-
-                                const row = document.querySelector('#userRow' + user.userID);
-                                if(row){
-                                    const badge = row.querySelector('.status-badge');
-
-                                    badge.textContent = data.status == 1 ? 'Active' : 'Inactive';
-                                    badge.className = data.status == 1 
-                                        ? 'status-badge px-3 py-1 rounded-full text-sm bg-green-100 text-green-700'
-                                        : 'status-badge px-3 py-1 rounded-full text-sm bg-gray-200 text-gray-600';
-                                }
-
-                                showConfirm = false;
-                            })
-                            .catch(() => alert('Failed to toggle status.'));
-                        "
-                        :class="actionType == 'deactivate' 
-                            ? 'bg-red-500 hover:bg-red-600 text-white' 
-                            : 'bg-green-500 hover:bg-green-600 text-white'"
-                        class="px-4 py-2 rounded-lg"
-                    >
-                        Confirm
-                    </button>
-                </div>
-
-            </div>
-        </div> 
 
         {{-- ACTIVATE / DEACTIVATE BUTTON --}}
         <div class="mt-4">
@@ -259,6 +241,81 @@
                 class="px-4 py-2 rounded-lg transition w-full md:w-auto"
             >
                 <span x-text="user.status == 1 ? 'Deactivate' : 'Reactivate'"></span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+{{-- CONFIRMATION MODAL --}}
+<div 
+    x-show="showConfirm"
+    x-transition
+    class="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-3 overflow-auto"
+    x-cloak
+>
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+
+        <h2 class="text-xl font-bold mb-2">
+            <span x-text="actionType == 'deactivate' ? 'Deactivate User' : 'Reactivate User'"></span>
+        </h2>
+
+        <p class="text-gray-600 mb-6">
+            Are you sure you want to 
+            <strong x-text="actionType"></strong> 
+            this account?
+        </p>
+
+        <div class="flex justify-end gap-2">
+            <button 
+                @click="showConfirm = false"
+                class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+            >
+                Cancel
+            </button>
+
+            <button 
+                @click="
+                    fetch('/admin/users/toggle-status/' + user.userID, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.error) {
+                            showConfirm = false;
+                            showToast(data.error, 'error');
+                            return;
+                        }
+
+                        user.status = data.status;
+
+                        const row = document.querySelector('#userRow' + user.userID);
+                        if (row) {
+                            const badge = row.querySelector('.status-badge');
+                            badge.textContent = data.status == 1 ? 'Active' : 'Inactive';
+                            badge.className = data.status == 1 
+                                ? 'status-badge px-3 py-1 rounded-full text-sm bg-green-100 text-green-700'
+                                : 'status-badge px-3 py-1 rounded-full text-sm bg-gray-200 text-gray-600';
+                        }
+
+                        showConfirm = false;
+                        showToast(
+                            actionType === 'deactivate' ? 'User deactivated.' : 'User reactivated!',
+                            actionType === 'deactivate' ? 'error' : 'success'
+                        );
+                    })
+                    .catch(() => showToast('Failed to toggle status.', 'error'));
+                "
+                :class="actionType == 'deactivate' 
+                    ? 'bg-red-500 hover:bg-red-600 text-white' 
+                    : 'bg-green-500 hover:bg-green-600 text-white'"
+                class="px-4 py-2 rounded-lg"
+            >
+                Confirm
             </button>
         </div>
 

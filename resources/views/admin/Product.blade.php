@@ -63,13 +63,13 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 {{-- Feedback Popup --}}
-<div id="feedbackMessage" class="fixed inset-0 flex items-center justify-center hidden z-50 pointer-events-none">
-    <div id="feedbackBox" class="px-8 py-6 rounded-xl shadow-xl text-white text-lg font-semibold pointer-events-auto"></div>
+<!-- <div id="feedbackMessage" class="fixed inset-0 flex items-center justify-center hidden z-50 pointer-events-none">
+    <div id="feedbackBox" class="px-8 py-6 rounded-xl shadow-xl text-white text-lg font-semibold pointer-events-auto"></div> -->
     {{-- ADD THIS -- toast element that showToast() looks for --}}
 <div id="feedbackToast"
      class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] hidden px-6 py-3 rounded-xl shadow-xl text-white font-semibold text-sm">
 </div>
-</div>
+<!-- </div> -->
 
 
 {{-- PASS INGREDIENTS TO JS --}}

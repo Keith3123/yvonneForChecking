@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Ingredient;
 use App\Models\Supplier;
 use App\Models\DeliveryReceipt;
@@ -13,26 +14,24 @@ use App\Models\PullOutDetail;
 class AdminInventoryController extends AdminBaseController
 {
     public function index()
-    {   
+    {
         parent::__construct();
-        // 🔒 Role-based access
+
         $user = session('admin_user');
         if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 2)) {
             abort(403, 'Unauthorized');
         }
 
-        // Fetch all ingredients to display
-         $ingredients = Ingredient::all()->map(function ($ingredient) {
-            $ingredient->totalIn  = DeliveryReceiptDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyDelivered');
-            $ingredient->totalOut = PullOutDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyPulled');
+        // SoftDeletes: automatically excludes soft-deleted ingredients
+        $ingredients = Ingredient::all()->map(function ($ingredient) {
+            $ingredient->totalIn  = DeliveryReceiptDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyDelivered') ?? 0;
+            $ingredient->totalOut = PullOutDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyPulled') ?? 0;
             return $ingredient;
         });
 
-         $stockIn = DeliveryReceipt::with(['details.ingredient', 'supplier'])->get()->flatMap(function ($dr) {
-            // Look up username from user table
-            $receivedByUser = \DB::table('user')->where('userID', $dr->receivedBy)->first();
-            $receivedByName = $receivedByUser ? $receivedByUser->username : 'Unknown';
-
+        $stockIn = DeliveryReceipt::with(['details.ingredient', 'supplier'])->get()->flatMap(function ($dr) {
+            $receivedByUser = DB::table('user')->where('userID', $dr->receivedBy)->first();
+            $receivedByName = $receivedByUser ? $receivedByUser->username : 'masteradmin';
             return $dr->details->map(function ($detail) use ($dr, $receivedByName) {
                 return [
                     'date'       => $dr->drDate,
@@ -46,10 +45,8 @@ class AdminInventoryController extends AdminBaseController
         });
 
         $stockOut = PullOut::with(['details.ingredient'])->get()->flatMap(function ($po) {
-            // Look up username from user table
-            $pulledByUser = \DB::table('user')->where('userID', $po->pullOutBy)->first();
-            $pulledByName = $pulledByUser ? $pulledByUser->username : 'Unknown';
-
+            $pulledByUser = DB::table('user')->where('userID', $po->pullOutBy)->first();
+            $pulledByName = $pulledByUser ? $pulledByUser->username : 'masteradmin';
             return $po->details->map(function ($detail) use ($po, $pulledByName) {
                 return [
                     'date'       => $po->pullDate,
@@ -57,7 +54,7 @@ class AdminInventoryController extends AdminBaseController
                     'ingredient' => $detail->ingredient->name ?? '—',
                     'qty'        => $detail->qtyPulled,
                     'by'         => $pulledByName,
-                    'remarks'    => $po->remarks ?? '—',
+                    'remarks'    => $po->pullType ?? $po->remarks ?? '—',
                 ];
             });
         });
@@ -67,12 +64,15 @@ class AdminInventoryController extends AdminBaseController
         $totalStockOut = PullOutDetail::sum('qtyPulled');
         $suppliers     = Supplier::all();
 
+        // Admin users for "Received By" / "Pulled By" dropdowns (roleID = admin or inventory)
+        $adminUsers = DB::table('user')
+        ->whereIn('roleID', [1, 2])
+        ->select('userID', 'username')
+        ->orderBy('username')
+        ->get();
+
         return view('admin.inventory', compact(
-            'ingredients',
-            'transactions',
-            'totalStockIn',
-            'totalStockOut',
-            'suppliers'
+            'ingredients', 'transactions', 'totalStockIn', 'totalStockOut', 'suppliers', 'adminUsers'
         ));
     }
 
@@ -82,7 +82,7 @@ class AdminInventoryController extends AdminBaseController
             'name'        => 'required',
             'description' => 'required',
             'unit'        => 'required',
-            'min_stock'   => 'required|integer',
+            'min_stock'   => 'required|numeric|min:0',
         ]);
 
         Ingredient::create([
@@ -98,44 +98,63 @@ class AdminInventoryController extends AdminBaseController
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'name'        => 'required',
-            'description' => 'required',
-            'unit'        => 'required',
-            'min_stock'   => 'required|numeric',
-        ]);
+        try {
+            $request->validate([
+                'name'        => 'required',
+                'description' => 'required',
+                'unit'        => 'required',
+                'min_stock'   => 'required|numeric|min:0',
+            ]);
 
-        Ingredient::where('ingredientID', $id)->update([
-            'name'          => $request->name,
-            'description'   => $request->description,
-            'unit'          => $request->unit,
-            'minStockLevel' => (int) $request->min_stock,
-        ]);
+            $ingredient = Ingredient::where('ingredientID', $id)->firstOrFail();
+            $ingredient->update([
+                'name'          => $request->name,
+                'description'   => $request->description,
+                'unit'          => $request->unit,
+                'minStockLevel' => $request->min_stock,
+            ]);
 
-        return redirect()->route('admin.inventory')->with('success', 'Ingredient updated!');
+            return response()->json(['success' => true, 'message' => 'Ingredient updated!']);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function destroy($id)
     {
-        $ingredient = Ingredient::where('ingredientID', $id)->firstOrFail();
+        try {
+            $ingredient = Ingredient::where('ingredientID', $id)->firstOrFail();
 
-        // Check if ingredient has transaction history
-        $hasTransactions = DeliveryReceiptDetail::where('ingredientID', $id)->exists() ||
-                        PullOutDetail::where('ingredientID', $id)->exists();
+            $hasTransactions = DeliveryReceiptDetail::where('ingredientID', $id)->exists()
+                            || PullOutDetail::where('ingredientID', $id)->exists();
 
-        if ($hasTransactions) {
-            return redirect()->route('admin.inventory')->with('error', 'Cannot delete ingredient with existing transaction history.');
+            if ($hasTransactions) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete: ingredient has existing transaction history.'
+                ]);
+            }
+
+            $ingredient->delete(); // SoftDeletes sets deleted_at
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
-
-        $ingredient->delete();
-
-        return redirect()->route('admin.inventory')->with('success', 'Ingredient deleted.');
     }
 
     public function receive(Request $request)
     {
         try {
             $request->validate([
+                'received_by'           => 'required|exists:user,userID',
                 'supplier'              => 'required',
                 'items'                 => 'required|array|min:1',
                 'items.*.ingredient_id' => 'required|exists:ingredient,ingredientID',
@@ -144,15 +163,9 @@ class AdminInventoryController extends AdminBaseController
                 'items.*.expiry_date'   => 'required|date',
             ]);
 
-            // Look up userID from the user table using session username
-            $adminUser = \DB::table('user')
-                ->where('username', session('admin_user')['username'])
-                ->first();
-            $receivedBy = $adminUser ? $adminUser->userID : 1;
-
             $dr = DeliveryReceipt::create([
                 'supplierID' => $request->supplier,
-                'receivedBy' => $receivedBy,
+                'receivedBy' => $request->received_by,
                 'drDate'     => now(),
                 'remarks'    => $request->remarks ?? 'Supplier delivery',
             ]);
@@ -165,13 +178,14 @@ class AdminInventoryController extends AdminBaseController
                     'unitCost'     => $item['unit_cost'],
                     'expiryDate'   => $item['expiry_date'],
                 ]);
-
                 Ingredient::where('ingredientID', $item['ingredient_id'])
                     ->increment('currentStock', $item['qty']);
             }
 
             return response()->json(['success' => true]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -181,47 +195,46 @@ class AdminInventoryController extends AdminBaseController
     {
         try {
             $request->validate([
+                'pulled_by'             => 'required|exists:user,userID',
                 'items'                 => 'required|array|min:1',
                 'items.*.ingredient_id' => 'required|exists:ingredient,ingredientID',
                 'items.*.qty'           => 'required|numeric|min:0.01',
             ]);
 
-            // Look up userID from the user table using session username
-            $adminUser = \DB::table('user')
-                ->where('username', session('admin_user')['username'])
-                ->first();
-            $pullOutBy = $adminUser ? $adminUser->userID : 1;
-
-            $po = PullOut::create([
-                'prepID'    => null,
-                'pullOutBy' => $pullOutBy,
-                'pullDate'  => now(),
-                'pullType'  => $request->pull_type,
-                'remarks'   => $request->remarks,
-            ]);
-
+            $itemsData = [];
             foreach ($request->items as $item) {
                 $ingredient = Ingredient::where('ingredientID', $item['ingredient_id'])->firstOrFail();
-
                 if ($ingredient->currentStock < $item['qty']) {
-                    $po->delete();
                     return response()->json([
                         'success' => false,
                         'message' => "Insufficient stock for {$ingredient->name}. Available: {$ingredient->currentStock} {$ingredient->unit}"
                     ]);
                 }
-
-                PullOutDetail::create([
-                    'pullOutID'    => $po->pullOutID,
-                    'ingredientID' => $item['ingredient_id'],
-                    'qtyPulled'    => $item['qty'],
-                ]);
-
-                $ingredient->decrement('currentStock', $item['qty']);
+                $itemsData[] = ['ingredient' => $ingredient, 'qty' => $item['qty']];
             }
+
+            DB::transaction(function () use ($request, $itemsData) {
+                $po = PullOut::create([
+                    'prepID'    => null,
+                    'pullOutBy' => $request->pulled_by,
+                    'pullDate'  => now(),
+                    'pullType'  => $request->pull_type ?? 'Manual Adjustment',
+                    'remarks'   => $request->remarks,
+                ]);
+                foreach ($itemsData as $data) {
+                    PullOutDetail::create([
+                        'pullOutID'    => $po->pullOutID,
+                        'ingredientID' => $data['ingredient']->ingredientID,
+                        'qtyPulled'    => $data['qty'],
+                    ]);
+                    $data['ingredient']->decrement('currentStock', $data['qty']);
+                }
+            });
 
             return response()->json(['success' => true]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -229,31 +242,15 @@ class AdminInventoryController extends AdminBaseController
 
     public function storeSupplier(Request $request)
     {
-        $request->validate([
-            'supplierName' => 'required|string',
-            'phone'        => 'required|string',
-        ]);
-
-        Supplier::create([
-            'supplierName' => $request->supplierName,
-            'phone'        => $request->phone,
-        ]);
-
+        $request->validate(['supplierName' => 'required|string', 'phone' => 'required|string']);
+        Supplier::create(['supplierName' => $request->supplierName, 'phone' => $request->phone]);
         return redirect()->route('admin.inventory')->with('success', 'Supplier added!');
     }
 
     public function updateSupplier(Request $request, $id)
     {
-        $request->validate([
-            'supplierName' => 'required|string',
-            'phone'        => 'required|string',
-        ]);
-
-        Supplier::where('supplierID', $id)->update([
-            'supplierName' => $request->supplierName,
-            'phone'        => $request->phone,
-        ]);
-
+        $request->validate(['supplierName' => 'required|string', 'phone' => 'required|string']);
+        Supplier::where('supplierID', $id)->update(['supplierName' => $request->supplierName, 'phone' => $request->phone]);
         return redirect()->route('admin.inventory')->with('success', 'Supplier updated!');
     }
 }

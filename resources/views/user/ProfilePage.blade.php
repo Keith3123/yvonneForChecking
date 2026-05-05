@@ -331,7 +331,7 @@
                     </button>
                     <button type="button" id="backToStep1Btn"
                         class="w-full mt-2 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition text-sm">
-                        ← Use a different email
+                        Use a different email
                     </button>
                 </div>
 

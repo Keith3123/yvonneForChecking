@@ -50,7 +50,7 @@ class LoginPageController extends Controller
             ]]);
 
             return redirect()->route('admin.dashboard')
-                ->with('success', 'Welcome Master Admin!');
+                ->with('success', 'Welcome ' . $username . '!');
         }
 
         // ===================== SYSTEM USERS =====================

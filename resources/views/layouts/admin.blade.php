@@ -32,6 +32,29 @@
     </div>
 
     @yield('scripts')
+    <div id="loginToast"
+     class="fixed top-6 left-1/2 -translate-x-1/2 z-[9999]
+            px-6 py-3 rounded-xl shadow-xl text-white font-semibold text-sm hidden">
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const message = @json(session('success'));
+
+    if (message) {
+        const t = document.getElementById('loginToast');
+        t.textContent = message;
+        t.classList.add('bg-green-600');
+        t.classList.remove('hidden');
+
+        setTimeout(() => {
+            t.classList.add('hidden');
+        }, 4000);
+    }
+
+});
+</script>
 
 </body>
 </html>

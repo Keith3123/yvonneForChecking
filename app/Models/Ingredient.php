@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Ingredient extends Model
 {
-     protected $table = 'ingredient';
+    use SoftDeletes;
+    
+    protected $table = 'ingredient';
     protected $primaryKey = 'ingredientID';
     public $timestamps = false;
 
