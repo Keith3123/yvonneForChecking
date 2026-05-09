@@ -3,6 +3,13 @@
 @section('title', 'Inventory')
 
 @section('content')
+
+@php
+    $currentUserID = DB::table('user')
+        ->where('username', session('admin_user')['username'])
+        ->value('userID');
+@endphp
+
 <div 
     x-data="{
         showAddModal: false,
@@ -19,13 +26,13 @@
 
         receiveForm: {
             supplier: '',
-            received_by: '',
+            received_by: {{ $currentUserID ?? 'null' }},
             remarks: '',
             items: [{ ingredient_id: '', qty: '', unit_cost: '', expiry_date: '' }]
         },
         pullOutForm: {
             pull_type: 'Preparation',
-            pulled_by: '',
+            pulled_by: {{ $currentUserID ?? 'null' }},
             remarks: '',
             items: [{ ingredient_id: '', qty: '' }]
         },
@@ -47,11 +54,22 @@
         removePullRow(index) {
             if (this.pullOutForm.items.length > 1) this.pullOutForm.items.splice(index, 1);
         },
+
         resetReceiveForm() {
-            this.receiveForm = { supplier: '', received_by: '', remarks: '', items: [{ ingredient_id: '', qty: '', unit_cost: '', expiry_date: '' }] };
+            this.receiveForm = {
+                supplier: '',
+                received_by: {{ $currentUserID ?? 'null' }},
+                remarks: '',
+                items: [{ ingredient_id: '', qty: '', unit_cost: '', expiry_date: '' }]
+            };
         },
         resetPullForm() {
-            this.pullOutForm = { pull_type: 'Preparation', pulled_by: '', remarks: '', items: [{ ingredient_id: '', qty: '' }] };
+            this.pullOutForm = {
+                pull_type: 'Preparation',
+                pulled_by: {{ $currentUserID ?? 'null' }},
+                remarks: '',
+                items: [{ ingredient_id: '', qty: '' }]
+            };
         },
 
         async saveIngredient() {
@@ -107,7 +125,7 @@
     class="px-3 sm:px-6 md:px-10 py-6 md:py-8"
 >
 
-    {{-- Centered Top Toast --}}
+    {{-- Toast --}}
     <div
         x-show="toast.show"
         x-transition:enter="transition ease-out duration-200"
@@ -116,7 +134,7 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-bounce"
+        class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999]"
         x-cloak
     >
         <div
@@ -127,28 +145,6 @@
             <span x-text="toast.message" class="font-bold whitespace-nowrap"></span>
         </div>
     </div>
-
-    {{-- Blade flash (for redirect-based responses like Add Ingredient / Add Supplier) --}}
-    @if(session('success'))
-    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3500)"
-         x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-         class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-bounce">
-        <div class="bg-green-600 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 border-2 border-white/20">
-            <i class="fas fa-check-circle text-xl"></i>
-            <span class="font-bold whitespace-nowrap">{{ session('success') }}</span>
-        </div>
-    </div>
-    @endif
-    @if(session('error'))
-    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
-         x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-         class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-bounce">
-        <div class="bg-red-600 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 border-2 border-white/20">
-            <i class="fas fa-circle-xmark text-xl"></i>
-            <span class="font-bold whitespace-nowrap">{{ session('error') }}</span>
-        </div>
-    </div>
-    @endif
 
     {{-- Page Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -417,24 +413,29 @@
             <div class="space-y-3">
                 <div>
                     <label class="text-sm font-medium block mb-1">Name</label>
-                    <input type="text" x-model="selectedIngredient.name" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                    <input type="text" x-model="selectedIngredient.name"
+                        class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                 </div>
                 <div>
                     <label class="text-sm font-medium block mb-1">Description</label>
-                    <input type="text" x-model="selectedIngredient.description" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                    <input type="text" x-model="selectedIngredient.description"
+                        class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                 </div>
                 <div>
                     <label class="text-sm font-medium block mb-1">Unit (e.g. kg, pcs, L)</label>
-                    <input type="text" x-model="selectedIngredient.unit" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                    <input type="text" x-model="selectedIngredient.unit"
+                        class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                 </div>
                 <div>
                     <label class="text-sm font-medium block mb-1">Min Stock Level</label>
-                    <input type="number" min="0" step="0.01" x-model="selectedIngredient.minStockLevel" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                    <input type="number" min="0" step="0.01" x-model="selectedIngredient.minStockLevel"
+                        class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                 </div>
             </div>
             <div class="flex justify-end gap-2 mt-6">
                 <button type="button" @click="showEditModal = false" class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 transition">Cancel</button>
-                <button type="button" @click="saveIngredient()" class="px-6 py-2 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold text-sm transition">Save Changes</button>
+                <button type="button" @click="saveIngredient()"
+                    class="px-6 py-2 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold text-sm transition">Save Changes</button>
             </div>
         </div>
     </div>
@@ -455,7 +456,8 @@
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
                     <label class="text-sm font-medium block mb-1">Supplier</label>
-                    <select x-model="receiveForm.supplier" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                    <select x-model="receiveForm.supplier"
+                        class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                         <option value="">-- Select --</option>
                         @foreach ($suppliers as $supplier)
                             <option value="{{ $supplier->supplierID }}">{{ $supplier->supplierName }}</option>
@@ -464,12 +466,8 @@
                 </div>
                 <div>
                     <label class="text-sm font-medium block mb-1">Received By</label>
-                    <select x-model="receiveForm.received_by" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
-                        <option value="">-- Select --</option>
-                        @foreach ($adminUsers as $adminUser)
-                            <option value="{{ $adminUser->userID }}">{{ $adminUser->username }}</option>
-                        @endforeach
-                    </select>
+                    <input type="text" value="{{ session('admin_user')['username'] }}"
+                        class="w-full px-3 py-2 bg-gray-200 rounded-lg text-sm text-gray-600 cursor-not-allowed" readonly>
                 </div>
             </div>
 
@@ -479,7 +477,8 @@
                     <div class="grid grid-cols-2 gap-2 mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <div class="col-span-2">
                             <label class="text-xs text-gray-500 mb-1 block">Ingredient</label>
-                            <select x-model="item.ingredient_id" class="w-full px-3 py-2 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                            <select x-model="item.ingredient_id"
+                                class="w-full px-3 py-2 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                                 <option value="">-- Ingredient --</option>
                                 @foreach ($ingredients as $ingredient)
                                     <option value="{{ $ingredient->ingredientID }}">{{ $ingredient->name }} ({{ $ingredient->unit ?? '' }})</option>
@@ -567,16 +566,13 @@
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
                     <label class="text-sm font-medium block mb-1">Pulled By</label>
-                    <select x-model="pullOutForm.pulled_by" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-                        <option value="">-- Select --</option>
-                        @foreach ($adminUsers as $adminUser)
-                            <option value="{{ $adminUser->userID }}">{{ $adminUser->username }}</option>
-                        @endforeach
-                    </select>
+                    <input type="text" value="{{ session('admin_user')['username'] }}"
+                        class="w-full px-3 py-2 bg-gray-200 rounded-lg text-sm text-gray-600 cursor-not-allowed" readonly>
                 </div>
                 <div>
                     <label class="text-sm font-medium block mb-1">Pull Out Type</label>
-                    <select x-model="pullOutForm.pull_type" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <select x-model="pullOutForm.pull_type"
+                        class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
                         <option>Preparation</option>
                         <option>Damage</option>
                         <option>Expired</option>
@@ -590,7 +586,8 @@
                 <template x-for="(item, index) in pullOutForm.items" :key="index">
                     <div class="flex gap-2 mb-2 items-end">
                         <div class="flex-1">
-                            <select x-model="item.ingredient_id" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            <select x-model="item.ingredient_id"
+                                class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
                                 <option value="">-- Ingredient --</option>
                                 @foreach ($ingredients as $ingredient)
                                     <option value="{{ $ingredient->ingredientID }}">
@@ -711,11 +708,13 @@
                 <div class="space-y-3">
                     <div>
                         <label class="text-sm font-medium block mb-1">Supplier Name</label>
-                        <input type="text" name="supplierName" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                        <input type="text" name="supplierName"
+                            class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                     </div>
                     <div>
                         <label class="text-sm font-medium block mb-1">Phone</label>
-                        <input type="text" name="phone" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                        <input type="text" name="phone"
+                            class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
@@ -744,11 +743,13 @@
                 <div class="space-y-3">
                     <div>
                         <label class="text-sm font-medium block mb-1">Supplier Name</label>
-                        <input type="text" name="supplierName" x-model="selectedSupplier.supplierName" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                        <input type="text" name="supplierName" x-model="selectedSupplier.supplierName"
+                            class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                     </div>
                     <div>
                         <label class="text-sm font-medium block mb-1">Phone</label>
-                        <input type="text" name="phone" x-model="selectedSupplier.phone" class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
+                        <input type="text" name="phone" x-model="selectedSupplier.phone"
+                            class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" required>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">

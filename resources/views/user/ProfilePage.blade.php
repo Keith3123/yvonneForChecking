@@ -105,7 +105,6 @@
                             <input id="currentEmail" name="email" value="{{ $user->email }}" readonly
                                 class="flex-1 min-w-0 rounded-lg border bg-gray-100 px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none text-sm">
 
-                            {{-- Verified / Unverified Badge --}}
                             @if($user->email_verified_at)
                                 <span class="px-3 py-2 text-xs font-semibold rounded-lg bg-green-100 text-green-700 whitespace-nowrap">
                                     ✓ Verified
@@ -115,13 +114,8 @@
                                     ⚠ Not Verified
                                 </span>
                             @endif
-
-                            <button type="button" id="changeEmailBtn"
-                                class="px-4 py-2 rounded-lg bg-pink-100 text-pink-700 hover:bg-pink-200 transition whitespace-nowrap text-xs">
-                                {{ $user->email ? 'Change Email' : 'Bind Email' }}
-                            </button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Changing your email requires OTP verification</p>
+                        <p class="text-xs text-gray-400 mt-1">To change your email, use the Google bind option in the Security tab</p>
                     </div>
 
                     <div>
@@ -186,7 +180,6 @@
             {{-- ─── GOOGLE BINDING ROW ─── --}}
             <div class="flex justify-between items-center bg-gray-50 border border-gray-200 p-5 rounded-xl">
                 <div class="flex items-center gap-3">
-                    {{-- Google icon --}}
                     <svg class="w-7 h-7" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -196,7 +189,7 @@
                     <div>
                         <p class="font-medium text-gray-800">Google Account</p>
                         @if($user->google_id)
-                            <p class="text-xs text-green-600 font-medium">✓ Linked</p>
+                            <p class="text-xs text-green-600 font-medium">✓ Linked · {{ $user->email }}</p>
                         @else
                             <p class="text-xs text-gray-500">Not linked</p>
                         @endif
@@ -204,18 +197,12 @@
                 </div>
 
                 @if($user->google_id)
-                    {{-- Unlink button --}}
-                    <form action="{{ route('google.unlink') }}" method="POST"
-                        onsubmit="return confirm('Unlink your Google account?')">
-                        @csrf
-                        <button type="submit"
-                            class="px-4 py-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition text-sm">
-                            Unlink Google
-                        </button>
-                    </form>
+                    <button type="button" onclick="openUnlinkModal()"
+                        class="px-4 py-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition text-sm">
+                        Unlink Google
+                    </button>
                 @else
-                    {{-- Link button --}}
-                    <a href="{{ route('google.bind') }}"
+                    <button type="button" onclick="openGoogleBindModal()"
                         class="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-sm flex items-center gap-2 shadow-sm">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -224,7 +211,7 @@
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                         </svg>
                         Link Google Account
-                    </a>
+                    </button>
                 @endif
             </div>
 
@@ -288,52 +275,75 @@
         </div>
 
         {{-- ══════════════════════════════════════════ --}}
-        {{-- CHANGE EMAIL MODAL (OTP)                  --}}
+        {{-- UNLINK GOOGLE CONFIRMATION MODAL         --}}
         {{-- ══════════════════════════════════════════ --}}
-        <div id="changeEmailModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+        <div id="unlinkModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+
+                <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-unlink text-red-500 text-xl"></i>
+                </div>
+
+                <h2 class="text-lg font-bold text-gray-800 mb-1">Unlink Google Account?</h2>
+                <p class="text-sm text-gray-500 mb-6">
+                    You will no longer be able to sign in with Google. Make sure you have a password set before unlinking.
+                </p>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeUnlinkModal()"
+                        class="w-1/2 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition font-medium">
+                        Cancel
+                    </button>
+                    <form action="{{ route('google.unlink') }}" method="POST" class="w-1/2">
+                        @csrf
+                        <button type="submit"
+                            class="w-full py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white transition font-medium">
+                            Yes, Unlink
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+        {{-- ══════════════════════════════════════════ --}}
+        {{-- GOOGLE BIND MODAL                         --}}
+        {{-- ══════════════════════════════════════════ --}}
+        <div id="googleBindModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
 
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">Change Email Address</h2>
-                    <button type="button" id="closeEmailModal"
+                    <h2 class="text-xl font-bold text-gray-800">Link Google Account</h2>
+                    <button type="button" onclick="closeGoogleBindModal()"
                         class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                 </div>
-                <p class="text-sm text-gray-500 mb-4">Enter your new email and verify it using a 6-digit OTP.</p>
 
-                {{-- STEP 1: Enter email --}}
-                <div id="emailStep1">
-                    <input type="email" id="newEmail" placeholder="Enter new email"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
-                    <input type="email" id="confirmNewEmail" placeholder="Confirm new email"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 mb-2 focus:ring-2 focus:ring-pink-300 outline-none">
-                    <p id="emailMatchError" class="text-red-500 text-sm hidden mb-3">Emails do not match</p>
-                    <p id="emailSendError" class="text-red-500 text-sm hidden mb-3"></p>
+                <p class="text-sm text-gray-500 mb-5">
+                    Your account email will be updated and verified to match whichever Google account you sign in with.
+                </p>
 
-                    <button type="button" id="sendEmailOtpBtn"
-                        class="w-full py-3 rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition disabled:opacity-50">
-                        Send Verification Code
-                    </button>
+                {{-- Current email info --}}
+                <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-5 text-sm text-yellow-800">
+                    <p><strong>Current email:</strong> {{ $user->email }}</p>
+                    <p class="mt-1 text-xs text-yellow-700">After linking, your email will be replaced by your Google account's email.</p>
                 </div>
 
-                {{-- STEP 2: Enter OTP --}}
-                <div id="emailStep2" class="hidden">
-                    <p class="text-sm text-gray-600 mb-3">
-                        OTP sent to <strong id="sentToEmail"></strong>
-                    </p>
-                    <input type="text" id="emailOtpInput" maxlength="6" placeholder="Enter 6-digit OTP"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-3 text-center tracking-widest mb-3 focus:ring-2 focus:ring-pink-300 outline-none">
-                    <p id="emailOtpError" class="text-red-500 text-sm hidden mb-2"></p>
-                    <p id="emailOtpTimer" class="text-sm text-gray-500 text-center mb-4">OTP expires in: <span id="timerDisplay">10:00</span></p>
+                {{-- Single CTA --}}
+                <a href="{{ route('google.bind') }}"
+                    class="flex items-center justify-center gap-3 w-full py-3 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition shadow-sm font-medium">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Continue with Google
+                </a>
 
-                    <button type="button" id="verifyEmailOtpBtn"
-                        class="w-full py-3 rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition">
-                        Verify & Update Email
-                    </button>
-                    <button type="button" id="backToStep1Btn"
-                        class="w-full mt-2 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition text-sm">
-                        Use a different email
-                    </button>
-                </div>
+                <button type="button" onclick="closeGoogleBindModal()"
+                    class="w-full mt-3 py-2 rounded-lg text-gray-500 hover:bg-gray-100 transition text-sm">
+                    Cancel
+                </button>
 
             </div>
         </div>
@@ -345,15 +355,14 @@
 {{-- JAVASCRIPT                                --}}
 {{-- ══════════════════════════════════════════ --}}
 <script>
-// ─── CSRF helper ───
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}';
 
 // ─── Tab switching ───
 function showTab(tab) {
-    const profileTab   = document.getElementById('profile-tab');
-    const securityTab  = document.getElementById('security-tab');
-    const profileBtn   = document.getElementById('tab-profile');
-    const securityBtn  = document.getElementById('tab-security');
+    const profileTab  = document.getElementById('profile-tab');
+    const securityTab = document.getElementById('security-tab');
+    const profileBtn  = document.getElementById('tab-profile');
+    const securityBtn = document.getElementById('tab-security');
 
     if (tab === 'profile') {
         profileTab.classList.remove('hidden');
@@ -398,175 +407,29 @@ cancelBtn.onclick = function () {
 };
 
 // ─── Password modal ───
-function openPasswordModal()  { document.getElementById('passwordModal').classList.replace('hidden','flex'); }
-function closePasswordModal() { document.getElementById('passwordModal').classList.replace('flex','hidden'); }
+function openPasswordModal()  { document.getElementById('passwordModal').classList.replace('hidden', 'flex'); }
+function closePasswordModal() { document.getElementById('passwordModal').classList.replace('flex', 'hidden'); }
 
-// Auto-open modal on validation error
 @if($errors->has('current_password') || $errors->has('new_password'))
     window.addEventListener('DOMContentLoaded', () => { showTab('security'); openPasswordModal(); });
 @endif
 
-// ─── Email OTP Modal ───
-const changeEmailModal = document.getElementById('changeEmailModal');
-const emailStep1       = document.getElementById('emailStep1');
-const emailStep2       = document.getElementById('emailStep2');
-const newEmailInput    = document.getElementById('newEmail');
-const confirmEmailInput= document.getElementById('confirmNewEmail');
-const emailMatchError  = document.getElementById('emailMatchError');
-const emailSendError   = document.getElementById('emailSendError');
-const emailOtpError    = document.getElementById('emailOtpError');
-const sentToEmail      = document.getElementById('sentToEmail');
+// ─── Unlink Google Modal ───
+function openUnlinkModal()  { document.getElementById('unlinkModal').classList.replace('hidden', 'flex'); }
+function closeUnlinkModal() { document.getElementById('unlinkModal').classList.replace('flex', 'hidden'); }
 
-let otpTimer = null;
+// ─── Google Bind Modal ───
+let bindTimer = null;
 
-function openEmailModal() {
-    changeEmailModal.classList.replace('hidden', 'flex');
+function openGoogleBindModal() {
+    document.getElementById('googleBindModal').classList.replace('hidden', 'flex');
 }
 
-function closeEmailModal() {
-    changeEmailModal.classList.replace('flex', 'hidden');
-    // reset
-    emailStep1.classList.remove('hidden');
-    emailStep2.classList.add('hidden');
-    newEmailInput.value = '';
-    confirmEmailInput.value = '';
-    emailMatchError.classList.add('hidden');
-    emailSendError.classList.add('hidden');
-    emailOtpError.classList.add('hidden');
-    document.getElementById('emailOtpInput').value = '';
-    clearInterval(otpTimer);
+function closeGoogleBindModal() {
+    document.getElementById('googleBindModal').classList.replace('flex', 'hidden');
 }
 
-document.getElementById('changeEmailBtn')?.addEventListener('click', openEmailModal);
-document.getElementById('closeEmailModal')?.addEventListener('click', closeEmailModal);
-document.getElementById('backToStep1Btn')?.addEventListener('click', () => {
-    emailStep2.classList.add('hidden');
-    emailStep1.classList.remove('hidden');
-    clearInterval(otpTimer);
-});
-
-// SEND OTP
-document.getElementById('sendEmailOtpBtn')?.addEventListener('click', async () => {
-    const email   = newEmailInput.value.trim();
-    const confirm = confirmEmailInput.value.trim();
-
-    emailMatchError.classList.add('hidden');
-    emailSendError.classList.add('hidden');
-
-    if (!email || !confirm) return;
-
-    if (email !== confirm) {
-        emailMatchError.classList.remove('hidden');
-        return;
-    }
-
-    const btn = document.getElementById('sendEmailOtpBtn');
-    btn.disabled = true;
-    btn.textContent = 'Sending...';
-
-    try {
-        const res = await fetch('{{ route("profile.email.send-otp") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-            body: JSON.stringify({ email }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-            emailSendError.textContent = data.message ?? 'Failed to send OTP.';
-            emailSendError.classList.remove('hidden');
-            btn.disabled = false;
-            btn.textContent = 'Send Verification Code';
-            return;
-        }
-
-        // Move to step 2
-        sentToEmail.textContent = email;
-        emailStep1.classList.add('hidden');
-        emailStep2.classList.remove('hidden');
-        startOtpTimer(10 * 60); // 10 minutes
-
-    } catch (e) {
-        emailSendError.textContent = 'Network error. Please try again.';
-        emailSendError.classList.remove('hidden');
-        btn.disabled = false;
-        btn.textContent = 'Send Verification Code';
-    }
-});
-
-// VERIFY OTP
-document.getElementById('verifyEmailOtpBtn')?.addEventListener('click', async () => {
-    const otp = document.getElementById('emailOtpInput').value.trim();
-    emailOtpError.classList.add('hidden');
-
-    if (otp.length !== 6) {
-        emailOtpError.textContent = 'Please enter a 6-digit OTP.';
-        emailOtpError.classList.remove('hidden');
-        return;
-    }
-
-    const btn = document.getElementById('verifyEmailOtpBtn');
-    btn.disabled = true;
-    btn.textContent = 'Verifying...';
-
-    try {
-        const res = await fetch('{{ route("profile.email.verify-otp") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-            body: JSON.stringify({ otp }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-            emailOtpError.textContent = data.message ?? 'Invalid OTP.';
-            emailOtpError.classList.remove('hidden');
-            btn.disabled = false;
-            btn.textContent = 'Verify & Update Email';
-            return;
-        }
-
-        // Update email display on page
-        document.getElementById('currentEmail').value = data.email;
-        clearInterval(otpTimer);
-        closeEmailModal();
-
-        // Show success toast dynamically
-        showToast('Email updated and verified successfully!', 'pink');
-
-        // Reload to refresh badge (verified)
-        setTimeout(() => location.reload(), 1500);
-
-    } catch (e) {
-        emailOtpError.textContent = 'Network error. Please try again.';
-        emailOtpError.classList.remove('hidden');
-        btn.disabled = false;
-        btn.textContent = 'Verify & Update Email';
-    }
-});
-
-// OTP countdown timer
-function startOtpTimer(seconds) {
-    clearInterval(otpTimer);
-    const display = document.getElementById('timerDisplay');
-    let remaining = seconds;
-
-    otpTimer = setInterval(() => {
-        const m = String(Math.floor(remaining / 60)).padStart(2, '0');
-        const s = String(remaining % 60).padStart(2, '0');
-        display.textContent = `${m}:${s}`;
-        remaining--;
-
-        if (remaining < 0) {
-            clearInterval(otpTimer);
-            display.textContent = '00:00';
-            document.getElementById('verifyEmailOtpBtn').disabled = true;
-            emailOtpError.textContent = 'OTP expired. Please request a new one.';
-            emailOtpError.classList.remove('hidden');
-        }
-    }, 1000);
-}
-
-// Dynamic toast helper
+// ─── Dynamic toast helper ───
 function showToast(message, color = 'pink') {
     const toast = document.createElement('div');
     toast.className = `fixed top-10 left-1/2 -translate-x-1/2 z-[100] flex items-center w-full max-w-xs p-4 text-gray-700 bg-white rounded-xl shadow-2xl border-l-4 border-${color}-500`;
@@ -577,7 +440,11 @@ function showToast(message, color = 'pink') {
         <div class="ml-3 text-sm font-semibold">${message}</div>
     `;
     document.body.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.5s'; setTimeout(() => toast.remove(), 500); }, 4000);
+    setTimeout(() => {
+        toast.style.opacity    = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
 }
 </script>
 

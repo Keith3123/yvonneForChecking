@@ -591,7 +591,7 @@
                     <div class="flex gap-2">
                         <button class="bulk-activate text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
                                 data-package="{{ $package->packageID }}">Activate All</button>
-                        <button class="bulk-deactivate text-xs px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                        <button class="bulk-deactivate text-xs px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                                 data-package="{{ $package->packageID }}">Deactivate All</button>
                     </div>
                 </div>
