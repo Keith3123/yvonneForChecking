@@ -277,7 +277,7 @@
                 @php
                   $medal = match($i) { 0 => '🥇', 1 => '🥈', 2 => '🥉', default => '#' . ($i + 1) };
                   $img = $product->imageURL
-                    ? asset('storage/products/' . $product->imageURL)
+                    ? asset('images/products/' . $product->imageURL)
                     : asset('images/sample_food.jpg');
                 @endphp
                 <div class="flex items-center gap-3">

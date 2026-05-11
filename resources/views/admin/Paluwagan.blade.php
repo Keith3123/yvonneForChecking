@@ -448,7 +448,7 @@
                             </td>
                             <td class="py-2 px-3">
                                 @if($package->image && file_exists(storage_path('app/public/products/' . $package->image)))
-                                    <img src="{{ asset('storage/products/' . $package->image) }}" class="w-20 h-20 object-cover rounded">
+                                    <img src="{{ asset('images/products/' . $package->image) }}" class="w-20 h-20 object-cover rounded">
                                 @else
                                     <span class="text-gray-400">No image</span>
                                 @endif

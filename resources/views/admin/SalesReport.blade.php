@@ -198,7 +198,7 @@
                                     default => '<span class="text-gray-400 text-xs font-bold">#' . ($index + 1) . '</span>'
                                 };
                                 $imgSrc = $product->imageURL
-                                    ? asset('storage/products/' . $product->imageURL)
+                                    ? asset('images/products/' . $product->imageURL)
                                     : asset('images/sample_food.jpg');
                             @endphp
 
