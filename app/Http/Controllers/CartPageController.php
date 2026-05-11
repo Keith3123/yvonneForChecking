@@ -31,13 +31,17 @@ class CartPageController extends Controller
         $cart[$key]['quantity'] += $quantity;
     } else {
         $cart[$key] = [
-            'id' => $id,
-            'productID' => $id,
-            'name' => $name,
-            'price' => (float) $price, // Already discounted
-            'quantity' => (int) $quantity,
-            'image' => $image,
-            'productType' => $productType,
+            'id'            => $id,
+            'productID'     => $id,
+            'name'          => $request->input('name'),
+            'image'         => $request->input('image'),
+            'price'         => $request->input('price'),
+            'quantity'      => $request->input('quantity', 1),
+            'productType'   => $request->input('productType'),
+            'size'          => $request->input('size'),
+            'message'       => $request->input('message'),
+            'customization' => $request->input('customization'),
+            'includes'      => $request->input('includes'),
         ];
     }
 

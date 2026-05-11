@@ -93,17 +93,16 @@
         </div>
 
         @php
-            function getProductImageUrl($imageURL) {
-                if (!$imageURL) return asset('storage/products/default-product.png');
-                if (file_exists(storage_path('app/public/products/' . $imageURL))) {
-                    return asset('storage/products/' . $imageURL);
-                }
-                if (file_exists(public_path('images/products/' . $imageURL))) {
-                    return asset('images/products/' . $imageURL);
-                }
-                return asset('storage/products/default-product.png');
-            }
-        @endphp
+    function getProductImageUrl($imageURL) {
+        if (!$imageURL) return asset('images/products/default-product.png');
+        
+        if (file_exists(public_path('images/products/' . $imageURL))) {
+            return asset('images/products/' . $imageURL);
+        }
+        
+        return asset('images/products/default-product.png');
+    }
+@endphp
 
         {{-- PRODUCT GRID --}}
         <div

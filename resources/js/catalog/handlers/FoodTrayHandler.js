@@ -88,20 +88,22 @@ export default class FoodTrayHandler {
     }
 
     openModal(modal) {
-        modal.classList.remove('hidden');
-        modal.querySelector('#add-to-cart-foodtray').onclick = () => {
-            const select = modal.querySelector('#foodtray-size');
-            const id = parseInt(modal.querySelector('#foodtray-id').value);
+    modal.classList.remove('hidden');
+    modal.querySelector('#add-to-cart-foodtray').onclick = () => {
+        const select = modal.querySelector('#foodtray-size');
+        const id = parseInt(modal.querySelector('#foodtray-id').value);
+        const selectedOption = select.options[select.selectedIndex];
 
-            this.cartService.sendToCart({
-                id,
-                name: modal.querySelector('#foodtray-name').textContent,
-                image: modal.querySelector('#foodtray-image').src,
-                price: parseFloat(select.value),
-                quantity: parseInt(modal.querySelector('#quantity-foodtray').textContent)
-            });
+        this.cartService.sendToCart({
+            id,
+            name: modal.querySelector('#foodtray-name').textContent,
+            image: modal.querySelector('#foodtray-image').src,
+            price: parseFloat(select.value),
+            quantity: parseInt(modal.querySelector('#quantity-foodtray').textContent),
+            size: selectedOption ? selectedOption.textContent.split(' - ')[0].trim() : null,
+        });
 
-            modal.classList.add('hidden');
-        };
-    }
+        modal.classList.add('hidden');
+    };
+}
 }

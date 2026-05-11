@@ -68,25 +68,26 @@ export default class CupcakeHandler {
     }
 
     bindAddToCart(modal) {
-        modal.querySelector('#add-to-cart-cupcake').onclick = e => {
-            e.stopPropagation();
+    modal.querySelector('#add-to-cart-cupcake').onclick = e => {
+        e.stopPropagation();
 
-            const priceText = modal.querySelector('#cupcake-price').textContent || modal.querySelector('#cupcake-price').innerText;
-            const priceMatch = priceText.match(/₱([\d,.]+)$/);
-            const price = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : 0;
+        const priceText = modal.querySelector('#cupcake-price').textContent || modal.querySelector('#cupcake-price').innerText;
+        const priceMatch = priceText.match(/₱([\d,.]+)$/);
+        const price = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : 0;
 
-            this.cartService.sendToCart({
-                id: parseInt(modal.querySelector('#cupcake-id').value),
-                name: modal.querySelector('#cupcake-name').textContent,
-                image: modal.querySelector('#cupcake-image')?.src ?? null,
-                price: price,
-                quantity: parseInt(modal.querySelector('#quantity-cupcake').textContent),
-                productType: 'Cupcake'
-            });
+        this.cartService.sendToCart({
+            id: parseInt(modal.querySelector('#cupcake-id').value),
+            name: modal.querySelector('#cupcake-name').textContent,
+            image: modal.querySelector('#cupcake-image')?.src ?? null,
+            price: price,
+            quantity: parseInt(modal.querySelector('#quantity-cupcake').textContent),
+            productType: 'Cupcake',
+            message: modal.querySelector('#cupcake-message')?.value || null, // ✅ ADD THIS
+        });
 
-            modal.classList.add('hidden');
-        };
-    }
+        modal.classList.add('hidden');
+    };
+}
 
     openModal(modal) {
         modal.classList.remove('hidden');

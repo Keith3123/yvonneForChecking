@@ -62,10 +62,14 @@ class CheckoutPageController extends Controller
         ]);
 
         $items = array_map(fn($item) => [
-            'productID' => $item['productID'] ?? $item['id'],
-            'qty' => $item['quantity'],
-            'price' => $item['price'],
-        ], $cart);
+    'productID'     => $item['productID'] ?? $item['id'],
+    'qty'           => $item['quantity'],
+    'price'         => $item['price'],
+    'size'          => $item['size'] ?? null,
+    'message'       => $item['message'] ?? null,
+    'customization' => $item['customization'] ?? null,
+    'includes'      => $item['includes'] ?? null,
+], $cart);
 
         $dto = new CreateOrderDTO([
             'customerID' => $customer['customerID'],
@@ -111,10 +115,14 @@ public function payWithGcash(Request $request)
         // PREPARE ITEMS
         // =========================
         $items = array_map(fn($item) => [
-            'productID' => $item['productID'] ?? $item['id'],
-            'qty' => $item['quantity'],
-            'price' => $item['price'],
-        ], $cart);
+    'productID'     => $item['productID'] ?? $item['id'],
+    'qty'           => $item['quantity'],
+    'price'         => $item['price'],
+    'size'          => $item['size'] ?? null,
+    'message'       => $item['message'] ?? null,
+    'customization' => $item['customization'] ?? null,
+    'includes'      => $item['includes'] ?? null,
+], $cart);
 
         $dto = new CreateOrderDTO([
             'customerID' => $customer['customerID'],

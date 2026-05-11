@@ -122,9 +122,9 @@
                                 @php
                                     $productImageURL = $item->product->imageURL ?? null;
                                 @endphp
-                                <img src="{{ $productImageURL ? asset('storage/products/'.$productImageURL) : asset('images/sample_food.jpg') }}"
-                                     alt="Food Package"
-                                     class="w-24 h-24 object-cover rounded-lg border shadow-sm">
+                                <img src="{{ $productImageURL ? asset('images/products/'.$productImageURL) : asset('images/products/default-product.png') }}"
+                                    alt="{{ $item->product->name }}"
+                                    class="w-24 h-24 object-cover rounded-lg border shadow-sm">
                                 <div class="flex-1">
                                     <h3 class="font-semibold text-gray-800">{{ $item->product->name ?? 'Product Name' }}</h3>
                                     <p class="text-sm text-gray-500">Quantity: {{ $item->qty }}</p>

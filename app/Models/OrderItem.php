@@ -15,11 +15,17 @@ class OrderItem extends Model
         'productID',
         'price',
         'qty',
+        'size',
+        'message',
+        'customization',
+        'includes',
     ];
 
     protected $casts = [
         'price' => 'float',
         'qty'   => 'integer',
+        'customization' => 'array',
+        'includes' => 'array',
     ];
 
     public function product()

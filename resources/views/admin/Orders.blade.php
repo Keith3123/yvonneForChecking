@@ -444,15 +444,46 @@ document.addEventListener("DOMContentLoaded", () => {
                 let itemsHtml = '';
 
                 order.order_items.forEach(item => {
-                    itemsHtml += `
-                        <tr>
-                            <td class="border-b py-2 px-4">${item.product.name}</td>
-                            <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.price).toFixed(2)}</td>
-                            <td class="border-b py-2 px-4 text-center">${item.qty}</td>
-                            <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.subtotal).toFixed(2)}</td>
-                        </tr>
-                    `;
-                });
+    let extras = [];
+
+    if (item.size) {
+        extras.push(`<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Size: ${item.size}</span>`);
+    }
+    if (item.message) {
+        extras.push(`<span class="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full">📝 "${item.message}"</span>`);
+    }
+    if (item.customization) {
+        const c = typeof item.customization === 'string' ? JSON.parse(item.customization) : item.customization;
+        if (c.flavor) extras.push(`<span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full">Flavor: ${c.flavor}</span>`);
+        if (c.shape)  extras.push(`<span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">Shape: ${c.shape}</span>`);
+        if (c.icing)  extras.push(`<span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">Icing: ${c.icing}</span>`);
+    }
+
+    let includesHtml = '';
+    if (item.includes) {
+        const inc = typeof item.includes === 'string' ? JSON.parse(item.includes) : item.includes;
+        if (Array.isArray(inc) && inc.length) {
+            includesHtml = `
+                <p class="text-xs text-gray-400 mt-1 font-medium">Includes:</p>
+                <ul class="list-disc ml-4 text-xs text-gray-500">
+                    ${inc.map(i => `<li>${i}</li>`).join('')}
+                </ul>`;
+        }
+    }
+
+    itemsHtml += `
+        <tr>
+            <td class="border-b py-2 px-4">
+                <div class="font-medium">${item.product.name}</div>
+                ${extras.length ? `<div class="flex flex-wrap gap-1 mt-1">${extras.join('')}</div>` : ''}
+                ${includesHtml}
+            </td>
+            <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.price).toFixed(2)}</td>
+            <td class="border-b py-2 px-4 text-center">${item.qty}</td>
+            <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.subtotal).toFixed(2)}</td>
+        </tr>
+    `;
+});
 
                 document.getElementById('order-content').innerHTML = `
                     <div class="grid grid-cols-3 gap-6 text-sm text-gray-700">

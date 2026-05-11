@@ -28,23 +28,27 @@ class OrderRepository implements OrderRepositoryInterface
     }
 
     public function addItems(int $orderID, array $items): void
-    {
-        foreach ($items as $item) {
-            $productID = $item['productID'] ?? $item['id'] ?? null;
+{
+    foreach ($items as $item) {
+        $productID = $item['productID'] ?? $item['id'] ?? null;
 
-            if (!is_numeric($productID)) {
-                Log::error('Invalid productID for order item', $item);
-                continue;
-            }
-
-            OrderItem::create([
-                'orderID'   => $orderID,
-                'productID' => (int)$productID,
-                'price'     => $item['price'],
-                'qty'       => $item['qty'],
-            ]);
+        if (!is_numeric($productID)) {
+            Log::error('Invalid productID for order item', $item);
+            continue;
         }
+
+        OrderItem::create([
+            'orderID'       => $orderID,
+            'productID'     => (int)$productID,
+            'price'         => $item['price'],
+            'qty'           => $item['qty'],
+            'size'          => $item['size'] ?? null,
+            'message'       => $item['message'] ?? null,
+            'customization' => isset($item['customization']) ? $item['customization'] : null,
+            'includes'      => isset($item['includes']) ? $item['includes'] : null,
+        ]);
     }
+}
 
     public function updateTotalAmount(int $orderID): void
     {

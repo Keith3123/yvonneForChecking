@@ -13,6 +13,7 @@ export default class FoodPackageHandler {
 
         modal.querySelector('#foodpackage-name').textContent = card.dataset.name;
         modal.querySelector('#foodpackage-image').src = card.dataset.image;
+        modal.dataset.includes = card.dataset.description || '';
         this.populateDescription(modal.querySelector('#foodpackage-includes'), card.dataset.description);
 
         const servings = JSON.parse(card.dataset.servings || '[]');
@@ -77,20 +78,29 @@ export default class FoodPackageHandler {
     }
 
     openModal(modal) {
-        modal.classList.remove('hidden');
-        modal.querySelector('#add-to-cart-foodpackage').onclick = () => {
-            const productID = parseInt(modal.querySelector('#foodpackage-id').value);
-            if (!productID) { console.error('Invalid productID for food package'); return; }
+    modal.classList.remove('hidden');
+    modal.querySelector('#add-to-cart-foodpackage').onclick = () => {
+        const productID = parseInt(modal.querySelector('#foodpackage-id').value);
+        if (!productID) { console.error('Invalid productID for food package'); return; }
 
-            const price = parseFloat(modal.querySelector('#foodpackage-price').textContent.replace('₱', ''));
-            this.cartService.sendToCart({
-                id: productID,
-                name: modal.querySelector('#foodpackage-name').textContent,
-                image: modal.querySelector('#foodpackage-image').src,
-                price: price,
-                quantity: parseInt(modal.querySelector('#quantity-foodpackage').textContent)
-            });
-            modal.classList.add('hidden');
-        };
-    }
+        const price = parseFloat(modal.querySelector('#foodpackage-price').textContent.replace('₱', ''));
+
+        // ✅ Parse includes from stored description
+        const rawIncludes = modal.dataset.includes || '';
+        const includesArray = rawIncludes
+            .split('\n')
+            .map(l => l.trim())
+            .filter(Boolean);
+
+        this.cartService.sendToCart({
+            id: productID,
+            name: modal.querySelector('#foodpackage-name').textContent,
+            image: modal.querySelector('#foodpackage-image').src,
+            price: price,
+            quantity: parseInt(modal.querySelector('#quantity-foodpackage').textContent),
+            includes: includesArray.length ? includesArray : null, // ✅ ADD THIS
+        });
+        modal.classList.add('hidden');
+    };
+}
 }

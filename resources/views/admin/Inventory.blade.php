@@ -12,6 +12,8 @@
 
 <div 
     x-data="{
+        showDeleteModal: false,
+        deleteTarget: { id: null, name: '' },
         showAddModal: false,
         showEditModal: false,
         showReceiveModal: false,
@@ -99,7 +101,11 @@
         },
 
         async deleteIngredient(id, name) {
-            if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+            this.deleteTarget = { id, name };
+            this.showDeleteModal = true;
+        },
+        async confirmDelete() {
+            const { id, name } = this.deleteTarget;
             const res = await fetch(`/admin/inventory/${id}`, {
                 method: 'POST',
                 headers: {
@@ -110,12 +116,14 @@
             });
             const d = await res.json();
             if (d.success) {
+                this.showDeleteModal = false;
                 this.showToast('Ingredient deleted.');
                 setTimeout(() => window.location.reload(), 1000);
             } else {
+                this.showDeleteModal = false;
                 this.showToast(d.message ?? 'Could not delete ingredient.', 'error');
             }
-        }
+        },
     }"
     @keydown.escape.window="
         showAddModal = false; showEditModal = false;
@@ -145,6 +153,37 @@
             <span x-text="toast.message" class="font-bold whitespace-nowrap"></span>
         </div>
     </div>
+    {{-- Delete Confirmation Modal --}}
+<div x-cloak x-show="showDeleteModal"
+     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 px-4 sm:px-6"
+     @click.self="showDeleteModal = false">
+    <div class="bg-white w-full max-w-xs sm:max-w-sm rounded-2xl shadow-lg p-6"
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+        <div class="flex flex-col items-center text-center gap-3 mb-5">
+            <div class="bg-red-100 rounded-full p-3">
+                <i class="fas fa-trash-alt text-red-500 text-xl"></i>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-800">Delete Ingredient</h2>
+            <p class="text-sm text-gray-500">
+                Are you sure you want to delete
+                <span class="font-semibold text-gray-800" x-text="deleteTarget.name"></span>?
+                This cannot be undone.
+            </p>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" @click="showDeleteModal = false"
+                class="flex-1 px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 transition">
+                Cancel
+            </button>
+            <button type="button" @click="confirmDelete()"
+                class="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
 
     {{-- Page Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

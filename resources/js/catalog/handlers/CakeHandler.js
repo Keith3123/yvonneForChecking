@@ -111,35 +111,35 @@ export default class CakeHandler {
     }
 
     bindAddToCart(modal) {
-        const btn = modal.querySelector('#add-to-cart-cake');
-        btn.onclick = e => {
-            e.stopPropagation();
+    const btn = modal.querySelector('#add-to-cart-cake');
+    btn.onclick = e => {
+        e.stopPropagation();
 
-            const isCustomization = !modal.querySelector('#cake-customization').classList.contains('hidden');
+        const isCustomization = !modal.querySelector('#cake-customization').classList.contains('hidden');
 
-            // Extract numeric price from potentially HTML content
-            const priceText = modal.querySelector('#cake-price').textContent || modal.querySelector('#cake-price').innerText;
-            const priceMatch = priceText.match(/₱([\d,.]+)$/);
-            const price = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : 0;
+        const priceText = modal.querySelector('#cake-price').textContent || modal.querySelector('#cake-price').innerText;
+        const priceMatch = priceText.match(/₱([\d,.]+)$/);
+        const price = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : 0;
 
-            this.cartService.sendToCart({
-                id: parseInt(modal.querySelector('#cake-id').value),
-                name: modal.querySelector('#cake-name').textContent,
-                image: modal.querySelector('#cake-image')?.src ?? null,
-                price: price,
-                quantity: parseInt(modal.querySelector('#quantity-cake').textContent),
-                productType: 'Cake',
-                customization: isCustomization ? {
-                    flavor: modal.querySelector('#cake-flavor option:checked')?.textContent,
-                    shape: modal.querySelector('#cake-shape option:checked')?.textContent,
-                    icing: modal.querySelector('#cake-icing option:checked')?.textContent,
-                    message: modal.querySelector('#cake-message')?.value || null
-                } : null
-            });
+        this.cartService.sendToCart({
+            id: parseInt(modal.querySelector('#cake-id').value),
+            name: modal.querySelector('#cake-name').textContent,
+            image: modal.querySelector('#cake-image')?.src ?? null,
+            price: price,
+            quantity: parseInt(modal.querySelector('#quantity-cake').textContent),
+            productType: 'Cake',
+            message: modal.querySelector('#cake-message')?.value || null, // ✅ TOP-LEVEL
+            customization: isCustomization ? {
+                flavor: modal.querySelector('#cake-flavor option:checked')?.textContent,
+                shape: modal.querySelector('#cake-shape option:checked')?.textContent,
+                icing: modal.querySelector('#cake-icing option:checked')?.textContent,
+                // ❌ removed message from here
+            } : null,
+        });
 
-            modal.classList.add('hidden');
-        };
-    }
+        modal.classList.add('hidden');
+    };
+}
 
     openModal(modal) {
         modal.classList.remove('hidden');
