@@ -1,3 +1,4 @@
+{{-- user/modals/paluwagan.blade.php --}}
 <div id="paluwagan-modal"
      data-package=""
      class="fixed inset-0 hidden z-50 flex items-center justify-center">
@@ -43,21 +44,49 @@
 
         <!-- STEP 2 -->
         <div id="paluwagan-step2" class="hidden">
-            <h2 class="text-2xl font-bold mb-4">Paluwagan Enrollment</h2>
-
-            <label class="font-semibold text-gray-700 block mb-2">
-                Select Start Month
-            </label>
-
-            <!-- ✅ DYNAMIC MONTHS -->
-            <select id="start-month"
-                    class="border rounded-md w-full p-2 mb-4">
-                <!-- filled dynamically -->
-            </select>
+            <h2 class="text-2xl font-bold mb-1">Select Start Month</h2>
+            <p class="text-gray-500 text-sm mb-4">Choose an available month to start your Paluwagan.</p>
 
             <img id="paluwagan-image2"
                  src=""
-                 class="rounded-lg w-full h-60 object-cover mb-5">
+                 class="rounded-lg w-full h-44 object-cover mb-5">
+
+            <!-- Month loading state -->
+            <div id="months-loading" class="text-center py-6">
+                <svg class="animate-spin h-6 w-6 text-pink-500 mx-auto" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                <p class="text-gray-400 text-sm mt-2">Loading available months...</p>
+            </div>
+
+            <!-- Legend -->
+            <div id="months-legend" class="hidden flex flex-wrap gap-3 mb-3 text-xs">
+                <span class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span> Available
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded-full bg-red-300 inline-block"></span> Taken
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> You're Waiting
+                </span>
+            </div>
+
+            <!-- Month grid — filled by JS -->
+            <div id="month-cards-grid"
+                 class="hidden grid grid-cols-3 gap-2 mb-4 max-h-72 overflow-y-auto pr-1">
+                <!-- JS renders cards here -->
+            </div>
+
+            <!-- Hidden input to carry selected month value -->
+            <input type="hidden" id="start-month" value="">
+
+            <!-- Waitlist notice (shown when user picks a taken month) -->
+            <div id="waitlist-notice" class="hidden bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm">
+                <p class="font-semibold text-yellow-800">📋 You'll be added to the waiting list</p>
+                <p class="text-yellow-700 text-xs mt-1" id="waitlist-notice-text"></p>
+            </div>
 
             <div class="bg-[#FFF1F0] p-3 rounded-lg mb-4 text-sm text-gray-800">
                 <p class="font-semibold mb-1">Important Reminders</p>
@@ -76,7 +105,9 @@
                 </button>
 
                 <button id="confirmEnrollmentBtn"
-                        class="bg-pink-600 hover:bg-pink-700 text-white font-semibold px-4 py-2 rounded">
+                        disabled
+                        class="bg-pink-600 hover:bg-pink-700 disabled:opacity-40 disabled:cursor-not-allowed
+                               text-white font-semibold px-4 py-2 rounded transition">
                     Confirm Enrollment
                 </button>
             </div>

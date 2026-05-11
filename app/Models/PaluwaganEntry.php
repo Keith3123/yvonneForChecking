@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -16,30 +17,75 @@ class PaluwaganEntry extends Model
         'joinDate',
         'status',
         'startMonth',
-        'startYear'
+        'startYear',
+        'releasedAt',          // ✅ NEW: when product was actually released
+        'releaseRequestedAt',  // ✅ NEW: when customer requested early release
+        'releaseNote',         // ✅ NEW: optional note from customer
     ];
 
-    // Entry → Package
+    protected $casts = [
+        'releasedAt'         => 'datetime',
+        'releaseRequestedAt' => 'datetime',
+    ];
+
+    // =====================
+    // RELATIONSHIPS
+    // =====================
+
     public function package()
     {
         return $this->belongsTo(PaluwaganPackage::class, 'packageID', 'packageID');
     }
 
-    // Entry → Schedules
-public function schedules()
-{
-    return $this->hasMany(PaluwaganSchedule::class, 'paluwaganEntryID', 'paluwaganEntryID');
-}
+    public function schedules()
+    {
+        return $this->hasMany(PaluwaganSchedule::class, 'paluwaganEntryID', 'paluwaganEntryID');
+    }
 
-    // Entry → Payments
     public function payments()
     {
         return $this->hasMany(Payment::class, 'paluwaganEntryID', 'paluwaganEntryID')
                     ->where('contextType', 'paluwagan');
     }
 
-public function customer()
-{
-    return $this->belongsTo(Customer::class, 'customerID', 'customerID');
-}
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customerID', 'customerID');
+    }
+
+    // =====================
+    // COMPUTED HELPERS
+    // =====================
+
+    /**
+     * Has the product been physically released to the customer?
+     */
+    public function isReleased(): bool
+    {
+        return !is_null($this->releasedAt);
+    }
+
+    /**
+     * Is a release pending admin approval?
+     */
+    public function hasPendingReleaseRequest(): bool
+    {
+        return $this->status === 'release_requested';
+    }
+
+    /**
+     * How much has been paid so far?
+     */
+    public function totalPaid(): float
+    {
+        return (float) $this->schedules->sum('amountPaid');
+    }
+
+    /**
+     * How much is still owed (even if released)?
+     */
+    public function totalRemaining(): float
+    {
+        return (float) ($this->package->totalAmount ?? 0) - $this->totalPaid();
+    }
 }

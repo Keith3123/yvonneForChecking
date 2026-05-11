@@ -109,6 +109,9 @@ Route::get('/paluwagan/schedule/{entryID}', [PaluwaganPageController::class, 'vi
 Route::get('/user/paluwagan/available-months/{packageID}', [PaluwaganPageController::class, 'availableMonths'])->name('user.paluwagan.available-months');
 Route::post('/paluwagan/cancel/{id}', [PaluwaganPageController::class, 'cancel']);
 
+Route::post('/paluwagan/entry/{entryID}/request-release',       [PaluwaganPageController::class, 'requestRelease']);
+Route::post('/paluwagan/entry/{entryID}/cancel-release-request',[PaluwaganPageController::class, 'cancelReleaseRequest']);
+
 // PALUWAGAN GCASH
 Route::post('/paluwagan/pay-gcash', [PaluwaganPageController::class, 'payWithGcash'])->name('paluwagan.pay.gcash');
 
@@ -145,16 +148,18 @@ Route::prefix('admin')->group(function() {
 
 
     // Paluwagan Management
-    Route::get('/paluwagan', [AdminPaluwaganController::class, 'index'])->name('admin.paluwagan');
+     Route::get('/paluwagan', [AdminPaluwaganController::class, 'index'])->name('admin.paluwagan');
     Route::post('/paluwagan/package/create', [AdminPaluwaganController::class, 'createPackage']);
-    Route::delete('/paluwagan/package/{id}/delete', [AdminPaluwaganController::class,'destroy']);
-    Route::put('/paluwagan/package/{id}', [AdminPaluwaganController::class,'updatePackage']);
-    Route::post('/paluwagan/month/toggle', [AdminPaluwaganController::class,'toggleMonth']);
+    Route::delete('/paluwagan/package/{id}/delete', [AdminPaluwaganController::class, 'destroy']);
+    Route::put('/paluwagan/package/{id}', [AdminPaluwaganController::class, 'updatePackage']);
+    Route::post('/paluwagan/month/toggle', [AdminPaluwaganController::class, 'toggleMonth']);
     Route::post('/paluwagan/entry/{id}/complete', [AdminPaluwaganController::class, 'complete'])->name('admin.paluwagan.complete');
     Route::post('/paluwagan/entry/{entryID}/reassign', [AdminPaluwaganController::class, 'reassign']);
-
     Route::get('/paluwagan/entry/{id}/payments', [AdminPaluwaganController::class, 'getPayments']);
     Route::get('/paluwagan/customers/search', [AdminPaluwaganController::class, 'searchCustomers']);
+    // ✅ FIXED — no double /admin/ prefix:
+    Route::post('/paluwagan/entry/{entryID}/approve-release', [AdminPaluwaganController::class, 'approveRelease'])->name('admin.paluwagan.approve-release');
+    Route::post('/paluwagan/entry/{entryID}/reject-release',  [AdminPaluwaganController::class, 'rejectRelease'])->name('admin.paluwagan.reject-release');
 
     // Inventory Routes
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('admin.inventory');

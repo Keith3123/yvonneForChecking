@@ -36,30 +36,73 @@ class PaluwaganPageController extends Controller
     }
 
     public function join(Request $request)
-    {
-        $request->validate([
-            'packageID' => 'required|integer',
-            'startMonth' => 'required|integer|min:1|max:12'
+{
+    $request->validate([
+        'packageID'  => 'required|integer',
+        'startMonth' => 'required|integer|min:1|max:12'
+    ]);
+
+    $customerID = session('logged_in_user.customerID');
+    if (!$customerID) {
+        return response()->json(['error' => 'Login required.'], 401);
+    }
+
+    // Prevent duplicate — already active or waiting for same package+month
+    $existing = PaluwaganEntry::where('customerID', $customerID)
+        ->where('packageID', $request->packageID)
+        ->whereIn('status', ['active', 'waiting'])
+        ->where('startMonth', $request->startMonth)
+        ->first();
+
+    if ($existing) {
+        return response()->json([
+            'error' => $existing->status === 'waiting'
+                ? 'You are already in the waiting list for this month.'
+                : 'You already have an active entry for this month.'
+        ], 409);
+    }
+
+    // Check if month is taken by another active entry
+    $isTaken = PaluwaganEntry::where('packageID', $request->packageID)
+        ->where('startMonth', $request->startMonth)
+        ->where('status', 'active')
+        ->exists();
+
+    if ($isTaken) {
+        // Add to waitlist — no schedules yet
+        PaluwaganEntry::create([
+            'customerID'  => $customerID,
+            'packageID'   => $request->packageID,
+            'startMonth'  => $request->startMonth,
+            'startYear'   => now()->year,
+            'status'      => 'waiting',
+            'joinDate'    => now(), 
         ]);
 
-        $customerID = session('logged_in_user.customerID');
+        return response()->json([
+            'success' => true,
+            'waiting' => true,
+            'message' => 'This month is taken. You have been added to the waiting list!'
+        ]);
+    }
 
-        if (!$customerID) {
-            return response()->json(['error' => 'You must be logged in to join paluwagan.'], 401);
-        }
-
-        try {
-            $this->paluwaganService->joinPaluwagan(
+    // Month is free — join normally
+    try {
+        $this->paluwaganService->joinPaluwagan(
             $customerID,
             $request->packageID,
             $request->startMonth
         );
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 409);
-        }
-
-        return response()->json(['success' => true, 'message' => 'Successfully joined the paluwagan!']);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 409);
     }
+
+    return response()->json([
+        'success' => true,
+        'waiting' => false,
+        'message' => 'Successfully joined!'
+    ]);
+}
 
     public function viewSchedule($entryID)
 {
@@ -135,27 +178,64 @@ $mapped = $schedules
     public function availableMonths($packageID)
 {
     try {
+        $currentCustomerID = session('logged_in_user.customerID');
+
         $year = \App\Models\PaluwaganMonthAvailability::where('packageID', $packageID)
             ->max('year') ?? now()->year;
 
-        $months = \App\Models\PaluwaganMonthAvailability::where('packageID', $packageID)
+        $activeMonths = \App\Models\PaluwaganMonthAvailability::where('packageID', $packageID)
             ->where('year', $year)
             ->where('status', 'active')
-            ->orderBy('month')
-            ->get()
-            ->map(function ($m) {
-                return [
-                    'month' => $m->month,
-                    'label' => \Carbon\Carbon::create()->month($m->month)->format('F')
-                ];
-            });
+            ->pluck('month');
 
-        return response()->json($months);
+        // Who's occupying each month (active entries)
+        $takenMonths = PaluwaganEntry::with('customer')
+            ->where('packageID', $packageID)
+            ->where('status', 'active')
+            ->whereIn('startMonth', $activeMonths)
+            ->get()
+            ->keyBy('startMonth');
+
+        // Who's waiting per month
+        $waitingPerMonth = PaluwaganEntry::with('customer')
+            ->where('packageID', $packageID)
+            ->where('status', 'waiting')
+            ->whereIn('startMonth', $activeMonths)
+            ->get()
+            ->groupBy('startMonth');
+
+        $result = $activeMonths->map(function ($month) use (
+            $takenMonths, $waitingPerMonth, $currentCustomerID
+        ) {
+            $takenEntry   = $takenMonths->get($month);
+            $waitingList  = $waitingPerMonth->get($month, collect());
+
+            $isTaken      = !is_null($takenEntry);
+            $currentWaiting = $waitingList->firstWhere('customerID', $currentCustomerID);
+
+            return [
+                'month'         => $month,
+                'label'         => \Carbon\Carbon::create()->month($month)->format('F'),
+                'status'        => $isTaken ? 'taken' : 'available',
+                'takenBy'       => $isTaken
+                                    ? ($takenEntry->customer->firstName ?? 'Someone')
+                                    : null,
+                'waitingCount'  => $waitingList->count(),
+                'waitingNames'  => $waitingList->map(fn($e) =>
+                                    $e->customer->firstName ?? 'Customer'
+                                   )->values(),
+                'currentUserWaitPosition' => $currentWaiting
+                                    ? ($waitingList->search(fn($e) =>
+                                        $e->customerID === $currentCustomerID
+                                      ) + 1)
+                                    : null,
+            ];
+        })->values();
+
+        return response()->json($result);
 
     } catch (\Exception $e) {
-        return response()->json([
-            'error' => $e->getMessage()
-        ], 500);
+        return response()->json(['error' => $e->getMessage()], 500);
     }
 }
 
@@ -328,5 +408,97 @@ public function cancel($id)
         ], 500);
     }
 }
+
+public function requestRelease(Request $request, $entryID)
+    {
+        try {
+            $customerID = session('logged_in_user.customerID');
+ 
+            if (!$customerID) {
+                return response()->json(['error' => 'Login required'], 401);
+            }
+ 
+            $entry = PaluwaganEntry::where('paluwaganEntryID', $entryID)
+                ->where('customerID', $customerID)
+                ->first();
+ 
+            if (!$entry) {
+                return response()->json(['success' => false, 'message' => 'Entry not found'], 404);
+            }
+ 
+            // Only active entries can request early release
+            if ($entry->status !== 'active') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only active subscriptions can request early release.'
+                ], 400);
+            }
+ 
+            // Already requested
+            if ($entry->hasPendingReleaseRequest()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have a pending release request.'
+                ], 400);
+            }
+ 
+            // Already released (but still paying)
+            if ($entry->isReleased()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your product has already been released.'
+                ], 400);
+            }
+ 
+            $note = $request->input('note', '');
+ 
+            $entry->status               = 'release_requested';
+            $entry->releaseRequestedAt   = now();
+            $entry->releaseNote          = $note;
+            $entry->save();
+ 
+            return response()->json([
+                'success' => true,
+                'message' => 'Early release request submitted. Admin will review and process it shortly.'
+            ]);
+ 
+        } catch (\Throwable $e) {
+            \Log::error('requestRelease error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        }
+    }
+ 
+    /**
+     * Customer cancels their pending release request (changed their mind).
+     */
+    public function cancelReleaseRequest($entryID)
+    {
+        try {
+            $customerID = session('logged_in_user.customerID');
+ 
+            $entry = PaluwaganEntry::where('paluwaganEntryID', $entryID)
+                ->where('customerID', $customerID)
+                ->where('status', 'release_requested')
+                ->first();
+ 
+            if (!$entry) {
+                return response()->json(['success' => false, 'message' => 'No pending release request found'], 404);
+            }
+ 
+            $entry->status             = 'active';
+            $entry->releaseRequestedAt = null;
+            $entry->releaseNote        = null;
+            $entry->save();
+ 
+            return response()->json([
+                'success' => true,
+                'message' => 'Release request cancelled.'
+            ]);
+ 
+        } catch (\Throwable $e) {
+            \Log::error('cancelReleaseRequest error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        }
+    }
 
 }
