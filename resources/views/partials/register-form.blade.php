@@ -216,17 +216,22 @@
             </section>
 
             <section>
-                <h3 class="font-semibold text-gray-700 mb-1">6. Product Availability</h3>
+                <h3 class="font-semibold text-gray-700 mb-1">6. Google Binding</h3>
+                <p>To prevent fraudulent orders and ensure secure payment processing, all customers are required to link a verified Gmail account to their profile.</p>
+            </section>
+
+            <section>
+                <h3 class="font-semibold text-gray-700 mb-1">7. Product Availability</h3>
                 <p>All items are made to order. Availability of custom cakes, pastries, and food trays may vary depending on season and supply. We will contact you if any ordered item cannot be fulfilled.</p>
             </section>
 
             <section>
-                <h3 class="font-semibold text-gray-700 mb-1">7. Modifications</h3>
+                <h3 class="font-semibold text-gray-700 mb-1">8. Modifications</h3>
                 <p>Yvonne's Cakes & Pastries reserves the right to update these Terms at any time. Continued use of the platform after changes constitutes acceptance of the new terms.</p>
             </section>
 
             <section>
-                <h3 class="font-semibold text-gray-700 mb-1">8. Contact</h3>
+                <h3 class="font-semibold text-gray-700 mb-1">9. Contact</h3>
                 <p>For any concerns regarding these terms, please reach out to us through our official channels.</p>
             </section>
         </div>
