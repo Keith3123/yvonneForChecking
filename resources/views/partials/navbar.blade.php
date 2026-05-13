@@ -29,9 +29,7 @@
 
         <!-- DESKTOP LINKS -->
         <div class="hidden md:flex items-center space-x-8">
-            @php $user = session('logged_in_user'); @endphp
 
-            <!-- NAV LINK -->
             <a href="{{ route('paluwagan') }}"
                class="relative font-medium text-gray-800 transition-all duration-300
                       hover:text-pink-500 hover:-translate-y-0.5
@@ -43,21 +41,18 @@
 
             @if($user)
                 <a href="{{ route('orders.index') }}"
-   class="relative font-medium text-gray-800 transition-all duration-300
-          hover:text-pink-500 hover:-translate-y-0.5 flex items-center gap-1 group">
-    My Orders
-    
-    @if($showOrderDot)
-        <!-- The Notification Dot -->
-        <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-        </span>
-    @endif
-
-    <span class="absolute left-1/2 -bottom-1 h-[2px] w-0 bg-pink-500 transition-all 
-          group-hover:w-full -translate-x-1/2"></span>
-</a>
+                   class="relative font-medium text-gray-800 transition-all duration-300
+                          hover:text-pink-500 hover:-translate-y-0.5 flex items-center gap-1 group">
+                    My Orders
+                    @if($showOrderDot)
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                    @endif
+                    <span class="absolute left-1/2 -bottom-1 h-[2px] w-0 bg-pink-500 transition-all 
+                          group-hover:w-full -translate-x-1/2"></span>
+                </a>
 
                 <!-- PROFILE DROPDOWN -->
                 <div class="relative" x-data="{ open: false }">
@@ -74,118 +69,132 @@
                         </svg>
                     </button>
 
-                    <!-- DROPDOWN MENU -->
-                    <div x-show="open"
-                        @click.away="open=false"
-                        x-transition
-                        x-cloak
+                    <div x-show="open" @click.away="open=false" x-transition x-cloak
                         class="absolute right-0 mt-3 w-44 bg-white border border-gray-200
                                rounded-xl shadow-lg overflow-hidden z-50">
-
                         <a href="{{ route('profile') }}"
-                           class="block px-4 py-2 text-sm transition
-                                  hover:bg-pink-50 hover:text-pink-600">
+                           class="block px-4 py-2 text-sm transition hover:bg-pink-50 hover:text-pink-600">
                             View Profile
                         </a>
-
-                         <a href="{{ route('my.ratings') }}"
-                           class="block px-4 py-2 text-sm transition
-                                  hover:bg-pink-50 hover:text-pink-600">
+                        <a href="{{ route('my.ratings') }}"
+                           class="block px-4 py-2 text-sm transition hover:bg-pink-50 hover:text-pink-600">
                             My Ratings
                         </a>
-
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit"
-                                class="w-full text-left px-4 py-2 text-sm transition
-                                       hover:bg-pink-50 hover:text-pink-600">
+                                class="w-full text-left px-4 py-2 text-sm transition hover:bg-pink-50 hover:text-pink-600">
                                 Logout
                             </button>
                         </form>
                     </div>
-                </div>
+                </div>{{-- end profile dropdown --}}
+
             @else
-                <!-- LOGIN BUTTON -->
                 <a href="{{ route('login') }}"
-                   class="bg-pink-500 text-white font-semibold
-                          px-6 py-2 rounded-xl
-                          transition-all duration-300
-                          hover:bg-pink-600 hover:shadow-lg hover:-translate-y-0.5
-                          active:scale-95">
+                   class="bg-pink-500 text-white font-semibold px-6 py-2 rounded-xl
+                          transition-all duration-300 hover:bg-pink-600 hover:shadow-lg
+                          hover:-translate-y-0.5 active:scale-95">
+                    Login
+                </a>
+            @endif
+
+            <!-- LANGUAGE DROPDOWN -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open"
+                    class="flex items-center gap-1 text-xs font-semibold text-gray-500
+                           border border-gray-300 rounded-full px-2.5 py-1 bg-white
+                           hover:border-pink-400 hover:text-pink-500 transition-all duration-200">
+                    🌐 EN
+                    <svg class="w-3 h-3 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="open" @click.away="open = false" x-transition x-cloak
+                    class="absolute right-0 mt-2 w-36 bg-white border border-gray-200
+                           rounded-xl shadow-lg overflow-hidden z-50">
+                    <button class="w-full text-left px-4 py-2 text-sm font-medium bg-pink-50 text-pink-600 cursor-default">
+                        🇺🇸 English
+                    </button>
+                </div>
+            </div>{{-- end language dropdown --}}
+
+        </div>{{-- end desktop links --}}
+    </div>{{-- end flex justify-between --}}
+
+    <!-- MOBILE MENU -->
+    <div id="mobile-menu"
+         class="md:hidden hidden mt-6 mx-4
+                bg-white rounded-2xl shadow-xl
+                divide-y divide-gray-100 overflow-hidden">
+
+        <div class="flex flex-col text-center">
+            <a href="{{ route('paluwagan') }}"
+               class="py-4 font-medium text-gray-800 transition-all duration-200
+                      hover:bg-pink-50 hover:text-pink-500 hover:tracking-wide">
+                Paluwagan
+            </a>
+
+            @if($user)
+                <a href="{{ route('orders.index') }}"
+                   class="py-4 font-medium text-gray-800 transition-all duration-200
+                          hover:bg-pink-50 hover:text-pink-500 hover:tracking-wide">
+                    My Orders
+                </a>
+                <a href="{{ route('profile') }}"
+                   class="py-4 font-medium text-gray-800 transition-all duration-200
+                          hover:bg-pink-50 hover:text-pink-500 hover:tracking-wide">
+                    Profile
+                </a>
+                <a href="{{ route('my.ratings') }}"
+                   class="py-4 font-medium text-gray-800 transition-all duration-200
+                          hover:bg-pink-50 hover:text-pink-500 hover:tracking-wide">
+                    My Ratings
+                </a>
+            @endif
+        </div>{{-- end menu links --}}
+
+        <!-- LANGUAGE MOBILE -->
+        <div x-data="{ open: false }">
+            <button @click="open = !open"
+                class="w-full py-4 font-medium text-gray-800 flex items-center justify-center gap-2
+                       hover:bg-pink-50 hover:text-pink-500 transition-all duration-200">
+                🌐 Language
+                <svg class="w-3 h-3 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" x-transition x-cloak class="bg-gray-50 divide-y divide-gray-100">
+                <div class="py-3 text-sm font-medium text-pink-600 text-center bg-pink-50">
+                    🇺🇸 English
+                </div>
+            </div>
+        </div>{{-- end language mobile --}}
+
+        <!-- LOGOUT / LOGIN -->
+        <div class="p-4 text-center">
+            @if($user)
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="w-full py-3 rounded-xl font-semibold text-red-500 border border-red-200
+                                   transition-all duration-200 hover:bg-red-50 hover:text-red-600">
+                        Logout
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('login') }}"
+                   class="block w-full py-3 rounded-xl bg-pink-500 text-white font-semibold
+                          transition hover:bg-pink-600">
                     Login
                 </a>
             @endif
         </div>
-    </div>
 
-    <!-- MOBILE MENU -->
-<div id="mobile-menu"
-     class="md:hidden hidden mt-6 mx-4
-            bg-white rounded-2xl shadow-xl
-            divide-y divide-gray-100 overflow-hidden">
+    </div>{{-- end mobile menu --}}
 
-    <!-- MENU LINKS -->
-    <div class="flex flex-col text-center">
-        <a href="{{ route('paluwagan') }}"
-           class="py-4 font-medium text-gray-800
-                  transition-all duration-200
-                  hover:bg-pink-50 hover:text-pink-500
-                  hover:tracking-wide">
-            Paluwagan
-        </a>
-
-        @if($user)
-            <a href="{{ route('orders.index') }}"
-               class="py-4 font-medium text-gray-800
-                      transition-all duration-200
-                      hover:bg-pink-50 hover:text-pink-500
-                      hover:tracking-wide">
-                My Orders
-            </a>
-
-            <a href="{{ route('profile') }}"
-               class="py-4 font-medium text-gray-800
-                      transition-all duration-200
-                      hover:bg-pink-50 hover:text-pink-500
-                      hover:tracking-wide">
-                Profile
-            </a>
-
-             <a href="{{ route('my.ratings') }}"
-               class="py-4 font-medium text-gray-800
-                      transition-all duration-200
-                      hover:bg-pink-50 hover:text-pink-500
-                      hover:tracking-wide">
-                My Ratings
-            </a>
-        @endif
-    </div>
-
-    <!-- LOGOUT / LOGIN -->
-    <div class="p-4 text-center">
-        @if($user)
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button
-                    class="w-full py-3 rounded-xl font-semibold
-                           text-red-500 border border-red-200
-                           transition-all duration-200
-                           hover:bg-red-50 hover:text-red-600">
-                    Logout
-                </button>
-            </form>
-        @else
-            <a href="{{ route('login') }}"
-               class="block w-full py-3 rounded-xl
-                      bg-pink-500 text-white font-semibold
-                      transition hover:bg-pink-600">
-                Login
-            </a>
-        @endif
-    </div>
-</div>
 </nav>
-
 
 <script>
 document.getElementById("menu-toggle").onclick = () => {

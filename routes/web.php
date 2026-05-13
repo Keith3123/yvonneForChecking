@@ -45,7 +45,7 @@ Route::post('/register', [RegisterPageController::class, 'store'])->name('regist
 Route::post('/check-username', [RegisterPageController::class, 'checkUsername']);
 Route::post('/check-email', [RegisterPageController::class, 'checkEmail']);
 
-
+//Catalog
 Route::get('/catalog', [CatalogPageController::class, 'index'])->name('catalog');
 
 Route::get('/cart', [CartPageController::class, 'index'])->name('cart');
@@ -54,6 +54,7 @@ Route::post('/cart/remove', [CartPageController::class, 'remove'])->name('cart.r
 Route::post('/cart/clear', [CartPageController::class, 'clear'])->name('cart.clear');
 Route::post('/cart/update', [CartPageController::class, 'update'])->name('cart.update');
 
+//Checkout
 Route::get('/checkout', [CheckoutPageController::class, 'index'])->name('checkout');
 Route::post('/profile/save-address', [ProfilePageController::class, 'saveAddress'])->name('profile.saveAddress');
 Route::get('/checkout/addresses', [CheckoutPageController::class, 'getSavedAddresses'])->name('checkout.addresses');

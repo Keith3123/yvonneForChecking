@@ -56,54 +56,78 @@
          * =========================
          */
         const validateStep = (index) => {
-            const inputs = steps[index].querySelectorAll('input[required]');
-            let valid = true;
-
-            inputs.forEach(input => {
-                input.classList.remove('border-red-500');
-
-                if (!input.checkValidity()) {
-                    input.reportValidity();
-                    valid = false;
-                }
-            });
-            // Step 2 (Phone)
-            if (index === 1) {
-                const phone = steps[index].querySelector('input[name="phone"]');
-                const phoneError = phone?.parentElement.querySelector('span');
-
-                const isValidPhone = /^\d{11}$/.test(phone.value);
-
-                if (!isValidPhone) {
-                    phone.classList.add('border-red-500');
-                    phoneError.textContent = 'Enter a valid phone number.';
-                    phoneError?.classList.remove('hidden');
-                    valid = false;
-                } else {
-                    phone.classList.remove('border-red-500');
-                    phoneError?.classList.add('hidden');
-                }
-            }
-            // Step 3 (Password)
-            if (index === 2) {
-                const password = steps[index].querySelector('input[name="password"]');
-                const confirmPassword = steps[index].querySelector('input[name="password_confirmation"]');
-                const errorMsg = confirmPassword.parentElement.querySelector('.password-error');
-
-                if (!passwordValid) {
-                    password.classList.add('border-red-500');
-                    valid = false;
-                }
-
-                if (password.value !== confirmPassword.value) {
-                    confirmPassword.classList.add('border-red-500');
-                    errorMsg?.classList.remove('hidden');
-                    valid = false;
-                }
-            }
-
-            return valid;
-        };
+    const inputs = steps[index].querySelectorAll('input[required]');
+    let valid = true;
+ 
+    inputs.forEach(input => {
+        input.classList.remove('border-red-500');
+        if (!input.checkValidity()) {
+            input.reportValidity();
+            valid = false;
+        }
+    });
+ 
+    // Step 2 – phone
+    if (index === 1) {
+        const phone = steps[index].querySelector('input[name="phone"]');
+        const phoneError = phone?.parentElement.querySelector('span');
+        const isValidPhone = /^\d{11}$/.test(phone.value);
+        if (!isValidPhone) {
+            phone.classList.add('border-red-500');
+            if (phoneError) phoneError.textContent = 'Enter a valid phone number.';
+            phoneError?.classList.remove('hidden');
+            valid = false;
+        } else {
+            phone.classList.remove('border-red-500');
+            phoneError?.classList.add('hidden');
+        }
+    }
+ 
+    // Step 3 – password + terms
+    if (index === 2) {
+        const password        = steps[index].querySelector('input[name="password"]');
+        const confirmPassword = steps[index].querySelector('input[name="password_confirmation"]');
+        const errorMsg        = confirmPassword.parentElement.querySelector('.password-error');
+        const termsCheckbox   = steps[index].querySelector('#terms-checkbox');
+        const termsError      = steps[index].querySelector('#terms-error');
+ 
+        if (!passwordValid) {
+            password.classList.add('border-red-500');
+            valid = false;
+        }
+ 
+        if (password.value !== confirmPassword.value) {
+            confirmPassword.classList.add('border-red-500');
+            errorMsg?.classList.remove('hidden');
+            valid = false;
+        }
+ 
+        // ── Terms check ──
+        if (termsCheckbox && !termsCheckbox.checked) {
+            termsError?.classList.remove('hidden');
+            valid = false;
+        } else {
+            termsError?.classList.add('hidden');
+        }
+    }
+ 
+    return valid;
+};
+ 
+// ── Updated form submit listener ─────────────────────────────────────────────
+ 
+form.addEventListener('submit', (e) => {
+    const termsCheckbox = document.querySelector('#terms-checkbox');
+    const termsAccepted = termsCheckbox ? termsCheckbox.checked : true;
+    const validStep     = validateStep(2);
+ 
+    if (!validStep || !passwordValid || !usernameValid || !emailValid || !termsAccepted) {
+        e.preventDefault();
+        currentStep = 2;
+        showStep(currentStep);
+    }
+});
+ 
 
         /**
          * =========================
