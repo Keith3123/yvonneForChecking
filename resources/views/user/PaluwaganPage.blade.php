@@ -74,7 +74,17 @@
                     <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                         <span class="text-green-600">✔</span> {{ $package?->packageName }}
                     </h3>
-                    <p class="text-sm text-gray-600">{{ $package?->description ?? '' }}</p>
+                    @php $descLines = preg_split('/\r\n|\r|\n/', $package?->description ?? ''); @endphp
+                    <ul class="text-sm text-gray-600 mt-1 space-y-0.5 list-none">
+                        @foreach($descLines as $line)
+                            @if(trim($line))
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-green-500 mt-0.5 flex-shrink-0">•</span>
+                                <span>{{ trim($line) }}</span>
+                            </li>
+                            @endif
+                        @endforeach
+                    </ul>
                     <p class="text-sm text-gray-600 mt-1">
                         Started:
                         {{ \Carbon\Carbon::create()->month($entry->startMonth)->year($entry->startYear)->format('F Y') }}

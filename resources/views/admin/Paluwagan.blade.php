@@ -724,6 +724,7 @@ searchAllCustomers(query) {
                                         editPackageDescription = `{{ addslashes($package->description) }}`;
                                         editPackageTotal = '{{ $package->totalAmount }}';
                                         editPackageDuration = '{{ $package->durationMonths }}';
+                                        $nextTick(() => preCheckEditProducts(editPackageDescription));
                                     ">Edit</button>
                                 <button class="text-red-500 hover:text-red-700 font-medium"
                                     @click="
@@ -742,15 +743,10 @@ searchAllCustomers(query) {
                 </table>
             </div>
         </div>
-    {{-- Package Pagination --}}
-    <div class="flex items-center justify-between gap-3 mt-3 text-xs text-gray-500">
-        <span id="pkg-count-label-bottom"></span>
-        <div class="flex items-center gap-1" id="pkg-page-buttons"></div>
-    </div>
 </div>
  
 
-    {{-- ============================================ --}}
+{{-- ============================================ --}}
 {{-- ADD PACKAGE MODAL --}}
 {{-- ============================================ --}}
 <div x-show="showAdd" x-cloak x-transition
@@ -830,23 +826,25 @@ searchAllCustomers(query) {
                 {{-- Product list --}}
                 <div id="productPickerList"
                      class="overflow-y-auto flex-1 space-y-1.5 pr-1">
-                    @forelse($products as $product)
-                    <label class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200
-                                  bg-white cursor-pointer hover:border-pink-300 hover:bg-pink-50
-                                  transition product-pick-item"
-                           data-name="{{ strtolower($product->name)}}">
-                        <input type="checkbox"
-                               class="product-pick-checkbox accent-pink-500 w-4 h-4 flex-shrink-0"
-                               value="{{ $product->name }}">
-                        <div class="min-w-0">
-                            <p class="text-sm font-medium text-gray-800 truncate">{{ $product->name }}</p>
-                            @if($product->category)
-                            <p class="text-xs text-gray-400">{{ $product->productType->typeName ?? '' }}</p>
-                            @endif
-                        </div>
-                    </label>
+                    @php $grouped = $paluwaganItems->groupBy('category'); @endphp
+
+                    @forelse($grouped as $category => $items)
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mt-3 mb-1 px-1">
+                            {{ $category }}
+                        </p>
+                        @foreach($items as $item)
+                        <label class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200
+                                    bg-white cursor-pointer hover:border-pink-300 hover:bg-pink-50
+                                    transition product-pick-item"
+                            data-name="{{ strtolower($item->name) }}">
+                            <input type="checkbox"
+                                class="product-pick-checkbox accent-pink-500 w-4 h-4 flex-shrink-0"
+                                value="{{ $item->name }}">
+                            <p class="text-sm text-gray-800">{{ $item->name }}</p>
+                        </label>
+                        @endforeach
                     @empty
-                    <p class="text-sm text-gray-400 text-center py-6">No products found</p>
+                        <p class="text-sm text-gray-400 text-center py-6">No items found</p>
                     @endforelse
                 </div>
 
@@ -860,66 +858,136 @@ searchAllCustomers(query) {
 </div>
 
     {{-- ============================================ --}}
-    {{-- EDIT PACKAGE MODAL --}}
-    {{-- ============================================ --}}
-    <div x-show="showEdit" x-cloak x-transition
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div @click.away="showEdit = false" class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg">
-            <h3 class="text-lg font-bold mb-4">Edit Paluwagan Package</h3>
-            <form x-ref="editForm" enctype="multipart/form-data" @submit.prevent="
-                const formData = new FormData($refs.editForm);
-                formData.append('_method', 'PUT');
-                fetch(`/admin/paluwagan/package/${editPackageID}`, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    body: formData
-                })
-                .then(res => res.json())
-                .then(res => {
-                    if (res.success) {
-                        showEdit = false;
-                        showToast('Package updated successfully!');
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showToast(res.message || 'Update failed', 'error');
-                    }
-                })
-                .catch(err => { console.error(err); showToast('Error updating package', 'error'); });
-            ">
-                <div class="mb-3">
+{{-- EDIT PACKAGE MODAL --}}
+{{-- ============================================ --}}
+<div x-show="showEdit" x-cloak x-transition
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div @click.away="showEdit = false"
+         class="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+
+        {{-- Header --}}
+        <div class="bg-pink-600 px-6 py-4 rounded-t-xl flex justify-between items-center flex-shrink-0">
+            <h3 class="text-white font-bold text-lg">Edit Paluwagan Package</h3>
+            <button @click="showEdit = false" class="text-white hover:text-pink-200 text-xl font-bold">✕</button>
+        </div>
+
+        {{-- Body: 2-column --}}
+        <div class="flex flex-col md:flex-row overflow-hidden flex-1 min-h-0">
+
+            {{-- LEFT: Form --}}
+            <form x-ref="editForm" enctype="multipart/form-data"
+                  class="flex-1 p-6 overflow-y-auto space-y-4 border-r border-gray-100"
+                  @submit.prevent="
+                    const formData = new FormData($refs.editForm);
+                    formData.append('_method', 'PUT');
+                    fetch(`/admin/paluwagan/package/${editPackageID}`, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.success) {
+                            showEdit = false;
+                            showToast('Package updated successfully!');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showToast(res.message || 'Update failed', 'error');
+                        }
+                    })
+                    .catch(err => { console.error(err); showToast('Error updating package', 'error'); });
+                  ">
+
+                <div>
                     <label class="block text-sm font-medium mb-1">Package Name</label>
                     <input type="text" name="packageName" x-model="editPackageName"
-                           class="w-full border rounded px-3 py-2" required>
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none" required>
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">What's Included</label>
-                    <textarea name="description" x-model="editPackageDescription"
-                              class="w-full border rounded px-3 py-2" required></textarea>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">
+                        What's Included
+                        <span class="text-xs text-gray-400 font-normal ml-1">(auto-filled from checked products, or type manually)</span>
+                    </label>
+                    <textarea id="editDescriptionField" name="description"
+                              x-model="editPackageDescription"
+                              rows="5"
+                              class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none resize-none"
+                              required></textarea>
                 </div>
-                <div class="mb-3">
+
+                <div>
                     <label class="block text-sm font-medium mb-1">Total Amount</label>
                     <input type="number" name="totalAmount" x-model="editPackageTotal"
-                           class="w-full border rounded px-3 py-2" required>
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none" required>
                 </div>
-                <div class="mb-3">
+
+                <div>
                     <label class="block text-sm font-medium mb-1">Duration (Months)</label>
                     <input type="number" name="durationMonths" x-model="editPackageDuration"
-                           class="w-full border rounded px-3 py-2" required>
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none" required>
                 </div>
-                <div class="mb-3">
+
+                <div>
                     <label class="block text-sm font-medium mb-1">Change Image (optional)</label>
                     <input type="file" name="image" accept="image/*"
-                           class="w-full border p-2 rounded border-pink-200">
+                           class="w-full border p-2 rounded-lg border-pink-200">
                 </div>
-                <div class="flex justify-end gap-2 mt-4">
+
+                <div class="flex justify-end gap-2 pt-2">
                     <button type="button" @click="showEdit = false"
-                            class="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+                            class="px-4 py-2 border rounded-lg hover:bg-gray-100 text-sm">Cancel</button>
                     <button type="submit"
-                            class="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700">Update</button>
+                            class="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 text-sm font-semibold">
+                        Update Package
+                    </button>
                 </div>
             </form>
+
+            {{-- RIGHT: Product Picker --}}
+            <div class="w-full md:w-72 flex flex-col p-4 bg-gray-50 overflow-hidden min-h-0">
+                <p class="text-sm font-semibold text-gray-700 mb-2 flex-shrink-0">
+                    Select Products to Include
+                </p>
+
+                {{-- Search --}}
+                <input type="text" id="editProductPickerSearch"
+                       placeholder="Search products..."
+                       class="w-full border rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-pink-300 outline-none flex-shrink-0">
+
+                {{-- Product list --}}
+                <div id="editProductPickerList"
+                     class="overflow-y-auto flex-1 space-y-1.5 pr-1">
+                    @php $grouped = $paluwaganItems->groupBy('category'); @endphp
+
+                    @forelse($grouped as $category => $items)
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mt-3 mb-1 px-1">
+                            {{ $category }}
+                        </p>
+                        @foreach($items as $item)
+                        <label class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200
+                                      bg-white cursor-pointer hover:border-pink-300 hover:bg-pink-50
+                                      transition edit-product-pick-item"
+                               data-name="{{ strtolower($item->name) }}">
+                            <input type="checkbox"
+                                   class="edit-product-pick-checkbox accent-pink-500 w-4 h-4 flex-shrink-0"
+                                   value="{{ $item->name }}">
+                            <p class="text-sm text-gray-800">{{ $item->name }}</p>
+                        </label>
+                        @endforeach
+                    @empty
+                        <p class="text-sm text-gray-400 text-center py-6">No items found</p>
+                    @endforelse
+                </div>
+
+                {{-- Selected count --}}
+                <p class="text-xs text-pink-500 font-medium mt-3 flex-shrink-0" id="editProductPickerCount">
+                    0 product(s) selected
+                </p>
+            </div>
         </div>
     </div>
+</div>
 
     {{-- ============================================ --}}
     {{-- MONTH AVAILABILITY --}}
@@ -979,6 +1047,11 @@ searchAllCustomers(query) {
             </div>
             @endforeach
         </div>
+            {{-- Package Pagination --}}
+    <div class="flex items-center justify-between gap-3 mt-3 text-xs text-gray-500">
+        <span id="pkg-count-label-bottom"></span>
+        <div class="flex items-center gap-1" id="pkg-page-buttons"></div>
+    </div>
     </div>
 
     {{-- ============================================ --}}
@@ -1372,6 +1445,63 @@ document.addEventListener('click', function (e) {
             document.querySelectorAll('.product-pick-item').forEach(i => i.style.display = '');
         }, 50);
     }
+});
+
+// =============================================
+// PRODUCT PICKER (Edit Package Modal)
+// =============================================
+function syncEditProductsToDescription() {
+    const checked = [...document.querySelectorAll('.edit-product-pick-checkbox:checked')]
+        .map(cb => cb.value);
+
+    // sync to textarea AND Alpine x-model
+    const textarea = document.getElementById('editDescriptionField');
+    textarea.value = checked.join('\n');
+
+    // trigger Alpine to pick up the change
+    textarea.dispatchEvent(new Event('input'));
+
+    document.getElementById('editProductPickerCount').textContent =
+        `${checked.length} product(s) selected`;
+}
+
+function preCheckEditProducts(description) {
+    const lines = description.split('\n').map(l => l.trim().toLowerCase()).filter(Boolean);
+
+    document.querySelectorAll('.edit-product-pick-checkbox').forEach(cb => {
+        const match = lines.includes(cb.value.trim().toLowerCase());
+        cb.checked  = match;
+
+        const label = cb.closest('label');
+        if (match) {
+            label.classList.add('border-pink-400', 'bg-pink-50');
+        } else {
+            label.classList.remove('border-pink-400', 'bg-pink-50');
+        }
+    });
+
+    const count = document.querySelectorAll('.edit-product-pick-checkbox:checked').length;
+    document.getElementById('editProductPickerCount').textContent =
+        `${count} product(s) selected`;
+}
+
+document.addEventListener('change', function (e) {
+    if (e.target.classList.contains('edit-product-pick-checkbox')) {
+        const label = e.target.closest('label');
+        if (e.target.checked) {
+            label.classList.add('border-pink-400', 'bg-pink-50');
+        } else {
+            label.classList.remove('border-pink-400', 'bg-pink-50');
+        }
+        syncEditProductsToDescription();
+    }
+});
+
+document.getElementById('editProductPickerSearch').addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.edit-product-pick-item').forEach(item => {
+        item.style.display = item.dataset.name.includes(q) ? '' : 'none';
+    });
 });
 
 

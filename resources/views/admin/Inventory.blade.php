@@ -938,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const getFilterStatus   = () =>  document.querySelector('select[x-model="filterStatus"]')?.value   ?? 'all';
     const getFilterIng      = () => (document.querySelector('select[x-model="filterIngredient"]')?.value ?? 'all').toLowerCase();
     const getHistoryTab     = () =>  document.querySelector('[x-model="historyTab"]')?.value            ?? 'all'; // fallback below
-    const getPerPage        = () => parseInt(document.querySelector('select[x-model="perPage"]')?.value ?? document.querySelector('select[x-model\\:number="perPage"]')?.value ?? 10);
+    const getPerPage = () => parseInt(document.querySelector('select[x-model="perPage"]')?.value ?? document.querySelector('select[x-model\\.number="perPage"]')?.value ?? 10);
     const getSupplierSearch = () => (document.querySelector('input[x-model="supplierSearch"]')?.value   ?? '').toLowerCase();
  
     // historyTab is driven by Alpine button clicks, so track it in JS too
@@ -1165,7 +1165,7 @@ document.addEventListener('DOMContentLoaded', () => {
  
     // Rows-per-page selector — re-render all tables, reset all pages
     const perPageEl = document.querySelector('select[x-model="perPage"]')
-                   ?? document.querySelector('select[x-model\\:number="perPage"]');
+               ?? document.querySelector('select[x-model\\.number="perPage"]');
     perPageEl?.addEventListener('change', () => {
         state.ingredientPage = 1;
         state.txPage         = 1;

@@ -23,7 +23,7 @@
                 @endforeach
             </select>
 
-            <label class="block text-sm font-medium mb-1">Description</label>
+            <label class="block text-sm font-medium mb-1">Description / Inclusions</label>
             <textarea name="description" rows="2"
                       class="w-full border p-2 mb-3 rounded-lg border-pink-200 focus:ring-2 focus:ring-pink-500 focus:outline-none"></textarea>
 

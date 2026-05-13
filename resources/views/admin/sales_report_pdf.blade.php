@@ -479,10 +479,14 @@
         @forelse($topProducts as $i => $prod)
         @php
             $share = round(($prod->total_revenue / $topRevTotal) * 100, 1);
-            $medal = match($i) { 0 => '&#127941;', 1 => '&#129352;', 2 => '&#129353;', default => '#'.($i+1) };
+            $medal = match($i) { 0 => '1st', 1 => '2nd', 2 => '3rd', default => '#'.($i+1) };
         @endphp
         <tr>
-            <td class="c b">{!! $medal !!}</td>
+            <td class="c b" style="
+                color: {{ $i === 0 ? '#b45309' : ($i === 1 ? '#6b7280' : ($i === 2 ? '#92400e' : '#be185d')) }};
+                font-size: {{ $i < 3 ? '9px' : '8.5px' }};">
+                {!! $medal !!}
+            </td>
             <td class="b">{{ $prod->name }}</td>
             <td class="r">{{ number_format($prod->total_units) }}</td>
             <td class="r b pink">&#8369;{{ number_format($prod->total_revenue, 2) }}</td>

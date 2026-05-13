@@ -7,6 +7,7 @@ use App\Models\PaluwaganPackage;
 use App\Models\PaluwaganSchedule;
 use App\Models\PaluwaganEntry;
 use App\Models\Product;
+use App\Models\PaluwaganItem;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use App\Models\PaluwaganMonthAvailability;
@@ -87,14 +88,14 @@ class AdminPaluwaganController extends AdminBaseController
         });
 
 
-        $products = Product::where('isAvailable', 1)
-        ->with('productType')
+        $paluwaganItems = PaluwaganItem::where('isActive', 1)
+        ->orderBy('category')
         ->orderBy('name')
-        ->get(['productID', 'name', 'productTypeID']);
+        ->get();
         
         return view('admin.paluwagan', [
             'packages' => $packages,
-            'products'      => $products,
+            'paluwaganItems' => $paluwaganItems,
             'summary' => [
                 'activeSubscriptions' => $activeSubscriptions,
                 'collectedRevenue' => $collectedRevenue,
@@ -125,7 +126,7 @@ class AdminPaluwaganController extends AdminBaseController
         try {
             $request->validate([
                 'packageName' => 'required|string|max:255',
-                'description' => 'required|string|max:500',
+                'description' => 'required|string|max:5000',
                 'totalAmount' => 'required|numeric|min:1',
                 'durationMonths' => 'required|integer|min:1',
                 'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
