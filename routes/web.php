@@ -41,8 +41,6 @@ Route::get('/my-ratings', [MyRatingPageController::class, 'index'])->name('my.ra
 // Registration Routes
 Route::get('/register', [RegisterPageController::class, 'show'])->name('register');
 Route::post('/register', [RegisterPageController::class, 'store'])->name('register.store');
-Route::post('/register/send-otp', [RegisterPageController::class, 'sendOtp'])->name('register.sendOtp');
-Route::post('/register/verify-otp', [RegisterPageController::class, 'verifyOtp'])->name('register.verifyOtp');
 
 Route::post('/check-username', [RegisterPageController::class, 'checkUsername']);
 Route::post('/check-email', [RegisterPageController::class, 'checkEmail']);
@@ -133,12 +131,14 @@ Route::prefix('admin')->group(function() {
     Route::get('/orders', [AdminOrdersController::class, 'index'])->name('admin.orders');
     Route::get('/orders/{orderID}/view', [AdminOrdersController::class, 'viewOrder']);
     Route::post('/orders/{orderID}/update-status', [AdminOrdersController::class, 'updateStatus']);
+    Route::post('/orders/{orderID}/update-payment-status', [AdminOrdersController::class, 'updatePaymentStatus']);
 
     // Sales Report
     Route::get('/salesreport', [AdminSalesReportController::class, 'index'])->name('admin.salesreport');
     // Sales Report - AJAX data + Export
     // Route::get('/salesreport/data', [AdminSalesReportController::class, 'getReportData'])->name('admin.salesreport.data');
     Route::get('/salesreport/export-csv', [AdminSalesReportController::class, 'exportCSV'])->name('admin.salesreport.export.csv');
+Route::get('/salesreport/export-pdf', [AdminSalesReportController::class, 'exportPDF'])->name('admin.salesreport.export.pdf');
 
     // User Management
     Route::get('/users', [AdminUsersController::class, 'index'])->name('admin.users');

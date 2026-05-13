@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\PaluwaganPackage;
 use App\Models\PaluwaganSchedule;
 use App\Models\PaluwaganEntry;
+use App\Models\Product;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use App\Models\PaluwaganMonthAvailability;
@@ -60,33 +61,40 @@ class AdminPaluwaganController extends AdminBaseController
                 ->first();
  
             return [
-    'entryID'              => $entry->paluwaganEntryID,
-    'packageName'          => $package?->packageName ?? 'N/A',
-    'packageID'            => $entry->packageID,       // ← ADD
-    'startMonth'           => $entry->startMonth,      // ← ADD
-    'totalMonths'          => $totalMonths,
-    'monthsPaid'           => $monthsPaid,
-    'monthsLeft'           => $monthsLeft,
-    'monthlyPayment'       => $package?->monthlyPayment ?? 0,
-    'totalPaid'            => $totalPaid,
-    'totalAmount'          => $package?->totalAmount ?? 0,
-    'nextDueDate'          => $nextSchedule?->dueDate,
-    'status'               => $entry->status,
-    'customerName'         => trim(
-        ($entry->customer->firstName ?? '') . ' ' . ($entry->customer->lastName ?? '')
-    ) ?: 'N/A',
-    'releasedAt'           => $entry->releasedAt
-                                ? \Carbon\Carbon::parse($entry->releasedAt)->format('M d, Y')
-                                : null,
-    'releaseRequestedAt'   => $entry->releaseRequestedAt
-                                ? \Carbon\Carbon::parse($entry->releaseRequestedAt)->format('M d, Y h:i A')
-                                : null,
-    'releaseNote'          => $entry->releaseNote,
-];
+                'entryID'              => $entry->paluwaganEntryID,
+                'packageName'          => $package?->packageName ?? 'N/A',
+                'packageID'            => $entry->packageID,       // ← ADD
+                'startMonth'           => $entry->startMonth,      // ← ADD
+                'totalMonths'          => $totalMonths,
+                'monthsPaid'           => $monthsPaid,
+                'monthsLeft'           => $monthsLeft,
+                'monthlyPayment'       => $package?->monthlyPayment ?? 0,
+                'totalPaid'            => $totalPaid,
+                'totalAmount'          => $package?->totalAmount ?? 0,
+                'nextDueDate'          => $nextSchedule?->dueDate,
+                'status'               => $entry->status,
+                'customerName'         => trim(
+                    ($entry->customer->firstName ?? '') . ' ' . ($entry->customer->lastName ?? '')
+                ) ?: 'N/A',
+                'releasedAt'           => $entry->releasedAt
+                                            ? \Carbon\Carbon::parse($entry->releasedAt)->format('M d, Y')
+                                            : null,
+                'releaseRequestedAt'   => $entry->releaseRequestedAt
+                                            ? \Carbon\Carbon::parse($entry->releaseRequestedAt)->format('M d, Y h:i A')
+                                            : null,
+                'releaseNote'          => $entry->releaseNote,
+            ];
         });
 
+
+        $products = Product::where('isAvailable', 1)
+        ->with('productType')
+        ->orderBy('name')
+        ->get(['productID', 'name', 'productTypeID']);
+        
         return view('admin.paluwagan', [
             'packages' => $packages,
+            'products'      => $products,
             'summary' => [
                 'activeSubscriptions' => $activeSubscriptions,
                 'collectedRevenue' => $collectedRevenue,

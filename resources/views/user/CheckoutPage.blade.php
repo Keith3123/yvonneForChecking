@@ -295,6 +295,32 @@
             });
     }
 
+    // AUTO-NAVIGATE WHEN TYPING ADDRESS
+    let geocodeTimer = null;
+
+    document.addEventListener('input', function(e) {
+        if (e.target.id !== 'mapAddress') return;
+
+        clearTimeout(geocodeTimer);
+
+        const query = e.target.value.trim();
+        if (query.length < 5) return; // don't search too-short strings
+
+        geocodeTimer = setTimeout(() => {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=ph`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+
+                        marker.setLatLng([lat, lon]);
+                        map.setView([lat, lon], 17);
+                    }
+                });
+        }, 600); // wait 600ms after user stops typing
+    });
+
     // APPLY TO CHECKOUT (UNCHANGED)
     function savePinnedLocation() {
         const pos = marker.getLatLng();

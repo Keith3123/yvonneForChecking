@@ -23,7 +23,14 @@
         selectedSupplier: {},
         selectedIngredient: {},
         searchQuery: '',
+        filterStatus: 'all',
+        filterIngredient: 'all',
         historyTab: 'all',
+        perPage: 10,
+        ingredientPage: 1,
+        txPage: 1,
+        supplierPage: 1,
+        supplierSearch: '',
         toast: { show: false, message: '', type: 'success' },
 
         receiveForm: {
@@ -247,152 +254,238 @@
         </div>
     </div>
 
-    {{-- Search --}}
+    {{-- Search + Status Filter --}}
     <div class="w-full border rounded-xl border-pink-200 p-4 md:p-5 mb-4">
-        <div class="relative w-full">
-            <input type="text" x-model="searchQuery" placeholder="Search ingredients..."
-                class="w-full border rounded-lg pl-10 p-3 focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm md:text-base">
-            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg"></i>
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <input type="text" x-model="searchQuery" placeholder="Search ingredients..."
+                    class="w-full border rounded-lg pl-10 p-3 focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm md:text-base">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg"></i>
+            </div>
+            <select x-model="filterStatus"
+                class="border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white min-w-[160px]">
+                <option value="all">All Statuses</option>
+                <option value="available">Available</option>
+                <option value="low stock">Low Stock</option>
+                <option value="out of stock">Out of Stock</option>
+            </select>
         </div>
     </div>
 
     {{-- Ingredients Table --}}
-    <div class="border border-pink-200 mt-8 rounded-xl p-4 md:p-6 overflow-x-auto">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Ingredients</h2>
+<div class="border border-pink-200 mt-8 rounded-xl p-4 md:p-6 overflow-x-auto">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
+        <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Ingredients</h2>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500 whitespace-nowrap">Rows per page</label>
+                <select x-model.number="perPage" @change="ingredientPage = 1; txPage = 1"
+                    class="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
             <button @click="showAddModal = true"
                 class="flex items-center justify-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg shadow text-xs sm:text-sm font-medium transition">
                 <i class="fas fa-plus"></i><span>Add Ingredient</span>
             </button>
         </div>
-        <p class="text-gray-500 text-xs sm:text-sm mb-4">{{ count($ingredients) }} ingredient(s) found</p>
-        <table class="min-w-full text-left text-xs sm:text-sm whitespace-nowrap">
-            <thead class="border-b text-gray-600">
-                <tr>
-                    <th class="py-2 pr-4">Ingredient</th>
-                    <th class="py-2 pr-4">Unit</th>
-                    <th class="py-2 pr-4">Total In</th>
-                    <th class="py-2 pr-4">Total Used</th>
-                    <th class="py-2 pr-4">Available</th>
-                    <th class="py-2 pr-4">Reorder Level</th>
-                    <th class="py-2 pr-4">Status</th>
-                    <th class="py-2">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($ingredients as $ingredient)
-                @php
-                    $statusKey = $ingredient->currentStock <= 0 ? 'out of stock'
-                        : ($ingredient->currentStock <= $ingredient->minStockLevel ? 'low stock' : 'available');
-                @endphp
-                <tr class="border-b hover:bg-pink-50 transition"
-                    x-show="
-                        '{{ strtolower($ingredient->name) }}'.includes(searchQuery.toLowerCase()) ||
-                        '{{ strtolower($ingredient->description ?? '') }}'.includes(searchQuery.toLowerCase()) ||
-                        '{{ $statusKey }}'.includes(searchQuery.toLowerCase())
-                    "
-                >
-                    <td class="py-3 pr-4 font-medium text-gray-800">{{ $ingredient->name }}</td>
-                    <td class="py-3 pr-4 text-gray-500">{{ $ingredient->unit ?? '—' }}</td>
-                    <td class="py-3 pr-4 text-green-600 font-medium">+{{ $ingredient->totalIn ?? 0 }}</td>
-                    <td class="py-3 pr-4 text-orange-500 font-medium">-{{ $ingredient->totalOut ?? 0 }}</td>
-                    <td class="py-3 pr-4 font-bold text-gray-800">{{ $ingredient->currentStock }}</td>
-                    <td class="py-3 pr-4 text-gray-500">{{ $ingredient->minStockLevel }}</td>
-                    <td class="py-3 pr-4">
-                        @if ($ingredient->currentStock <= 0)
-                            <span class="bg-red-100 text-red-600 text-xs font-semibold px-2 py-1 rounded-full">Out of Stock</span>
-                        @elseif ($ingredient->currentStock <= $ingredient->minStockLevel)
-                            <span class="bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-1 rounded-full">Low Stock</span>
-                        @else
-                            <span class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">Available</span>
-                        @endif
-                    </td>
-                    <td class="py-3">
-                        <div class="flex items-center gap-3">
-                            <button class="text-blue-500 hover:text-blue-700 text-xs font-medium transition"
-                                @click="showEditModal = true; selectedIngredient = {{ $ingredient->toJson() }}">
-                                Edit
-                            </button>
-                            <button class="text-red-400 hover:text-red-600 text-xs font-medium transition"
-                                @click="deleteIngredient({{ $ingredient->ingredientID }}, '{{ addslashes($ingredient->name) }}')">
-                                Delete
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="py-10 text-center text-gray-400">
-                        <div class="flex flex-col items-center gap-2">
-                            <i class="fas fa-box-open text-3xl opacity-50"></i>
-                            <span>No ingredient found</span>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
     </div>
 
+    <div x-data="{
+        get filtered() {
+            return {{ collect($ingredients)->map(fn($i) => [
+                'ingredientID' => $i->ingredientID,
+                'name'         => $i->name,
+                'nameLower'    => strtolower($i->name),
+                'descLower'    => strtolower($i->description ?? ''),
+                'unit'         => $i->unit ?? '—',
+                'totalIn'      => $i->totalIn ?? 0,
+                'totalOut'     => $i->totalOut ?? 0,
+                'currentStock' => $i->currentStock,
+                'minStockLevel'=> $i->minStockLevel,
+                'statusKey'    => $i->currentStock <= 0 ? 'out of stock' : ($i->currentStock <= $i->minStockLevel ? 'low stock' : 'available'),
+                'json'         => $i->toJson(),
+            ])->values()->toJson() }};
+        },
+        get rows() {
+            return this.filtered.filter(i => {
+                const q = $store ? '' : '';
+                const sq = this.$root.closest('[x-data]').__x.$data.searchQuery.toLowerCase();
+                const fs = this.$root.closest('[x-data]').__x.$data.filterStatus;
+                const matchSearch = i.nameLower.includes(sq) || i.descLower.includes(sq) || i.statusKey.includes(sq);
+                const matchStatus = fs === 'all' || fs === i.statusKey;
+                return matchSearch && matchStatus;
+            });
+        },
+        get totalPages() { return Math.max(1, Math.ceil(this.rows.length / $root.closest('[x-data]').__x.$data.perPage)); },
+        get paged() {
+            const p = $root.closest('[x-data]').__x.$data.ingredientPage;
+            const pp = $root.closest('[x-data]').__x.$data.perPage;
+            return this.rows.slice((p - 1) * pp, p * pp);
+        }
+    }">
+    </div>
+
+    <p class="text-gray-500 text-xs sm:text-sm mb-4">{{ count($ingredients) }} ingredient(s) found</p>
+
+    <table class="min-w-full text-left text-xs sm:text-sm whitespace-nowrap">
+        <thead class="border-b text-gray-600">
+            <tr>
+                <th class="py-2 pr-4">Ingredient</th>
+                <th class="py-2 pr-4">Unit</th>
+                <th class="py-2 pr-4">Total In</th>
+                <th class="py-2 pr-4">Total Used</th>
+                <th class="py-2 pr-4">Available</th>
+                <th class="py-2 pr-4">Reorder Level</th>
+                <th class="py-2 pr-4">Status</th>
+                <th class="py-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="ingredient-tbody">
+            @php
+                $ingredientRows = $ingredients->map(fn($i) => array_merge((array) $i->toArray(), [
+                    'statusKey' => $i->currentStock <= 0 ? 'out of stock' : ($i->currentStock <= $i->minStockLevel ? 'low stock' : 'available')
+                ]));
+            @endphp
+            @forelse ($ingredients as $ingredient)
+            @php
+                $statusKey = $ingredient->currentStock <= 0 ? 'out of stock'
+                    : ($ingredient->currentStock <= $ingredient->minStockLevel ? 'low stock' : 'available');
+            @endphp
+            <tr class="border-b hover:bg-pink-50 transition ingredient-row"
+                data-name="{{ strtolower($ingredient->name) }}"
+                data-desc="{{ strtolower($ingredient->description ?? '') }}"
+                data-status="{{ $statusKey }}"
+                data-index="{{ $loop->index }}"
+            >
+                <td class="py-3 pr-4 font-medium text-gray-800">{{ $ingredient->name }}</td>
+                <td class="py-3 pr-4 text-gray-500">{{ $ingredient->unit ?? '—' }}</td>
+                <td class="py-3 pr-4 text-green-600 font-medium">+{{ $ingredient->totalIn ?? 0 }}</td>
+                <td class="py-3 pr-4 text-orange-500 font-medium">-{{ $ingredient->totalOut ?? 0 }}</td>
+                <td class="py-3 pr-4 font-bold text-gray-800">{{ $ingredient->currentStock }}</td>
+                <td class="py-3 pr-4 text-gray-500">{{ $ingredient->minStockLevel }}</td>
+                <td class="py-3 pr-4">
+                    @if ($ingredient->currentStock <= 0)
+                        <span class="bg-red-100 text-red-600 text-xs font-semibold px-2 py-1 rounded-full">Out of Stock</span>
+                    @elseif ($ingredient->currentStock <= $ingredient->minStockLevel)
+                        <span class="bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-1 rounded-full">Low Stock</span>
+                    @else
+                        <span class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">Available</span>
+                    @endif
+                </td>
+                <td class="py-3">
+                    <div class="flex items-center gap-3">
+                        <button class="text-blue-500 hover:text-blue-700 text-xs font-medium transition"
+                            @click="showEditModal = true; selectedIngredient = {{ $ingredient->toJson() }}">
+                            Edit
+                        </button>
+                        <button class="text-red-400 hover:text-red-600 text-xs font-medium transition"
+                            @click="deleteIngredient({{ $ingredient->ingredientID }}, '{{ addslashes($ingredient->name) }}')">
+                            Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            @empty
+            <tr id="ingredient-empty-row">
+                <td colspan="8" class="py-10 text-center text-gray-400">
+                    <div class="flex flex-col items-center gap-2">
+                        <i class="fas fa-box-open text-3xl opacity-50"></i>
+                        <span>No ingredient found</span>
+                    </div>
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    {{-- Ingredient Pagination --}}
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs text-gray-500" id="ingredient-pagination">
+        <span id="ingredient-count-label"></span>
+        <div class="flex items-center gap-1" id="ingredient-page-buttons"></div>
+    </div>
+</div>
+
     {{-- Transaction History --}}
-    <div class="border border-pink-200 mt-8 rounded-xl p-4 md:p-6 overflow-x-auto">
-        <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Transaction History</h2>
-        <div class="flex gap-1 border-b border-gray-200 mb-4">
-            <button @click="historyTab = 'all'"
+<div class="border border-pink-200 mt-8 rounded-xl p-4 md:p-6 overflow-x-auto">
+    <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Transaction History</h2>
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div class="flex gap-1 border-b border-gray-200 sm:border-none">
+            <button @click="historyTab = 'all'; txPage = 1"
                 :class="historyTab === 'all' ? 'border-b-2 border-pink-500 text-pink-600 font-semibold' : 'text-gray-500 hover:text-gray-700'"
                 class="px-4 py-2 text-sm transition">All</button>
-            <button @click="historyTab = 'in'"
+            <button @click="historyTab = 'in'; txPage = 1"
                 :class="historyTab === 'in' ? 'border-b-2 border-green-500 text-green-600 font-semibold' : 'text-gray-500 hover:text-gray-700'"
                 class="px-4 py-2 text-sm transition">Stock In</button>
-            <button @click="historyTab = 'out'"
+            <button @click="historyTab = 'out'; txPage = 1"
                 :class="historyTab === 'out' ? 'border-b-2 border-orange-500 text-orange-600 font-semibold' : 'text-gray-500 hover:text-gray-700'"
                 class="px-4 py-2 text-sm transition">Stock Out</button>
         </div>
-        <table class="min-w-full text-left text-xs sm:text-sm whitespace-nowrap">
-            <thead class="border-b text-gray-600">
-                <tr>
-                    <th class="py-2 pr-4">Date</th>
-                    <th class="py-2 pr-4">Type</th>
-                    <th class="py-2 pr-4">Ingredient</th>
-                    <th class="py-2 pr-4">Qty</th>
-                    <th class="py-2 pr-4">By</th>
-                    <th class="py-2">Remarks</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($transactions ?? [] as $tx)
-                <tr class="border-b hover:bg-pink-50 transition"
-                    data-tx-type="{{ $tx['type'] }}"
-                    x-show="historyTab === 'all' || $el.dataset.txType === historyTab"
-                >
-                    <td class="py-3 pr-4 text-gray-500">{{ \Carbon\Carbon::parse($tx['date'])->format('M d, Y h:i A') }}</td>
-                    <td class="py-3 pr-4">
-                        @if ($tx['type'] === 'in')
-                            <span class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">Stock In</span>
-                        @else
-                            <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-1 rounded-full">Pull Out</span>
-                        @endif
-                    </td>
-                    <td class="py-3 pr-4 font-medium text-gray-800">{{ $tx['ingredient'] }}</td>
-                    <td class="py-3 pr-4 font-bold {{ $tx['type'] === 'in' ? 'text-green-600' : 'text-orange-500' }}">
-                        {{ $tx['type'] === 'in' ? '+' : '-' }}{{ $tx['qty'] }}
-                    </td>
-                    <td class="py-3 pr-4 text-gray-600">{{ $tx['by'] }}</td>
-                    <td class="py-3 text-gray-500">{{ $tx['remarks'] ?? '—' }}</td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="6" class="py-10 text-center text-gray-400">
-                        <div class="flex flex-col items-center gap-2">
-                            <i class="fas fa-clock-rotate-left text-3xl opacity-50"></i>
-                            <span>No transactions yet</span>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+        <select x-model="filterIngredient" @change="txPage = 1"
+            class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white min-w-[180px]">
+            <option value="all">All Ingredients</option>
+            @foreach ($ingredients as $ingredient)
+                <option value="{{ strtolower($ingredient->name) }}">{{ $ingredient->name }}</option>
+            @endforeach
+        </select>
     </div>
+
+    <table class="min-w-full text-left text-xs sm:text-sm whitespace-nowrap">
+        <thead class="border-b text-gray-600">
+            <tr>
+                <th class="py-2 pr-4">Date</th>
+                <th class="py-2 pr-4">Type</th>
+                <th class="py-2 pr-4">Ingredient</th>
+                <th class="py-2 pr-4">Qty</th>
+                <th class="py-2 pr-4">By</th>
+                <th class="py-2">Remarks</th>
+            </tr>
+        </thead>
+        <tbody id="tx-tbody">
+            @forelse ($transactions ?? [] as $tx)
+            <tr class="border-b hover:bg-pink-50 transition tx-row"
+                data-tx-type="{{ $tx['type'] }}"
+                data-tx-ingredient="{{ strtolower($tx['ingredient']) }}"
+                data-tx-index="{{ $loop->index }}"
+            >
+                <td class="py-3 pr-4 text-gray-500">{{ \Carbon\Carbon::parse($tx['date'])->format('M d, Y h:i A') }}</td>
+                <td class="py-3 pr-4">
+                    @if ($tx['type'] === 'in')
+                        <span class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">Stock In</span>
+                    @else
+                        <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-1 rounded-full">Pull Out</span>
+                    @endif
+                </td>
+                <td class="py-3 pr-4 font-medium text-gray-800">{{ $tx['ingredient'] }}</td>
+                <td class="py-3 pr-4 font-bold {{ $tx['type'] === 'in' ? 'text-green-600' : 'text-orange-500' }}">
+                    {{ $tx['type'] === 'in' ? '+' : '-' }}{{ $tx['qty'] }}
+                </td>
+                <td class="py-3 pr-4 text-gray-600">{{ $tx['by'] }}</td>
+                <td class="py-3 text-gray-500">{{ $tx['remarks'] ?? '—' }}</td>
+            </tr>
+            @empty
+            <tr id="tx-empty-row">
+                <td colspan="6" class="py-10 text-center text-gray-400">
+                    <div class="flex flex-col items-center gap-2">
+                        <i class="fas fa-clock-rotate-left text-3xl opacity-50"></i>
+                        <span>No transactions yet</span>
+                    </div>
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    {{-- Transaction Pagination --}}
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs text-gray-500" id="tx-pagination">
+        <span id="tx-count-label"></span>
+        <div class="flex items-center gap-1" id="tx-page-buttons"></div>
+    </div>
+</div>
 
     {{-- ===================== MODALS ===================== --}}
 
@@ -686,49 +779,68 @@
     </div>
 
     {{-- Supplier Management --}}
-    <div class="border border-pink-200 mt-8 rounded-xl p-4 md:p-6 overflow-x-auto">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Suppliers</h2>
+<div class="border border-pink-200 mt-8 rounded-xl p-4 md:p-6 overflow-x-auto">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
+        <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Suppliers</h2>
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <input type="text" x-model="supplierSearch" @input="supplierPage = 1"
+                    placeholder="Search suppliers..."
+                    class="border rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white w-44">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+            </div>
             <button @click="showAddSupplierModal = true"
                 class="flex items-center justify-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg shadow text-xs sm:text-sm font-medium transition">
                 <i class="fas fa-plus"></i><span>Add Supplier</span>
             </button>
         </div>
-        <table class="min-w-full text-left text-xs sm:text-sm whitespace-nowrap">
-            <thead class="border-b text-gray-600">
-                <tr>
-                    <th class="py-2 pr-4">#</th>
-                    <th class="py-2 pr-4">Supplier Name</th>
-                    <th class="py-2 pr-4">Phone</th>
-                    <th class="py-2">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($suppliers as $supplier)
-                <tr class="border-b hover:bg-pink-50 transition">
-                    <td class="py-3 pr-4 text-gray-400">{{ $loop->iteration }}</td>
-                    <td class="py-3 pr-4 font-medium text-gray-800">{{ $supplier->supplierName }}</td>
-                    <td class="py-3 pr-4 text-gray-500">{{ $supplier->phone }}</td>
-                    <td class="py-3">
-                        <button class="text-blue-500 hover:text-blue-700 text-xs font-medium transition"
-                            @click="showEditSupplierModal = true; selectedSupplier = {{ $supplier->toJson() }}">
-                            Edit
-                        </button>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="4" class="py-10 text-center text-gray-400">
-                        <div class="flex flex-col items-center gap-2">
-                            <i class="fas fa-truck text-3xl opacity-50"></i>
-                            <span>No suppliers yet</span>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
     </div>
+
+    <table class="min-w-full text-left text-xs sm:text-sm whitespace-nowrap">
+        <thead class="border-b text-gray-600">
+            <tr>
+                <th class="py-2 pr-4">#</th>
+                <th class="py-2 pr-4">Supplier Name</th>
+                <th class="py-2 pr-4">Phone</th>
+                <th class="py-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="supplier-tbody">
+            @forelse ($suppliers as $supplier)
+            <tr class="border-b hover:bg-pink-50 transition supplier-row"
+                data-supplier-name="{{ strtolower($supplier->supplierName) }}"
+                data-supplier-phone="{{ strtolower($supplier->phone) }}"
+                data-supplier-index="{{ $loop->index }}"
+            >
+                <td class="py-3 pr-4 text-gray-400 supplier-num"></td>
+                <td class="py-3 pr-4 font-medium text-gray-800">{{ $supplier->supplierName }}</td>
+                <td class="py-3 pr-4 text-gray-500">{{ $supplier->phone }}</td>
+                <td class="py-3">
+                    <button class="text-blue-500 hover:text-blue-700 text-xs font-medium transition"
+                        @click="showEditSupplierModal = true; selectedSupplier = {{ $supplier->toJson() }}">
+                        Edit
+                    </button>
+                </td>
+            </tr>
+            @empty
+            <tr id="supplier-empty-row">
+                <td colspan="4" class="py-10 text-center text-gray-400">
+                    <div class="flex flex-col items-center gap-2">
+                        <i class="fas fa-truck text-3xl opacity-50"></i>
+                        <span>No suppliers yet</span>
+                    </div>
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    {{-- Supplier Pagination --}}
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs text-gray-500" id="supplier-pagination">
+        <span id="supplier-count-label"></span>
+        <div class="flex items-center gap-1" id="supplier-page-buttons"></div>
+    </div>
+</div>
 
     {{-- Add Supplier Modal --}}
     <div x-cloak x-show="showAddSupplierModal"
@@ -800,4 +912,275 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+ 
+    // ══════════════════════════════════════════════════════
+    //  PURE JS STATE — single source of truth for pagination
+    // ══════════════════════════════════════════════════════
+    const state = {
+        ingredientPage: 1,
+        txPage:         1,
+        supplierPage:   1,
+    };
+ 
+    // ── Button style helper ──
+    const btnClass = (active) =>
+        `px-2.5 py-1 rounded-lg border text-xs font-medium transition ${
+            active
+            ? 'bg-pink-500 text-white border-pink-500'
+            : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300'
+        }`;
+ 
+    // ── Read current Alpine-controlled values directly from DOM ──
+    const getSearchQuery    = () => (document.querySelector('input[x-model="searchQuery"]')?.value     ?? '').toLowerCase();
+    const getFilterStatus   = () =>  document.querySelector('select[x-model="filterStatus"]')?.value   ?? 'all';
+    const getFilterIng      = () => (document.querySelector('select[x-model="filterIngredient"]')?.value ?? 'all').toLowerCase();
+    const getHistoryTab     = () =>  document.querySelector('[x-model="historyTab"]')?.value            ?? 'all'; // fallback below
+    const getPerPage        = () => parseInt(document.querySelector('select[x-model="perPage"]')?.value ?? document.querySelector('select[x-model\\:number="perPage"]')?.value ?? 10);
+    const getSupplierSearch = () => (document.querySelector('input[x-model="supplierSearch"]')?.value   ?? '').toLowerCase();
+ 
+    // historyTab is driven by Alpine button clicks, so track it in JS too
+    let historyTab = 'all';
+ 
+    // ── Intercept the historyTab buttons ──
+    document.querySelectorAll('button[\\@click*="historyTab"]').forEach(btn => {
+        const match = btn.getAttribute('@click')?.match(/historyTab\s*=\s*'(\w+)'/);
+        if (match) {
+            btn.addEventListener('click', () => {
+                historyTab     = match[1];
+                state.txPage   = 1;
+                renderTransactions();
+            });
+        }
+    });
+    // Also reset txPage when filterIngredient changes
+    document.querySelector('select[x-model="filterIngredient"]')?.addEventListener('change', () => {
+        state.txPage = 1;
+        renderTransactions();
+    });
+ 
+    // ── Generic pagination renderer ──
+    function makePagination(container, page, totalPages, onPageChange) {
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+ 
+        const makeBtn = (label, target, active, disabled) => {
+            const btn     = document.createElement('button');
+            btn.textContent = label;
+            btn.className   = btnClass(active);
+            btn.disabled    = disabled;
+            if (disabled) btn.style.opacity = '0.4';
+            btn.addEventListener('click', () => onPageChange(target));
+            return btn;
+        };
+ 
+        container.appendChild(makeBtn('‹', page - 1, false, page === 1));
+ 
+        for (let p = 1; p <= totalPages; p++) {
+            if (totalPages > 7 && Math.abs(p - page) > 2 && p !== 1 && p !== totalPages) {
+                if (p === page - 3 || p === page + 3) {
+                    const dots = document.createElement('span');
+                    dots.textContent = '…';
+                    dots.style.padding = '0 4px';
+                    container.appendChild(dots);
+                }
+                continue;
+            }
+            container.appendChild(makeBtn(p, p, p === page, false));
+        }
+ 
+        container.appendChild(makeBtn('›', page + 1, false, page === totalPages));
+    }
+ 
+    // ══════════════════════════════════════════════════════
+    //  INGREDIENTS TABLE
+    // ══════════════════════════════════════════════════════
+    const ingredientRows      = [...document.querySelectorAll('.ingredient-row')];
+    const ingredientEmptyRow  = document.getElementById('ingredient-empty-row');
+    const ingredientCountLbl  = document.getElementById('ingredient-count-label');
+    const ingredientPageBtns  = document.getElementById('ingredient-page-buttons');
+ 
+    function renderIngredients() {
+        const sq     = getSearchQuery();
+        const fs     = getFilterStatus();
+        const pp     = getPerPage();
+ 
+        const visible = ingredientRows.filter(row => {
+            const name   = row.dataset.name   || '';
+            const desc   = row.dataset.desc   || '';
+            const status = row.dataset.status || '';
+            const matchSearch = !sq || name.includes(sq) || desc.includes(sq) || status.includes(sq);
+            const matchStatus = fs === 'all' || fs === status;
+            return matchSearch && matchStatus;
+        });
+ 
+        const total      = visible.length;
+        const totalPages = Math.max(1, Math.ceil(total / pp));
+        state.ingredientPage = Math.min(state.ingredientPage, totalPages);
+        const page  = state.ingredientPage;
+        const start = (page - 1) * pp;
+        const end   = start + pp;
+ 
+        ingredientRows.forEach(row => { row.style.display = 'none'; });
+        visible.slice(start, end).forEach(row => { row.style.display = ''; });
+ 
+        if (ingredientEmptyRow) {
+            ingredientEmptyRow.style.display = total === 0 ? '' : 'none';
+        }
+ 
+        const from = total === 0 ? 0 : start + 1;
+        const to   = Math.min(end, total);
+        if (ingredientCountLbl) {
+            ingredientCountLbl.textContent = total === 0
+                ? 'No ingredients match'
+                : `Showing ${from}–${to} of ${total} ingredient(s)`;
+        }
+ 
+        makePagination(ingredientPageBtns, page, totalPages, (target) => {
+            state.ingredientPage = target;
+            renderIngredients();
+        });
+    }
+ 
+    // ══════════════════════════════════════════════════════
+    //  TRANSACTION TABLE
+    // ══════════════════════════════════════════════════════
+    const txRows     = [...document.querySelectorAll('.tx-row')];
+    const txEmptyRow = document.getElementById('tx-empty-row');
+    const txCountLbl = document.getElementById('tx-count-label');
+    const txPageBtns = document.getElementById('tx-page-buttons');
+ 
+    function renderTransactions() {
+        const fi = getFilterIng();
+        const pp = getPerPage();
+ 
+        const visible = txRows.filter(row => {
+            const type  = row.dataset.txType       || '';
+            const ing   = row.dataset.txIngredient || '';
+            const matchTab = historyTab === 'all' || type === historyTab;
+            const matchIng = fi === 'all' || ing === fi;
+            return matchTab && matchIng;
+        });
+ 
+        const total      = visible.length;
+        const totalPages = Math.max(1, Math.ceil(total / pp));
+        state.txPage = Math.min(state.txPage, totalPages);
+        const page  = state.txPage;
+        const start = (page - 1) * pp;
+        const end   = start + pp;
+ 
+        txRows.forEach(row => { row.style.display = 'none'; });
+        visible.slice(start, end).forEach(row => { row.style.display = ''; });
+ 
+        if (txEmptyRow) {
+            txEmptyRow.style.display = total === 0 ? '' : 'none';
+        }
+ 
+        const from = total === 0 ? 0 : start + 1;
+        const to   = Math.min(end, total);
+        if (txCountLbl) {
+            txCountLbl.textContent = total === 0
+                ? 'No transactions match'
+                : `Showing ${from}–${to} of ${total} transaction(s)`;
+        }
+ 
+        makePagination(txPageBtns, page, totalPages, (target) => {
+            state.txPage = target;
+            renderTransactions();
+        });
+    }
+ 
+    // ══════════════════════════════════════════════════════
+    //  SUPPLIER TABLE
+    // ══════════════════════════════════════════════════════
+    const supplierRows     = [...document.querySelectorAll('.supplier-row')];
+    const supplierEmptyRow = document.getElementById('supplier-empty-row');
+    const supplierCountLbl = document.getElementById('supplier-count-label');
+    const supplierPageBtns = document.getElementById('supplier-page-buttons');
+ 
+    function renderSuppliers() {
+        const sq = getSupplierSearch();
+        const pp = getPerPage();
+ 
+        const visible = supplierRows.filter(row => {
+            const name  = row.dataset.supplierName  || '';
+            const phone = row.dataset.supplierPhone || '';
+            return !sq || name.includes(sq) || phone.includes(sq);
+        });
+ 
+        const total      = visible.length;
+        const totalPages = Math.max(1, Math.ceil(total / pp));
+        state.supplierPage = Math.min(state.supplierPage, totalPages);
+        const page  = state.supplierPage;
+        const start = (page - 1) * pp;
+        const end   = start + pp;
+ 
+        supplierRows.forEach(row => { row.style.display = 'none'; });
+        let num = start + 1;
+        visible.slice(start, end).forEach(row => {
+            row.style.display = '';
+            const numCell = row.querySelector('.supplier-num');
+            if (numCell) numCell.textContent = num++;
+        });
+ 
+        if (supplierEmptyRow) {
+            supplierEmptyRow.style.display = total === 0 ? '' : 'none';
+        }
+ 
+        const from = total === 0 ? 0 : start + 1;
+        const to   = Math.min(end, total);
+        if (supplierCountLbl) {
+            supplierCountLbl.textContent = total === 0
+                ? 'No suppliers match'
+                : `Showing ${from}–${to} of ${total} supplier(s)`;
+        }
+ 
+        makePagination(supplierPageBtns, page, totalPages, (target) => {
+            state.supplierPage = target;
+            renderSuppliers();
+        });
+    }
+ 
+    // ══════════════════════════════════════════════════════
+    //  EVENT LISTENERS  — reset page on filter changes
+    // ══════════════════════════════════════════════════════
+ 
+    // Ingredient search & status filter
+    document.querySelector('input[x-model="searchQuery"]')?.addEventListener('input', () => {
+        state.ingredientPage = 1;
+        renderIngredients();
+    });
+    document.querySelector('select[x-model="filterStatus"]')?.addEventListener('change', () => {
+        state.ingredientPage = 1;
+        renderIngredients();
+    });
+ 
+    // Supplier search
+    document.querySelector('input[x-model="supplierSearch"]')?.addEventListener('input', () => {
+        state.supplierPage = 1;
+        renderSuppliers();
+    });
+ 
+    // Rows-per-page selector — re-render all tables, reset all pages
+    const perPageEl = document.querySelector('select[x-model="perPage"]')
+                   ?? document.querySelector('select[x-model\\:number="perPage"]');
+    perPageEl?.addEventListener('change', () => {
+        state.ingredientPage = 1;
+        state.txPage         = 1;
+        state.supplierPage   = 1;
+        renderIngredients();
+        renderTransactions();
+        renderSuppliers();
+    });
+ 
+    // ══════════════════════════════════════════════════════
+    //  INITIAL RENDER
+    // ══════════════════════════════════════════════════════
+    renderIngredients();
+    renderTransactions();
+    renderSuppliers();
+});
+</script>
 @endsection

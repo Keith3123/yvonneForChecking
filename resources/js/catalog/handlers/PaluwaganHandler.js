@@ -166,13 +166,12 @@ export default class PaluwaganHandler {
 
         grid.innerHTML = '';
 
-        // ✅ Sort months starting from current month going forward
-    const currentMonth = new Date().getMonth() + 1; // 1-12
-    const sorted = [...months].sort((a, b) => {
-        const aOffset = (a.month - currentMonth + 12) % 12;
-        const bOffset = (b.month - currentMonth + 12) % 12;
-        return aOffset - bOffset;
-    });
+        const currentMonth = new Date().getMonth() + 1; // 1-12
+        const sorted = [...months].sort((a, b) => {
+            const aOffset = (a.month - currentMonth + 12) % 12;
+            const bOffset = (b.month - currentMonth + 12) % 12;
+            return aOffset - bOffset;
+        });
 
         sorted.forEach(item => {
             const card = document.createElement('div');

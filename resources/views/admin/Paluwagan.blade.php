@@ -22,8 +22,10 @@
         showDeleteModal: false,
         showPaymentHistory: false,
         showReplaceModal: false,
-        showCompleteModal: false,      {{-- ✅ NEW --}}
-        completeEntryID: null,         {{-- ✅ NEW --}}
+        showCompleteModal: false,      
+        completeEntryID: null,
+        subPage: 1,
+        subPerPage: 10,        
         replaceWaitingOnly: false,
         replaceShowAll: false,
 
@@ -740,47 +742,122 @@ searchAllCustomers(query) {
                 </table>
             </div>
         </div>
+    {{-- Package Pagination --}}
+    <div class="flex items-center justify-between gap-3 mt-3 text-xs text-gray-500">
+        <span id="pkg-count-label-bottom"></span>
+        <div class="flex items-center gap-1" id="pkg-page-buttons"></div>
     </div>
+</div>
+ 
 
     {{-- ============================================ --}}
-    {{-- ADD PACKAGE MODAL --}}
-    {{-- ============================================ --}}
-    <div x-show="showAdd" x-cloak x-transition
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div @click.away="showAdd = false" class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg">
-            <h3 class="text-lg font-bold mb-4">Create Paluwagan Package</h3>
-            <form id="addPackageForm" enctype="multipart/form-data">
+{{-- ADD PACKAGE MODAL --}}
+{{-- ============================================ --}}
+<div x-show="showAdd" x-cloak x-transition
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div @click.away="showAdd = false"
+         class="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+
+        {{-- Header --}}
+        <div class="bg-pink-600 px-6 py-4 rounded-t-xl flex justify-between items-center flex-shrink-0">
+            <h3 class="text-white font-bold text-lg">Create Paluwagan Package</h3>
+            <button @click="showAdd = false" class="text-white hover:text-pink-200 text-xl font-bold">✕</button>
+        </div>
+
+        {{-- Body: 2-column --}}
+        <div class="flex flex-col md:flex-row overflow-hidden flex-1 min-h-0">
+
+            {{-- LEFT: Form --}}
+            <form id="addPackageForm" enctype="multipart/form-data"
+                  class="flex-1 p-6 overflow-y-auto space-y-4 border-r border-gray-100">
                 @csrf
-                <div class="mb-3">
+
+                <div>
                     <label class="block text-sm font-medium mb-1">Package Name</label>
-                    <input type="text" name="packageName" class="w-full border rounded px-3 py-2" required>
+                    <input type="text" name="packageName"
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none" required>
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">What's Included</label>
-                    <textarea name="description" rows="5" class="w-full border rounded px-3 py-2" required></textarea>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">
+                        What's Included
+                        <span class="text-xs text-gray-400 font-normal ml-1">(auto-filled from checked products, or type manually)</span>
+                    </label>
+                    <textarea id="addDescriptionField" name="description" rows="5"
+                              class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none resize-none"
+                              placeholder="Check products on the right, or type here..." required></textarea>
                 </div>
-                <div class="mb-3">
+
+                <div>
                     <label class="block text-sm font-medium mb-1">Total Amount</label>
-                    <input type="number" step="0.01" name="totalAmount" class="w-full border rounded px-3 py-2" required>
+                    <input type="number" step="0.01" name="totalAmount"
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none" required>
                 </div>
-                <div class="mb-3">
+
+                <div>
                     <label class="block text-sm font-medium mb-1">Duration (Months)</label>
-                    <input type="number" name="durationMonths" class="w-full border rounded px-3 py-2" required>
+                    <input type="number" name="durationMonths"
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none" required>
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Image</label>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Package Image</label>
                     <input type="file" name="image" accept="image/*"
-                           class="w-full mb-4 border p-2 rounded border-pink-200" required>
+                           class="w-full border p-2 rounded-lg border-pink-200" required>
                 </div>
-                <div class="flex justify-end gap-2 mt-4">
+
+                <div class="flex justify-end gap-2 pt-2">
                     <button type="button" @click="showAdd = false"
-                            class="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+                            class="px-4 py-2 border rounded-lg hover:bg-gray-100 text-sm">Cancel</button>
                     <button type="submit"
-                            class="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700">Create</button>
+                            class="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 text-sm font-semibold">
+                        Create Package
+                    </button>
                 </div>
             </form>
+
+            {{-- RIGHT: Product Picker --}}
+            <div class="w-full md:w-72 flex flex-col p-4 bg-gray-50 overflow-hidden min-h-0">
+                <p class="text-sm font-semibold text-gray-700 mb-2 flex-shrink-0">
+                    Select Products to Include
+                </p>
+
+                {{-- Search --}}
+                <input type="text" id="productPickerSearch"
+                       placeholder="Search products..."
+                       class="w-full border rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-pink-300 outline-none flex-shrink-0">
+
+                {{-- Product list --}}
+                <div id="productPickerList"
+                     class="overflow-y-auto flex-1 space-y-1.5 pr-1">
+                    @forelse($products as $product)
+                    <label class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200
+                                  bg-white cursor-pointer hover:border-pink-300 hover:bg-pink-50
+                                  transition product-pick-item"
+                           data-name="{{ strtolower($product->name)}}">
+                        <input type="checkbox"
+                               class="product-pick-checkbox accent-pink-500 w-4 h-4 flex-shrink-0"
+                               value="{{ $product->name }}">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-gray-800 truncate">{{ $product->name }}</p>
+                            @if($product->category)
+                            <p class="text-xs text-gray-400">{{ $product->productType->typeName ?? '' }}</p>
+                            @endif
+                        </div>
+                    </label>
+                    @empty
+                    <p class="text-sm text-gray-400 text-center py-6">No products found</p>
+                    @endforelse
+                </div>
+
+                {{-- Selected count --}}
+                <p class="text-xs text-pink-500 font-medium mt-3 flex-shrink-0" id="productPickerCount">
+                    0 product(s) selected
+                </p>
+            </div>
         </div>
     </div>
+</div>
 
     {{-- ============================================ --}}
     {{-- EDIT PACKAGE MODAL --}}
@@ -850,13 +927,31 @@ searchAllCustomers(query) {
     <div class="border rounded-xl border-pink-200 p-5 bg-white shadow-sm mb-8">
         <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
             <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Month Availability per Package</h2>
-            <input type="text" id="searchPackage" placeholder="Search package..."
-                class="border px-3 py-2 rounded-lg w-full md:w-64 text-sm">
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <input type="text" id="searchPackage" placeholder="Search package..."
+                        class="border pl-9 pr-3 py-2 rounded-lg w-full md:w-64 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                </div>
+            </div>
+        </div>
+
+        {{-- Package pagination controls --}}
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mb-3 text-xs text-gray-500">
+            <span id="pkg-count-label"></span>
+            <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500">Rows per page</label>
+                <select id="pkg-per-page" class="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white">
+                    <option value="3">3</option>
+                    <option value="5" selected>5</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
         </div>
 
         <div class="max-h-[500px] overflow-y-auto pr-2">
             @foreach($packages as $package)
-            <div class="mb-4 border rounded-lg p-4 package-item">
+            <div class="mb-4 border rounded-lg p-4 package-item" data-pkg-index="{{ $loop->index }}">
                 <div class="flex justify-between items-center cursor-pointer package-header">
                     <h3 class="font-bold package-name">{{ $package->packageName }}</h3>
                     <div class="flex gap-2">
@@ -887,148 +982,147 @@ searchAllCustomers(query) {
     </div>
 
     {{-- ============================================ --}}
-    {{-- CUSTOMER SUBSCRIPTIONS TABLE --}}
-    {{-- ============================================ --}}
-    <div class="border rounded-xl border-pink-200 p-5 bg-white shadow-sm">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Customer Subscriptions</h2>
-        </div>
-
-        <div class="flex flex-col md:flex-row gap-3 mb-4">
-            <input type="text" id="searchCustomer" placeholder="Search customer..."
-                class="border px-3 py-2 rounded-lg w-full md:w-2/4 text-sm">
-            <select id="statusFilter" class="border px-3 py-2 rounded-lg w-full md:w-1/4 text-sm">
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="release_requested">Release Requested</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-            </select>
-            <select id="dueFilter" class="border px-3 py-2 rounded-lg w-full md:w-1/4 text-sm">
-                <option value="">All Due Dates</option>
-                <option value="today">Due Today</option>
-                <option value="week">Due This Week</option>
-                <option value="overdue">Overdue</option>
+{{-- CUSTOMER SUBSCRIPTIONS TABLE --}}
+{{-- ============================================ --}}
+<div class="border rounded-xl border-pink-200 p-5 bg-white shadow-sm">
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+        <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Customer Subscriptions</h2>
+        <div class="flex items-center gap-2">
+            <label class="text-xs text-gray-500 whitespace-nowrap">Rows per page</label>
+            <select id="sub-per-page" class="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
             </select>
         </div>
+    </div>
 
-        <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
-            <table class="w-full text-left text-sm sm:text-base min-w-max">
-                <thead class="border-b text-gray-600 bg-gray-50 sticky top-0">
-                    <tr>
-                        <th class="py-2 px-3">Entry ID</th>
-                        <th class="py-2 px-3">Customer</th>
-                        <th class="py-2 px-3">Package</th>
-                        <th class="py-2 px-3 text-center">Progress</th>
-                        <th class="py-2 px-3">Monthly</th>
-                        <th class="py-2 px-3">Paid</th>
-                        <th class="py-2 px-3">Remaining</th>
-                        <th class="py-2 px-3">Next Due</th>
-                        <th class="py-2 px-3">Status</th>
-                        <th class="py-2 px-3">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($subscriptions as $sub)
-                    <tr class="border-b hover:bg-pink-50 transition subscription-row"
-                        data-name="{{ strtolower($sub['customerName']) }}"
-                        data-status="{{ $sub['status'] }}"
-                        data-due="{{ $sub['nextDueDate'] }}">
+    <div class="flex flex-col md:flex-row gap-3 mb-4">
+        <input type="text" id="searchCustomer" placeholder="Search customer..."
+            class="border px-3 py-2 rounded-lg w-full md:w-2/4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+        <select id="statusFilter" class="border px-3 py-2 rounded-lg w-full md:w-1/4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="release_requested">Release Requested</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+        </select>
+        <select id="dueFilter" class="border px-3 py-2 rounded-lg w-full md:w-1/4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+            <option value="">All Due Dates</option>
+            <option value="today">Due Today</option>
+            <option value="week">Due This Week</option>
+            <option value="overdue">Overdue</option>
+        </select>
+    </div>
 
-                        <td class="py-2 px-3">{{ $sub['entryID'] }}</td>
-                        <td class="py-2 px-3 font-medium">{{ $sub['customerName'] }}</td>
-                        <td class="py-2 px-3">{{ $sub['packageName'] }}</td>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm sm:text-base min-w-max">
+            <thead class="border-b text-gray-600 bg-gray-50">
+                <tr>
+                    <th class="py-2 px-3">Entry ID</th>
+                    <th class="py-2 px-3">Customer</th>
+                    <th class="py-2 px-3">Package</th>
+                    <th class="py-2 px-3 text-center">Progress</th>
+                    <th class="py-2 px-3">Monthly</th>
+                    <th class="py-2 px-3">Paid</th>
+                    <th class="py-2 px-3">Remaining</th>
+                    <th class="py-2 px-3">Next Due</th>
+                    <th class="py-2 px-3">Status</th>
+                    <th class="py-2 px-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="sub-tbody">
+                @forelse($subscriptions as $sub)
+                <tr class="border-b hover:bg-pink-50 transition subscription-row"
+                    data-name="{{ strtolower($sub['customerName']) }}"
+                    data-status="{{ $sub['status'] }}"
+                    data-due="{{ $sub['nextDueDate'] }}"
+                    data-sub-index="{{ $loop->index }}">
 
-                        {{-- Progress Circle --}}
-                        <td class="py-2 px-3 text-center">
-                            @php
-                                $percent = $sub['totalMonths'] > 0
-                                    ? round(($sub['monthsPaid'] / $sub['totalMonths']) * 100) : 0;
-                            @endphp
-                            <div class="relative w-12 h-12 mx-auto">
-                                <svg class="w-12 h-12 transform -rotate-90">
-                                    <circle cx="24" cy="24" r="20" stroke="#e5e7eb" stroke-width="4" fill="none"/>
-                                    <circle cx="24" cy="24" r="20" stroke="#ec4899" stroke-width="4" fill="none"
-                                        stroke-dasharray="126"
-                                        stroke-dashoffset="{{ 126 - (126 * $percent / 100) }}"
-                                        stroke-linecap="round"/>
-                                </svg>
-                                <span class="absolute inset-0 flex items-center justify-center text-xs font-bold">
-                                    {{ $percent }}%
-                                </span>
-                            </div>
-                        </td>
+                    <td class="py-2 px-3">{{ $sub['entryID'] }}</td>
+                    <td class="py-2 px-3 font-medium">{{ $sub['customerName'] }}</td>
+                    <td class="py-2 px-3">{{ $sub['packageName'] }}</td>
 
-                        <td class="py-2 px-3">₱{{ number_format($sub['monthlyPayment'], 2) }}</td>
-                        <td class="py-2 px-3 text-green-600 font-semibold">₱{{ number_format($sub['totalPaid'], 2) }}</td>
-                        <td class="py-2 px-3 text-red-500 font-semibold">
-                            ₱{{ number_format($sub['totalAmount'] - $sub['totalPaid'], 2) }}
-                        </td>
-                        <td class="py-2 px-3">
-                            {{ $sub['nextDueDate']
-                                ? \Carbon\Carbon::parse($sub['nextDueDate'])->format('M d, Y')
-                                : '-' }}
-                        </td>
+                    <td class="py-2 px-3 text-center">
+                        @php
+                            $percent = $sub['totalMonths'] > 0
+                                ? round(($sub['monthsPaid'] / $sub['totalMonths']) * 100) : 0;
+                        @endphp
+                        <div class="relative w-12 h-12 mx-auto">
+                            <svg class="w-12 h-12 transform -rotate-90">
+                                <circle cx="24" cy="24" r="20" stroke="#e5e7eb" stroke-width="4" fill="none"/>
+                                <circle cx="24" cy="24" r="20" stroke="#ec4899" stroke-width="4" fill="none"
+                                    stroke-dasharray="126"
+                                    stroke-dashoffset="{{ 126 - (126 * $percent / 100) }}"
+                                    stroke-linecap="round"/>
+                            </svg>
+                            <span class="absolute inset-0 flex items-center justify-center text-xs font-bold">
+                                {{ $percent }}%
+                            </span>
+                        </div>
+                    </td>
 
-                        {{-- Status + released badge --}}
-                        <td class="py-2 px-3">
-                            <div class="flex flex-col gap-1">
-                                <span class="px-2 py-1 text-xs rounded-full
-                                    @switch($sub['status'])
-                                        @case('active')            bg-green-100  text-green-800  @break
-                                        @case('release_requested') bg-orange-100 text-orange-800 @break
-                                        @case('completed')         bg-blue-100   text-blue-800   @break
-                                        @case('cancelled')         bg-red-100    text-red-800    @break
-                                    @endswitch">
-                                    @if($sub['status'] === 'release_requested')
-                                        ⏳ Release Pending
-                                    @else
-                                        {{ ucfirst($sub['status']) }}
-                                    @endif
-                                </span>
-                                @if(!empty($sub['releasedAt']))
-                                    <span class="text-[10px] text-green-600 font-semibold whitespace-nowrap">
-                                        📦 Released {{ $sub['releasedAt'] }}
-                                    </span>
-                                @endif
-                            </div>
-                        </td>
+                    <td class="py-2 px-3">₱{{ number_format($sub['monthlyPayment'], 2) }}</td>
+                    <td class="py-2 px-3 text-green-600 font-semibold">₱{{ number_format($sub['totalPaid'], 2) }}</td>
+                    <td class="py-2 px-3 text-red-500 font-semibold">
+                        ₱{{ number_format($sub['totalAmount'] - $sub['totalPaid'], 2) }}
+                    </td>
+                    <td class="py-2 px-3">
+                        {{ $sub['nextDueDate']
+                            ? \Carbon\Carbon::parse($sub['nextDueDate'])->format('M d, Y')
+                            : '-' }}
+                    </td>
 
-                        {{-- Actions --}}
-                        <td class="py-2 px-3">
-                            <div class="flex gap-1 flex-wrap">
-
-                                {{-- View Payment History --}}
-                                <button @click="openPaymentHistory(
-                                            '{{ $sub['entryID'] }}',
-                                            '{{ addslashes($sub['customerName']) }}',
-                                            '{{ addslashes($sub['packageName']) }}')"
-                                    class="bg-purple-500 text-white px-2.5 py-1 rounded text-xs hover:bg-purple-600">
-                                    <i class="fas fa-receipt"></i> History
-                                </button>
-
-                                {{-- Approve / Reject release --}}
+                    <td class="py-2 px-3">
+                        <div class="flex flex-col gap-1">
+                            <span class="px-2 py-1 text-xs rounded-full
+                                @switch($sub['status'])
+                                    @case('active')            bg-green-100  text-green-800  @break
+                                    @case('release_requested') bg-orange-100 text-orange-800 @break
+                                    @case('completed')         bg-blue-100   text-blue-800   @break
+                                    @case('cancelled')         bg-red-100    text-red-800    @break
+                                @endswitch">
                                 @if($sub['status'] === 'release_requested')
-                                    <button onclick="approveRelease({{ $sub['entryID'] }}, '{{ addslashes($sub['customerName']) }}')"
-                                        class="bg-green-500 text-white px-2.5 py-1 rounded text-xs hover:bg-green-600">
-                                        ✅ Release
-                                    </button>
-                                    <button onclick="rejectRelease({{ $sub['entryID'] }}, '{{ addslashes($sub['customerName']) }}')"
-                                        class="bg-red-400 text-white px-2.5 py-1 rounded text-xs hover:bg-red-500">
-                                        ✕ Reject
-                                    </button>
+                                    ⏳ Release Pending
+                                @else
+                                    {{ ucfirst($sub['status']) }}
                                 @endif
+                            </span>
+                            @if(!empty($sub['releasedAt']))
+                                <span class="text-[10px] text-green-600 font-semibold whitespace-nowrap">
+                                    📦 Released {{ $sub['releasedAt'] }}
+                                </span>
+                            @endif
+                        </div>
+                    </td>
 
-                                {{-- ✅ Complete — now triggers Alpine modal, NOT confirm() --}}
-                                @if($sub['status'] === 'active')
-                                    <button @click="confirmMarkComplete('{{ $sub['entryID'] }}')"
-                                        class="bg-green-500 text-white px-2.5 py-1 rounded text-xs hover:bg-green-600">
-                                        Complete
-                                    </button>
-                                @endif
-
-                                {{-- Replace — cancelled only --}}
-                                 @if($sub['status'] === 'cancelled')
+                    <td class="py-2 px-3">
+                        <div class="flex gap-1 flex-wrap">
+                            <button @click="openPaymentHistory(
+                                        '{{ $sub['entryID'] }}',
+                                        '{{ addslashes($sub['customerName']) }}',
+                                        '{{ addslashes($sub['packageName']) }}')"
+                                class="bg-purple-500 text-white px-2.5 py-1 rounded text-xs hover:bg-purple-600">
+                                <i class="fas fa-receipt"></i> History
+                            </button>
+                            @if($sub['status'] === 'release_requested')
+                                <button onclick="approveRelease({{ $sub['entryID'] }}, '{{ addslashes($sub['customerName']) }}')"
+                                    class="bg-green-500 text-white px-2.5 py-1 rounded text-xs hover:bg-green-600">
+                                    ✅ Release
+                                </button>
+                                <button onclick="rejectRelease({{ $sub['entryID'] }}, '{{ addslashes($sub['customerName']) }}')"
+                                    class="bg-red-400 text-white px-2.5 py-1 rounded text-xs hover:bg-red-500">
+                                    ✕ Reject
+                                </button>
+                            @endif
+                            @if($sub['status'] === 'active')
+                                <button @click="confirmMarkComplete('{{ $sub['entryID'] }}')"
+                                    class="bg-green-500 text-white px-2.5 py-1 rounded text-xs hover:bg-green-600">
+                                    Complete
+                                </button>
+                            @endif
+                            @if($sub['status'] === 'cancelled')
                                 <button @click="openReplaceModal(
                                             '{{ $sub['entryID'] }}',
                                             '{{ addslashes($sub['packageName']) }}',
@@ -1036,24 +1130,27 @@ searchAllCustomers(query) {
                                             {{ $sub['monthsPaid'] }},
                                             '{{ $sub['packageID'] ?? '' }}',
                                             '{{ $sub['startMonth'] ?? '' }}')"
-                                        class="bg-blue-500 text-white px-2.5 py-1 rounded text-xs hover:bg-blue-600">
-                                        <i class="fas fa-user-plus"></i> Replace
-                                    </button>
-                                @endif
-
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="10" class="py-10 text-center text-gray-400">No subscriptions found</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                                    class="bg-blue-500 text-white px-2.5 py-1 rounded text-xs hover:bg-blue-600">
+                                    <i class="fas fa-user-plus"></i> Replace
+                                </button>
+                            @endif
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr id="sub-empty-row">
+                    <td colspan="10" class="py-10 text-center text-gray-400">No subscriptions found</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
+    {{-- Subscription Pagination --}}
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs text-gray-500">
+        <span id="sub-count-label"></span>
+        <div class="flex items-center gap-1" id="sub-page-buttons"></div>
+    </div>
 </div>
 @endsection
 
@@ -1080,10 +1177,7 @@ function showToast(message, type = 'success') {
 function updateMonth(packageID, month, status, parent, checkbox) {
     fetch('/admin/paluwagan/month/toggle', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
         body: JSON.stringify({ packageID, month, status })
     })
     .then(res => res.json())
@@ -1092,28 +1186,20 @@ function updateMonth(packageID, month, status, parent, checkbox) {
         if (status === 'active') parent.classList.add('bg-pink-100', 'border-pink-400');
         else parent.classList.remove('bg-pink-100', 'border-pink-400');
     })
-    .catch(() => {
-        showToast('Update failed', 'error');
-        checkbox.checked = !checkbox.checked;
-    });
+    .catch(() => { showToast('Update failed', 'error'); checkbox.checked = !checkbox.checked; });
 }
 
 document.addEventListener('change', function (e) {
     if (e.target.classList.contains('toggle-month')) {
         const parent = e.target.closest('.month-box');
-        updateMonth(
-            parent.dataset.package,
-            parent.dataset.month,
-            e.target.checked ? 'active' : 'inactive',
-            parent,
-            e.target
-        );
+        updateMonth(parent.dataset.package, parent.dataset.month,
+            e.target.checked ? 'active' : 'inactive', parent, e.target);
     }
 });
 
 function bulkAction(packageID, activate) {
     document.querySelectorAll(`.month-box[data-package="${packageID}"]`).forEach(box => {
-        const checkbox   = box.querySelector('.toggle-month');
+        const checkbox = box.querySelector('.toggle-month');
         checkbox.checked = activate;
         updateMonth(packageID, box.dataset.month, activate ? 'active' : 'inactive', box, checkbox);
     });
@@ -1134,12 +1220,87 @@ document.addEventListener('click', function (e) {
     }
 });
 
-document.getElementById('searchPackage').addEventListener('input', function () {
-    const val = this.value.toLowerCase();
-    document.querySelectorAll('.package-item').forEach(item => {
-        item.style.display = item.querySelector('.package-name')
-            .textContent.toLowerCase().includes(val) ? '' : 'none';
-    });
+// =============================================
+// PACKAGE PAGINATION
+// =============================================
+const pkgItems        = [...document.querySelectorAll('.package-item')];
+const pkgCountLabel   = document.getElementById('pkg-count-label');
+const pkgCountBottom  = document.getElementById('pkg-count-label-bottom');
+const pkgPageButtons  = document.getElementById('pkg-page-buttons');
+const pkgPerPageSel   = document.getElementById('pkg-per-page');
+const pkgSearchInput  = document.getElementById('searchPackage');
+
+let pkgPage    = 1;
+let pkgPerPage = parseInt(pkgPerPageSel.value);
+let pkgSearch  = '';
+
+const btnClass = (active) =>
+    `px-2.5 py-1 rounded-lg border text-xs font-medium transition ${
+        active
+        ? 'bg-pink-500 text-white border-pink-500'
+        : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300'
+    }`;
+
+function renderPackages() {
+    const sq = pkgSearch.toLowerCase();
+    const visible = pkgItems.filter(item =>
+        item.querySelector('.package-name').textContent.toLowerCase().includes(sq)
+    );
+
+    const total      = visible.length;
+    const totalPages = Math.max(1, Math.ceil(total / pkgPerPage));
+    pkgPage          = Math.min(pkgPage, totalPages);
+    const start      = (pkgPage - 1) * pkgPerPage;
+    const end        = start + pkgPerPage;
+
+    pkgItems.forEach(item => item.style.display = 'none');
+    visible.slice(start, end).forEach(item => item.style.display = '');
+
+    const from = total === 0 ? 0 : start + 1;
+    const to   = Math.min(end, total);
+    const label = total === 0 ? 'No packages match' : `Showing ${from}–${to} of ${total} package(s)`;
+    if (pkgCountLabel)  pkgCountLabel.textContent  = label;
+    if (pkgCountBottom) pkgCountBottom.textContent = label;
+
+    pkgPageButtons.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const makeBtn = (label, target, active, disabled) => {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.className   = btnClass(active);
+        btn.disabled    = disabled;
+        if (disabled) btn.style.opacity = '0.4';
+        btn.addEventListener('click', () => { pkgPage = target; renderPackages(); });
+        return btn;
+    };
+
+    pkgPageButtons.appendChild(makeBtn('‹', pkgPage - 1, false, pkgPage === 1));
+    for (let p = 1; p <= totalPages; p++) {
+        if (totalPages > 7 && Math.abs(p - pkgPage) > 2 && p !== 1 && p !== totalPages) {
+            if (p === pkgPage - 3 || p === pkgPage + 3) {
+                const dots = document.createElement('span');
+                dots.textContent = '…';
+                dots.style.padding = '0 4px';
+                pkgPageButtons.appendChild(dots);
+            }
+            continue;
+        }
+        pkgPageButtons.appendChild(makeBtn(p, p, p === pkgPage, false));
+    }
+    pkgPageButtons.appendChild(makeBtn('›', pkgPage + 1, false, pkgPage === totalPages));
+}
+
+pkgSearchInput.addEventListener('input', function () {
+    pkgSearch = this.value;
+    pkgPage   = 1;
+    renderPackages();
+});
+
+pkgPerPageSel.addEventListener('change', function () {
+    pkgPerPage = parseInt(this.value);
+    pkgPage    = 1;
+    renderPackages();
 });
 
 // =============================================
@@ -1148,19 +1309,162 @@ document.getElementById('searchPackage').addEventListener('input', function () {
 document.getElementById('addPackageForm').addEventListener('submit', function (e) {
     e.preventDefault();
     fetch('{{ url("admin/paluwagan/package/create") }}', {
-        method: 'POST',
-        body: new FormData(this)
+        method: 'POST', body: new FormData(this)
     })
     .then(res => res.json())
     .then(res => {
-        if (res.success) {
-            showToast('Package created!');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showToast(res.message || 'Create failed', 'error');
-        }
+        if (res.success) { showToast('Package created!'); setTimeout(() => location.reload(), 1500); }
+        else showToast(res.message || 'Create failed', 'error');
     })
-    .catch(err => { console.error(err); showToast('Error creating package', 'error'); });
+    .catch(() => showToast('Error creating package', 'error'));
+});
+
+
+// =============================================
+// PRODUCT PICKER (Add Package Modal)
+// =============================================
+function syncProductsToDescription() {
+    const checked = [...document.querySelectorAll('.product-pick-checkbox:checked')]
+        .map(cb => cb.value);
+
+    document.getElementById('addDescriptionField').value = checked.join('\n');
+    document.getElementById('productPickerCount').textContent =
+        `${checked.length} product(s) selected`;
+}
+
+document.addEventListener('change', function (e) {
+    if (e.target.classList.contains('product-pick-checkbox')) {
+        // Highlight the label
+        const label = e.target.closest('label');
+        if (e.target.checked) {
+            label.classList.add('border-pink-400', 'bg-pink-50');
+        } else {
+            label.classList.remove('border-pink-400', 'bg-pink-50');
+        }
+        syncProductsToDescription();
+    }
+});
+
+document.getElementById('productPickerSearch').addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.product-pick-item').forEach(item => {
+        item.style.display = item.dataset.name.includes(q) ? '' : 'none';
+    });
+});
+
+// Reset checkboxes when modal closes
+document.addEventListener('alpine:initialized', () => {
+    // watch for showAdd = false to clear checkboxes
+});
+
+// Clear product checkboxes when the Add modal is re-opened
+document.addEventListener('click', function (e) {
+    if (e.target.closest('[\\@click="showAdd = true"]') ||
+        (e.target.tagName === 'BUTTON' && e.target.textContent.includes('Add Package'))) {
+        setTimeout(() => {
+            document.querySelectorAll('.product-pick-checkbox').forEach(cb => {
+                cb.checked = false;
+                cb.closest('label').classList.remove('border-pink-400', 'bg-pink-50');
+            });
+            document.getElementById('addDescriptionField').value = '';
+            document.getElementById('productPickerCount').textContent = '0 product(s) selected';
+            document.getElementById('productPickerSearch').value = '';
+            document.querySelectorAll('.product-pick-item').forEach(i => i.style.display = '');
+        }, 50);
+    }
+});
+
+
+// =============================================
+// SUBSCRIPTION FILTERS + PAGINATION
+// =============================================
+const searchInput  = document.getElementById('searchCustomer');
+const statusFilter = document.getElementById('statusFilter');
+const dueFilter    = document.getElementById('dueFilter');
+const subPerPageSel = document.getElementById('sub-per-page');
+const subRows       = [...document.querySelectorAll('.subscription-row')];
+const subEmptyRow   = document.getElementById('sub-empty-row');
+const subCountLabel = document.getElementById('sub-count-label');
+const subPageBtns   = document.getElementById('sub-page-buttons');
+
+let subPage    = 1;
+let subPerPage = parseInt(subPerPageSel.value);
+
+function getVisibleSubs() {
+    const sq      = searchInput.value.toLowerCase();
+    const statusV = statusFilter.value;
+    const dueV    = dueFilter.value;
+    const today   = new Date();
+
+    return subRows.filter(row => {
+        let show = true;
+        if (sq && !row.dataset.name.includes(sq))          show = false;
+        if (statusV && row.dataset.status !== statusV)     show = false;
+        if (dueV && row.dataset.due) {
+            const dueDate = new Date(row.dataset.due);
+            if (dueV === 'today')   show = dueDate.toDateString() === today.toDateString();
+            if (dueV === 'week')  { const diff = (dueDate - today) / 86400000; show = diff >= 0 && diff <= 7; }
+            if (dueV === 'overdue') show = dueDate < today;
+        }
+        return show;
+    });
+}
+
+function renderSubscriptions() {
+    const visible    = getVisibleSubs();
+    const total      = visible.length;
+    const totalPages = Math.max(1, Math.ceil(total / subPerPage));
+    subPage          = Math.min(subPage, totalPages);
+    const start      = (subPage - 1) * subPerPage;
+    const end        = start + subPerPage;
+
+    subRows.forEach(row => row.style.display = 'none');
+    visible.slice(start, end).forEach(row => row.style.display = '');
+
+    if (subEmptyRow) subEmptyRow.style.display = total === 0 ? '' : 'none';
+
+    const from = total === 0 ? 0 : start + 1;
+    const to   = Math.min(end, total);
+    subCountLabel.textContent = total === 0
+        ? 'No subscriptions match'
+        : `Showing ${from}–${to} of ${total} subscription(s)`;
+
+    subPageBtns.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const makeBtn = (label, target, active, disabled) => {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.className   = btnClass(active);
+        btn.disabled    = disabled;
+        if (disabled) btn.style.opacity = '0.4';
+        btn.addEventListener('click', () => { subPage = target; renderSubscriptions(); });
+        return btn;
+    };
+
+    subPageBtns.appendChild(makeBtn('‹', subPage - 1, false, subPage === 1));
+    for (let p = 1; p <= totalPages; p++) {
+        if (totalPages > 7 && Math.abs(p - subPage) > 2 && p !== 1 && p !== totalPages) {
+            if (p === subPage - 3 || p === subPage + 3) {
+                const dots = document.createElement('span');
+                dots.textContent = '…';
+                dots.style.padding = '0 4px';
+                subPageBtns.appendChild(dots);
+            }
+            continue;
+        }
+        subPageBtns.appendChild(makeBtn(p, p, p === subPage, false));
+    }
+    subPageBtns.appendChild(makeBtn('›', subPage + 1, false, subPage === totalPages));
+}
+
+searchInput.addEventListener('input',   () => { subPage = 1; renderSubscriptions(); });
+statusFilter.addEventListener('change', () => { subPage = 1; renderSubscriptions(); });
+dueFilter.addEventListener('change',   () => { subPage = 1; renderSubscriptions(); });
+subPerPageSel.addEventListener('change', function () {
+    subPerPage = parseInt(this.value);
+    subPage    = 1;
+    renderSubscriptions();
 });
 
 // =============================================
@@ -1176,18 +1480,15 @@ function approveRelease(entryID, customerName) {
     document.getElementById('approve-customer-name').textContent = customerName;
     document.getElementById('approve-release-modal').classList.remove('hidden');
 }
-
 function closeApproveModal() {
     document.getElementById('approve-release-modal').classList.add('hidden');
     pendingApproveID = null;
 }
-
 function rejectRelease(entryID, customerName) {
     pendingRejectID = entryID;
     document.getElementById('reject-customer-name').textContent = customerName;
     document.getElementById('reject-release-modal').classList.remove('hidden');
 }
-
 function closeRejectModal() {
     document.getElementById('reject-release-modal').classList.add('hidden');
     pendingRejectID = null;
@@ -1196,12 +1497,10 @@ function closeRejectModal() {
 document.getElementById('confirm-approve-btn').addEventListener('click', async function () {
     if (!pendingApproveID || isApprovingRelease) return;
     isApprovingRelease = true;
-
     const btnText = document.getElementById('approve-btn-text');
     const spinner = document.getElementById('approve-spinner');
     btnText.textContent = 'Approving...';
     spinner.classList.remove('hidden');
-
     try {
         const res  = await fetch(`/admin/paluwagan/entry/${pendingApproveID}/approve-release`, {
             method: 'POST',
@@ -1224,12 +1523,10 @@ document.getElementById('confirm-approve-btn').addEventListener('click', async f
 document.getElementById('confirm-reject-btn').addEventListener('click', async function () {
     if (!pendingRejectID || isRejectingRelease) return;
     isRejectingRelease = true;
-
     const btnText = document.getElementById('reject-btn-text');
     const spinner = document.getElementById('reject-spinner');
     btnText.textContent = 'Rejecting...';
     spinner.classList.remove('hidden');
-
     try {
         const res  = await fetch(`/admin/paluwagan/entry/${pendingRejectID}/reject-release`, {
             method: 'POST',
@@ -1257,37 +1554,9 @@ document.getElementById('reject-release-modal').addEventListener('click', functi
 });
 
 // =============================================
-// SUBSCRIPTION FILTERS
+// INIT
 // =============================================
-const searchInput  = document.getElementById('searchCustomer');
-const statusFilter = document.getElementById('statusFilter');
-const dueFilter    = document.getElementById('dueFilter');
-
-function filterSubscriptions() {
-    const searchVal = searchInput.value.toLowerCase();
-    const statusVal = statusFilter.value;
-    const dueVal    = dueFilter.value;
-    const today     = new Date();
-
-    document.querySelectorAll('.subscription-row').forEach(row => {
-        let show = true;
-
-        if (searchVal && !row.dataset.name.includes(searchVal)) show = false;
-        if (statusVal && row.dataset.status !== statusVal)       show = false;
-
-        if (dueVal && row.dataset.due) {
-            const dueDate = new Date(row.dataset.due);
-            if (dueVal === 'today')   show = dueDate.toDateString() === today.toDateString();
-            if (dueVal === 'week')  { const diff = (dueDate - today) / 86400000; show = diff >= 0 && diff <= 7; }
-            if (dueVal === 'overdue') show = dueDate < today;
-        }
-
-        row.style.display = show ? '' : 'none';
-    });
-}
-
-searchInput.addEventListener('input',   filterSubscriptions);
-statusFilter.addEventListener('change', filterSubscriptions);
-dueFilter.addEventListener('change',    filterSubscriptions);
+renderPackages();
+renderSubscriptions();
 </script>
 @endsection

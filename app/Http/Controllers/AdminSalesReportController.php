@@ -87,7 +87,6 @@ class AdminSalesReportController extends AdminBaseController
         $trendOrders  = [];
 
         if ($period === 'daily') {
-            // Hourly
             for ($h = 0; $h < 24; $h++) {
                 $hStart = (clone $from)->addHours($h);
                 $hEnd   = (clone $from)->addHours($h + 1);
@@ -102,7 +101,6 @@ class AdminSalesReportController extends AdminBaseController
                     ->count();
             }
         } else {
-            // Daily breakdown
             $cursor = clone $from;
             while ($cursor->lte($to)) {
                 $dayStart = (clone $cursor)->startOfDay();
@@ -175,9 +173,6 @@ class AdminSalesReportController extends AdminBaseController
             ->pluck('cnt', 'status')
             ->toArray();
 
-        // ===========================
-        // PASS EVERYTHING TO VIEW
-        // ===========================
         return view('admin.salesreport', compact(
             'period', 'from', 'to',
             'totalRevenue', 'totalOrders', 'completedOrders',
@@ -290,5 +285,141 @@ class AdminSalesReportController extends AdminBaseController
             'Content-Type'        => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
+    }
+
+    /**
+     * PDF Export
+     */
+    public function exportPDF(Request $request)
+    {
+        $period    = $request->get('period', 'monthly');
+        $startDate = $request->get('start_date');
+        $endDate   = $request->get('end_date');
+
+        $dates = $this->getDateRange($period, $startDate, $endDate);
+        $from  = $dates['from'];
+        $to    = $dates['to'];
+
+        // ===========================
+        // ORDERS — Done only (completed/delivered orders)
+        // ===========================
+        $orders = Order::with(['orderItems.product', 'payment', 'customer'])
+            ->whereBetween('orderDate', [(clone $from)->startOfDay(), (clone $to)->endOfDay()])
+            ->where('status', 'Done')
+            ->orderBy('orderDate', 'desc')
+            ->get();
+
+        $totalRevenue    = (float) $orders->sum('totalAmount');
+        $completedOrders = $orders->count();
+        $avgOrderValue   = $completedOrders > 0 ? round($totalRevenue / $completedOrders, 2) : 0;
+
+        // Still count ALL orders for context stats
+        $totalOrders = (int) DB::table('order')
+            ->whereBetween('orderDate', [$from, $to])
+            ->count();
+
+        $cancelledOrders = (int) DB::table('order')
+            ->whereBetween('orderDate', [$from, $to])
+            ->where('status', 'Cancelled')
+            ->count();
+
+        // ===========================
+        // PREVIOUS PERIOD (for growth) — FIXED: added here
+        // ===========================
+        $prevRevenue = (float) DB::table('order')
+            ->whereBetween('orderDate', [$dates['prev_from'], $dates['prev_to']])
+            ->where('status', '!=', 'Cancelled')
+            ->sum('totalAmount');
+
+        $prevOrders = DB::table('order')
+            ->whereBetween('orderDate', [$dates['prev_from'], $dates['prev_to']])
+            ->count();
+
+        $revenueGrowth = $prevRevenue > 0
+            ? round((($totalRevenue - $prevRevenue) / $prevRevenue) * 100, 1)
+            : ($totalRevenue > 0 ? 100 : 0);
+
+        $orderGrowth = $prevOrders > 0
+            ? round((($totalOrders - $prevOrders) / $prevOrders) * 100, 1)
+            : ($totalOrders > 0 ? 100 : 0);
+
+        // ===========================
+        // TOP PRODUCTS
+        // ===========================
+        $topProducts = DB::table('orderitem')
+            ->join('order', 'orderitem.orderID', '=', 'order.orderID')
+            ->join('product', 'orderitem.productID', '=', 'product.productID')
+            ->select(
+                'product.name',
+                DB::raw('SUM(orderitem.qty) as total_units'),
+                DB::raw('SUM(orderitem.subtotal) as total_revenue')
+            )
+            ->whereBetween('order.orderDate', [$from, $to])
+            ->where('order.status', '!=', 'Cancelled')
+            ->groupBy('product.productID', 'product.name')
+            ->orderByDesc('total_revenue')
+            ->limit(5)
+            ->get();
+
+        // ===========================
+        // ORDER STATUS BREAKDOWN
+        // ===========================
+        $statusBreakdown = DB::table('order')
+            ->select('status', DB::raw('COUNT(*) as cnt'))
+            ->whereBetween('orderDate', [$from, $to])
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->toArray();
+
+        // ===========================
+        // PAYMENT SUMMARY
+        // ===========================
+        $paymentStats = DB::table('payment')
+            ->join('order', 'payment.orderID', '=', 'order.orderID')
+            ->select(
+                'payment.method',
+                'payment.status',
+                DB::raw('COUNT(*) as cnt'),
+                DB::raw('SUM(payment.amount) as total')
+            )
+            ->where('payment.contextType', 'order')
+            ->whereBetween('order.orderDate', [$from, $to])
+            ->groupBy('payment.method', 'payment.status')
+            ->get();
+
+        $gcashTotal    = (float) $paymentStats->where('method', 'GCASH')->sum('total');
+        $codTotal      = (float) $paymentStats->where('method', 'COD')->sum('total');
+        $paidTotal     = (float) $paymentStats->where('status', 'approved')->sum('total');
+        $pendingTotal  = (float) $paymentStats->where('status', 'pending')->sum('total');
+        $rejectedTotal = (float) $paymentStats->where('status', 'rejected')->sum('total');
+        $paidCount     = (int) $paymentStats->where('status', 'approved')->sum('cnt');
+        $pendingCount  = (int) $paymentStats->where('status', 'pending')->sum('cnt');
+        $rejectedCount = (int) $paymentStats->where('status', 'rejected')->sum('cnt');
+
+        $allStatuses = ['Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Done', 'Cancelled'];
+
+        // ===========================
+        // GENERATE PDF
+        // ===========================
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.sales_report_pdf', compact(
+            'from', 'to', 'period',
+            'totalRevenue', 'totalOrders', 'completedOrders', 'cancelledOrders', 'avgOrderValue',
+            'revenueGrowth', 'orderGrowth',
+            'topProducts', 'statusBreakdown', 'allStatuses',
+            'gcashTotal', 'codTotal',
+            'paidTotal', 'pendingTotal', 'rejectedTotal',
+            'paidCount', 'pendingCount', 'rejectedCount',
+            'orders'
+        ))
+        ->setPaper('a4', 'portrait')
+        ->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled'      => false,
+            'defaultFont'          => 'sans-serif',
+        ]);
+
+        $filename = 'sales-report-' . $from->format('Ymd') . '-to-' . $to->format('Ymd') . '.pdf';
+
+        return $pdf->download($filename);
     }
 }

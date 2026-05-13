@@ -14,9 +14,14 @@
                     Track revenue, orders, and product performance
                 </p>
             </div>
-            <a href="{{ route('admin.salesreport.export.csv', ['period' => $period, 'start_date' => request('start_date'), 'end_date' => request('end_date')]) }}"
-               class="px-4 py-2 bg-white border rounded-lg text-sm text-gray-600 hover:bg-pink-200 hover:text-pink-600 transition">
-                <i class="fas fa-file-csv mr-1"></i> Export CSV
+            <a href="{{ route('admin.salesreport.export.pdf', [
+                    'period'     => $period,
+                    'start_date' => request('start_date'),
+                    'end_date'   => request('end_date')
+                ]) }}"
+            target="_blank"
+            class="px-4 py-2 bg-white border rounded-lg text-sm text-gray-600 hover:bg-pink-200 hover:text-pink-600 transition">
+                <i class="fas fa-file-pdf mr-1 text-red-500"></i> Export PDF
             </a>
         </div>
 
