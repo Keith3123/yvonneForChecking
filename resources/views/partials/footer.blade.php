@@ -59,28 +59,27 @@
                 </h3>
                 <ul class="space-y-2 text-sm">
                     <li>
-                        <a href="#" class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
+                        <a href="catalog" class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
                             Order Now
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
-                            Our Menu
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
+                        {{-- Paluwagan: if logged in -> paluwagan, else -> catalog --}}
+                        <a href="{{ auth()->check() ? 'catalog' : 'paluwagan' }}" 
+                        class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
                             Paluwagan
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
+                        {{-- My Order: if logged in -> my-order, else -> catalog --}}
+                        <a href="{{ auth()->check() ?   'catalog' : 'orders' }}" 
+                        class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
                             My Order
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
-                            Catalog
+                        <a href="my-ratings" class="inline-block transition-all duration-300 hover:translate-x-1 hover:text-pink-400">
+                            My Ratings
                         </a>
                     </li>
                 </ul>
@@ -94,7 +93,7 @@
                 <ul class="space-y-3 text-sm text-gray-700">
                     <li class="flex space-x-3 items-start">
                         <span class="text-pink-400">📍</span>
-                        <span>123 Bakery Street, Barangay San Juan, Manila City</span>
+                        <span>Barangay 19-B, Poblacion District, Davao City, Davao del Sur</span>
                     </li>
                     <li class="flex space-x-3 items-center">
                         <span class="text-pink-400">📞</span>

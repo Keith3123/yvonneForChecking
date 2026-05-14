@@ -12,14 +12,15 @@
 
         @foreach ($featuredProducts as $product)
           @php
-              $origPrice  = $product['servings'][0]['price'] ?? 0;
-              $promo      = $product['promo'] ?? null;
-              $hasPromo   = $promo && $promo > 0;
-              $discounted = $hasPromo ? round($origPrice * (1 - $promo / 100), 2) : $origPrice;
-              $imgSrc     = asset('images/products/' . $product['imageURL']);
-              $isPaluwagan = strtolower($product['productType']) === 'paluwagan';
-              $destination = session('logged_in_user') ? route('catalog') : route('register');
-          @endphp
+    $firstServing = $product['servings'][0] ?? null;
+    $promo        = $product['promo'] ?? 0;
+    $displayPrice = $firstServing['price'] ?? 0;
+    $origPrice    = $firstServing['originalPrice'] ?? $displayPrice;
+    $hasPromo     = $promo > 0 && $origPrice != $displayPrice;
+    $imgSrc       = asset('images/products/' . $product['imageURL']);
+    $isPaluwagan  = strtolower($product['productType']) === 'paluwagan';
+    $destination  = session('logged_in_user') ? route('catalog') : route('register');
+@endphp
 
           <div
             class="relative bg-white rounded-lg shadow
@@ -44,19 +45,18 @@
               <h3 class="font-semibold text-base text-center text-gray-800 mb-1">
                 {{ $product['name'] }}
               </h3>
-
-              @if($hasPromo)
-                <p class="text-center text-gray-400 line-through text-sm">
-                  ₱ {{ number_format($origPrice, 2) }}
-                </p>
-                <p class="text-pink-600 font-bold text-center text-lg">
-                  ₱ {{ number_format($discounted, 2) }}
-                </p>
-              @else
-                <p class="text-pink-600 font-semibold text-center">
-                  ₱ {{ number_format($origPrice, 2) }}
-                </p>
-              @endif
+@if($hasPromo)
+    <p class="text-center text-gray-400 line-through text-sm">
+        ₱ {{ number_format($origPrice, 2) }}
+    </p>
+    <p class="text-pink-600 font-bold text-center text-lg">
+        ₱ {{ number_format($displayPrice, 2) }}
+    </p>
+@else
+    <p class="text-pink-600 font-semibold text-center">
+        ₱ {{ number_format($origPrice, 2) }}
+    </p>
+@endif
             </div>
           </div>
 

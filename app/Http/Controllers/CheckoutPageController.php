@@ -56,7 +56,11 @@ class CheckoutPageController extends Controller
         $validated = $request->validate([
             'deliveryAddress' => 'required|string|max:255',
             'remarks' => 'nullable|string|max:200',
-            'deliveryDate' => 'required|date',
+            'deliveryDate' => [
+    'required',
+    'date',
+    'after_or_equal:' . now()->addDays(3)->toDateString(),
+],
             'deliveryTime' => 'required|string',
             'payment' => 'required|string|in:cod,gcash', // ✅ add this
         ]);
@@ -107,7 +111,11 @@ public function payWithGcash(Request $request)
         $validated = $request->validate([
             'deliveryAddress' => 'required|string|max:255',
             'remarks' => 'nullable|string|max:200',
-            'deliveryDate' => 'required|date',
+            'deliveryDate' => [
+    'required',
+    'date',
+    'after_or_equal:' . now()->addDays(3)->toDateString(),
+],
             'deliveryTime' => 'required|string',
         ]);
 

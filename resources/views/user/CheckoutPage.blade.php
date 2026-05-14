@@ -440,25 +440,21 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const dateInput = document.querySelector('input[name="deliveryDate"]');
-    if (dateInput) {
-        const today = new Date();
-        
-        // Add 3 days (Reservation Rule)
-        // If today is March 25, min will be March 28
-        const minDate = new Date(today);
-        minDate.setDate(today.getDate() + 3);
-        
-        // Format to YYYY-MM-DD
-        const yyyy = minDate.getFullYear();
-        const mm = String(minDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(minDate.getDate()).padStart(2, '0');
-        
-        const minDateString = `${yyyy}-${mm}-${dd}`;
-        
-        // Apply restriction and hover message
-        dateInput.setAttribute('min', minDateString);
-        dateInput.setAttribute('title', 'Please choose a date at least 3 days in advance. Past dates are disabled.');
-    }
+        if (dateInput) {
+            const today = new Date();
+
+            // +2 means the earliest selectable = today + 3 (because setDate(+2) gives
+            // the day AFTER +2, and min is inclusive, so we use +3 for "3 days ahead")
+            const minDate = new Date(today);
+            minDate.setDate(today.getDate() + 3); // today=14, min=17 ✅
+
+            const yyyy = minDate.getFullYear();
+            const mm   = String(minDate.getMonth() + 1).padStart(2, '0');
+            const dd   = String(minDate.getDate()).padStart(2, '0');
+
+            dateInput.setAttribute('min', `${yyyy}-${mm}-${dd}`);
+            dateInput.setAttribute('title', 'Please choose a date at least 3 days in advance.');
+        }
         const btn = document.getElementById('trigger-login-modal');
 
         // ✅ safe trigger

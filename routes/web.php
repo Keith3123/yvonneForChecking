@@ -45,6 +45,10 @@ Route::post('/register', [RegisterPageController::class, 'store'])->name('regist
 Route::post('/check-username', [RegisterPageController::class, 'checkUsername']);
 Route::post('/check-email', [RegisterPageController::class, 'checkEmail']);
 
+// ── OTP (phone verification during registration) ──────────────────────────
+Route::post('/register/send-otp',   [RegisterPageController::class, 'sendOtp']);
+Route::post('/register/verify-otp', [RegisterPageController::class, 'verifyOtp']);
+
 //Catalog
 Route::get('/catalog', [CatalogPageController::class, 'index'])->name('catalog');
 

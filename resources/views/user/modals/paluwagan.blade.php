@@ -92,7 +92,6 @@
                 <p class="font-semibold mb-1">Important Reminders</p>
                 <ul class="list-disc list-inside text-gray-700 space-y-1">
                     <li>Payments are due on the 15th of each month.</li>
-                    <li>5-day extension for late payment, then penalty per day.</li>
                     <li>No cancellation or refund once payment starts.</li>
                     <li>All payments are non-refundable.</li>
                 </ul>
