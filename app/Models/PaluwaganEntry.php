@@ -17,6 +17,7 @@ class PaluwaganEntry extends Model
         'joinDate',
         'status',
         'startMonth',
+        'startDay',
         'startYear',
         'releasedAt',          // ✅ NEW: when product was actually released
         'releaseRequestedAt',  // ✅ NEW: when customer requested early release
@@ -88,4 +89,22 @@ class PaluwaganEntry extends Model
     {
         return (float) ($this->package->totalAmount ?? 0) - $this->totalPaid();
     }
+
+    public function releaseDate(): ?\Carbon\Carbon
+{
+    if (!$this->startMonth || !$this->startDay) return null;
+    return \Carbon\Carbon::create(
+        $this->startYear ?? now()->year,
+        $this->startMonth,
+        $this->startDay
+    );
+}
+
+/** Is the full balance paid? */
+public function isFullyPaid(): bool
+{
+    $totalPaid   = (float) $this->schedules->sum('amountPaid');
+    $totalAmount = (float) ($this->package->totalAmount ?? 0);
+    return $totalAmount > 0 && $totalPaid >= $totalAmount;
+}
 }

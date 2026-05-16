@@ -17,7 +17,7 @@ class AdminOrdersController extends AdminBaseController
             abort(403, 'Unauthorized');
         }
 
-        $orders = Order::with(['orderItems.product', 'customer', 'payment'])
+        $orders = Order::with(['orderItems.product', 'customer', 'payment', 'payments'])  
             ->orderBy('orderDate', 'desc')
             ->get();
 
@@ -28,7 +28,7 @@ class AdminOrdersController extends AdminBaseController
 
     public function viewOrder($orderID)
     {
-        $order = Order::with(['orderItems.product', 'customer', 'payment'])
+        $order = Order::with(['orderItems.product', 'customer', 'payments'])
             ->where('orderID', $orderID)
             ->first();
 
@@ -60,8 +60,9 @@ class AdminOrdersController extends AdminBaseController
     // ✅ Auto-manage COD payment status based on order status
     $newPayStatus = null;
     $payment = Payment::where('orderID', $orderID)
-        ->where('contextType', 'order')
-        ->first();
+    ->where('contextType', 'order')
+    ->where('method', 'COD')
+    ->first();
 
     if ($payment && $payment->method === 'COD') {
         if ($request->status === 'Done') {
@@ -86,56 +87,46 @@ class AdminOrdersController extends AdminBaseController
      * Creates a payment record if none exists yet (older COD orders).
      */
     public function updatePaymentStatus(Request $request, $orderID)
-    {
-        $order = Order::where('orderID', $orderID)->first();
+{
+    $order = Order::where('orderID', $orderID)->first();
+    if (!$order) {
+        return response()->json(['status' => 'error', 'message' => 'Order not found']);
+    }
 
-        if (!$order) {
-            return response()->json(['status' => 'error', 'message' => 'Order not found']);
-        }
+    // ✅ For downpayment orders, toggle the remaining_balance (COD) record
+    $payment = Payment::where('orderID', $orderID)
+        ->where('contextType', 'order')
+        ->where('method', 'COD') // targets remaining_balance or pure COD
+        ->first();
 
-        // Query directly — avoid withDefault() which returns a dummy model
-        $payment = Payment::where('orderID', $orderID)
-            ->where('contextType', 'order')
-            ->first();
-
-        // No payment record yet — create one (handles old COD orders that skipped payment insert)
-        if (!$payment) {
-            $payment = Payment::create([
-                'orderID'          => $order->orderID,
-                'paluwaganEntryID' => null,
-                'contextType'      => 'order',
-                'paymentType'      => 'fullpayment',
-                'amount'           => $order->totalAmount,
-                'paymentDate'      => now(),
-                'method'           => 'COD',
-                'status'           => 'pending',
-                'meta'             => json_encode([]),
-            ]);
-        }
-
-        if ($payment->method !== 'COD') {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Only COD payments can be manually updated'
-            ]);
-        }
-
-        if ($payment->status !== 'approved' && $order->status !== 'Done') {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Payment can only be approved after the order is marked as Done'
-            ]);
-        }
-
-        // Toggle
-        $newStatus       = $payment->status === 'approved' ? 'pending' : 'approved';
-        $payment->status = $newStatus;
-        $payment->save();
-
-        return response()->json([
-            'status'     => 'success',
-            'new_status' => $newStatus,
-            'message'    => "Payment marked as {$newStatus}"
+    if (!$payment) {
+        $payment = Payment::create([
+            'orderID'     => $order->orderID,
+            'contextType' => 'order',
+            'paymentType' => 'fullpayment',
+            'amount'      => $order->totalAmount,
+            'paymentDate' => now(),
+            'method'      => 'COD',
+            'status'      => 'pending',
+            'meta'        => json_encode([]),
         ]);
     }
+
+    if ($payment->status !== 'approved' && $order->status !== 'Done') {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Payment can only be approved after the order is marked as Done'
+        ]);
+    }
+
+    $newStatus       = $payment->status === 'approved' ? 'pending' : 'approved';
+    $payment->status = $newStatus;
+    $payment->save();
+
+    return response()->json([
+        'status'     => 'success',
+        'new_status' => $newStatus,
+        'message'    => "Payment marked as {$newStatus}"
+    ]);
+}
 }

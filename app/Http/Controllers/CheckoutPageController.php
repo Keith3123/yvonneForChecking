@@ -108,70 +108,70 @@ public function payWithGcash(Request $request)
         $cart = session('cart', []);
         if (empty($cart)) return response()->json(['error' => 'Cart empty'], 400);
 
-        $validated = $request->validate([
-            'deliveryAddress' => 'required|string|max:255',
-            'remarks' => 'nullable|string|max:200',
-            'deliveryDate' => [
-    'required',
-    'date',
-    'after_or_equal:' . now()->addDays(3)->toDateString(),
-],
-            'deliveryTime' => 'required|string',
-        ]);
-
-        // =========================
-        // PREPARE ITEMS
-        // =========================
-        $items = array_map(fn($item) => [
-    'productID'     => $item['productID'] ?? $item['id'],
-    'qty'           => $item['quantity'],
-    'price'         => $item['price'],
-    'size'          => $item['size'] ?? null,
-    'message'       => $item['message'] ?? null,
-    'customization' => $item['customization'] ?? null,
-    'includes'      => $item['includes'] ?? null,
-], $cart);
-
-        $dto = new CreateOrderDTO([
-            'customerID' => $customer['customerID'],
-            'deliveryAddress' => $validated['deliveryAddress'],
-            'remarks' => $validated['remarks'] ?? '',
-            'items' => $items,
-            'deliveryDate' => Carbon::parse($validated['deliveryDate'].' '.$validated['deliveryTime']),
-            'deliveryTime' => $validated['deliveryTime'],
-            'payment' => 'gcash',
-        ]);
-
-        // ✅ CREATE ORDER
-        $order = $this->orderService->createOrder($dto);
-
-        // =========================
-        // TOTAL
-        // =========================
         $total = collect($cart)->sum(fn($i) => $i['price'] * $i['quantity']);
 
-        if ($total <= 0) {
-            return response()->json(['error' => 'Invalid total'], 400);
-        }
+        $validated = $request->validate([
+            'deliveryAddress'   => 'required|string|max:255',
+            'remarks'           => 'nullable|string|max:200',
+            'deliveryDate'      => ['required','date','after_or_equal:'.now()->addDays(3)->toDateString()],
+            'deliveryTime'      => 'required|string',
+            'payment_mode'      => 'required|in:full,downpayment',
+            'downpayment_amount'=> 'nullable|numeric|min:1|max:'.$total,
+        ]);
 
-        // =========================
-        // CREATE CHECKOUT SESSION
-        // =========================
+        $paymentMode      = $validated['payment_mode'];
+        $downpaymentAmount = $paymentMode === 'downpayment'
+            ? (float)$validated['downpayment_amount']
+            : $total;
+
+        // Amount to charge via PayMongo = downpayment (or full)
+        $chargeAmount = $downpaymentAmount;
+
+        $items = array_map(fn($item) => [
+            'productID'     => $item['productID'] ?? $item['id'],
+            'qty'           => $item['quantity'],
+            'price'         => $item['price'],
+            'size'          => $item['size'] ?? null,
+            'message'       => $item['message'] ?? null,
+            'customization' => $item['customization'] ?? null,
+            'includes'      => $item['includes'] ?? null,
+        ], $cart);
+
+        $dto = new CreateOrderDTO([
+            'customerID'        => $customer['customerID'],
+            'deliveryAddress'   => $validated['deliveryAddress'],
+            'remarks'           => $validated['remarks'] ?? '',
+            'items'             => $items,
+            'deliveryDate'      => Carbon::parse($validated['deliveryDate'].' '.$validated['deliveryTime']),
+            'deliveryTime'      => $validated['deliveryTime'],
+            'payment'           => 'gcash',
+            'paymentMode'       => $paymentMode,
+            'downpaymentAmount' => $downpaymentAmount,
+        ]);
+
+        $order = $this->orderService->createOrder($dto);
+
+        // PayMongo — only charge the downpayment (or full)
+        $label = $paymentMode === 'downpayment'
+            ? "Downpayment for Order #{$order->orderID}"
+            : "Order #{$order->orderID}";
+
         $response = Http::withBasicAuth(config('services.paymongo.secret'), '')
             ->post('https://api.paymongo.com/v1/checkout_sessions', [
                 'data' => [
                     'attributes' => [
                         'line_items' => [[
-                            'name' => 'Order #' . $order->orderID,
-                            'amount' => intval($total * 100),
+                            'name'     => $label,
+                            'amount'   => intval($chargeAmount * 100),
                             'currency' => 'PHP',
                             'quantity' => 1,
                         ]],
                         'payment_method_types' => ['gcash'],
                         'success_url' => route('checkout.payment.success'),
-                        'cancel_url' => route('checkout.payment.failed'),
-                        'metadata' => [
-                            'order_id' => (string)$order->orderID
+                        'cancel_url'  => route('checkout.payment.failed'),
+                        'metadata'    => [
+                            'order_id'     => (string)$order->orderID,
+                            'payment_type' => $paymentMode === 'downpayment' ? 'downpayment' : 'fullpayment',
                         ]
                     ]
                 ]
@@ -182,31 +182,23 @@ public function payWithGcash(Request $request)
             return response()->json(['error' => 'PayMongo failed'], 500);
         }
 
-$data = $response->json()['data'];
+        $data       = $response->json()['data'];
+        $checkoutId = $data['id'];
+        $checkoutUrl = $data['attributes']['checkout_url'] ?? null;
 
-$checkoutId = $data['id'];
-$checkoutUrl = $data['attributes']['checkout_url'] ?? null;
+        // Save session ID on the GCash/downpayment payment record
+        Payment::where('orderID', $order->orderID)
+            ->where('method', 'GCASH')
+            ->update([
+                'checkout_session_id' => $checkoutId,
+                'checkout_url'        => $checkoutUrl,
+                'status'              => 'pending',
+            ]);
 
-// ✅ SAVE IMMEDIATELY
-Payment::where('orderID', $order->orderID)
-->update([
-    'checkout_session_id' => $checkoutId,
-    'checkout_url'        => $checkoutUrl,
-    'status'              => 'pending',
-    'meta'                => json_encode([
-        'stage' => 'checkout_created'
-    ])
-]);
-
-        return response()->json([
-            'checkout_url' => $data['attributes']['checkout_url']
-        ]);
+        return response()->json(['checkout_url' => $checkoutUrl]);
 
     } catch (\Throwable $e) {
-        Log::error('💥 GCASH ERROR', [
-            'message' => $e->getMessage(),
-        ]);
-
+        Log::error('GCASH ERROR', ['message' => $e->getMessage()]);
         return response()->json(['error' => 'Server error'], 500);
     }
 }

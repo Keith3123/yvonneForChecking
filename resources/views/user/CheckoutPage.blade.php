@@ -110,9 +110,38 @@
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
 
-                        <div id="gcashDetails" class="hidden bg-[#FFF8F8] border border-[#F9B3B0] p-4 rounded-lg text-sm">
-                            <p class="font-semibold mb-2">Gcash Payment</p>
-                        </div>
+                        <div id="gcashDetails" class="hidden bg-[#FFF8F8] border border-[#F9B3B0] p-4 rounded-lg text-sm space-y-3">
+    <p class="font-semibold mb-1">GCash Payment Option</p>
+
+    {{-- Full or Downpayment choice --}}
+    <div class="flex gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="payment_mode" value="full" checked
+                   onchange="toggleDownpaymentInput(this.value)">
+            <span>Full Payment</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="payment_mode" value="downpayment"
+                   onchange="toggleDownpaymentInput(this.value)">
+            <span>Downpayment</span>
+        </label>
+    </div>
+
+    {{-- Downpayment input — hidden by default --}}
+    <div id="downpaymentField" class="hidden">
+        <label class="block text-sm font-medium mb-1">
+            Downpayment Amount
+            <span class="text-gray-400 font-normal">(max: ₱<span id="maxDownpayment">0</span>)</span>
+        </label>
+        <input type="number" id="downpaymentInput" name="downpayment_amount"
+               min="1" step="0.01"
+               placeholder="e.g. 50"
+               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none">
+        <p class="text-xs text-gray-500 mt-1">
+            Remaining balance will be collected on delivery.
+        </p>
+    </div>
+</div>
 
                         <p id="codNote"
                             class="mt-2 text-sm text-gray-600 border border-gray-300 rounded p-3 flex items-center gap-2 hidden">
@@ -139,13 +168,26 @@
                     </div>
 
                     <div class="text-sm mt-3 space-y-2">
-                        <div class="flex justify-between"><span>VATable Sales</span><span>₱{{ number_format($subtotal, 2) }}</span></div>
-                        <div class="flex justify-between text-gray-600"><span>VAT</span><span>₱{{ number_format($vatAmount, 2) }}</span></div>
-                        <div class="flex justify-between text-lg font-bold border-t pt-3 mt-3">
-                            <span>Total Amount</span>
-                            <span id="summaryTotal">₱{{ number_format($total, 2) }}</span>
+                    <div class="flex justify-between"><span>VATable Sales</span><span>₱{{ number_format($subtotal, 2) }}</span></div>
+                    <div class="flex justify-between text-gray-600"><span>VAT</span><span>₱{{ number_format($vatAmount, 2) }}</span></div>
+
+                    {{-- Payment breakdown (shown when downpayment mode is active) --}}
+                    <div id="paymentBreakdown" class="hidden border-t pt-3 mt-3 space-y-1 text-gray-600">
+                        <div class="flex justify-between">
+                            <span>GCash Downpayment</span>
+                            <span id="summaryDownpayment">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Remaining Balance (On Delivery)</span>
+                            <span id="summaryRemaining">₱0.00</span>
                         </div>
                     </div>
+
+                    <div class="flex justify-between text-lg font-bold border-t pt-3 mt-3">
+                        <span>Total Amount</span>
+                        <span id="summaryTotal">₱{{ number_format($total, 2) }}</span>
+                    </div>
+                </div>
 
                     @if(!$user)
                     <button type="button" id="trigger-login-modal"
@@ -405,6 +447,27 @@
         
     }
 
+    function updateSummary() {
+    const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value;
+    const paymentMode   = document.querySelector('input[name="payment_mode"]:checked')?.value;
+    const dpInput       = document.getElementById('downpaymentInput');
+    const breakdown     = document.getElementById('paymentBreakdown');
+    const dpDisplay     = document.getElementById('summaryDownpayment');
+    const rbDisplay     = document.getElementById('summaryRemaining');
+
+    if (paymentMethod === 'gcash' && paymentMode === 'downpayment') {
+        const dp = parseFloat(dpInput?.value) || 0;
+        const rb = rawTotal - dp;
+
+        breakdown.classList.remove('hidden');
+        dpDisplay.textContent = '₱' + dp.toFixed(2);
+        rbDisplay.textContent = '₱' + (rb >= 0 ? rb.toFixed(2) : '0.00');
+    } else {
+        breakdown.classList.add('hidden');
+    }
+}
+
+
     // ✅ UPDATED AUTH MODAL
     function openAuthModal() {
         document.getElementById('authModal').classList.remove('hidden');
@@ -522,6 +585,62 @@
         setTimeout(() => toast.remove(), 500);
     }, 4000);
 }
+
+// Show/hide downpayment input
+function toggleDownpaymentInput(mode) {
+    const field = document.getElementById('downpaymentField');
+    field.classList.toggle('hidden', mode !== 'downpayment');
+}
+
+// Sync max downpayment with order total
+document.addEventListener('DOMContentLoaded', () => {
+    const rawTotal = {{ $total }};
+    document.getElementById('maxDownpayment').textContent = rawTotal.toFixed(2);
+
+    const downInput = document.getElementById('downpaymentInput');
+    if (downInput) downInput.max = rawTotal;
+
+    // ── updateSummary defined here so rawTotal is in scope ──
+    function updateSummary() {
+        const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value;
+        const paymentMode   = document.querySelector('input[name="payment_mode"]:checked')?.value;
+        const breakdown     = document.getElementById('paymentBreakdown');
+        const dpDisplay     = document.getElementById('summaryDownpayment');
+        const rbDisplay     = document.getElementById('summaryRemaining');
+
+        if (paymentMethod === 'gcash' && paymentMode === 'downpayment') {
+            const dp = parseFloat(downInput?.value) || 0;
+            const rb = rawTotal - dp;
+            breakdown.classList.remove('hidden');
+            dpDisplay.textContent = '₱' + dp.toFixed(2);
+            rbDisplay.textContent = '₱' + (rb >= 0 ? rb.toFixed(2) : '0.00');
+        } else {
+            breakdown.classList.add('hidden');
+        }
+    }
+
+    // Show/hide gcashDetails + codNote based on payment method
+    document.querySelectorAll('input[name="payment"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            document.getElementById('gcashDetails').classList.toggle('hidden', radio.value !== 'gcash');
+            document.getElementById('codNote').classList.toggle('hidden', radio.value !== 'cod');
+            const el = document.getElementById('orderTotal');
+            if (el) el.textContent = rawTotal.toFixed(2);
+            updateSummary();
+        });
+    });
+
+    // payment_mode change (full vs downpayment)
+    document.addEventListener('change', e => {
+        if (e.target.name === 'payment_mode') {
+            toggleDownpaymentInput(e.target.value);
+            updateSummary();
+        }
+    });
+
+    // live update as user types downpayment amount
+    downInput?.addEventListener('input', updateSummary);
+});
 </script>
 <script>
     window.checkoutRoutes = {

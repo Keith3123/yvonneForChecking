@@ -137,57 +137,78 @@
                     </div>
 
                     {{-- Delivery & Payment Info --}}
-                    <div class="grid md:grid-cols-2 gap-6 border-t border-gray-200 pt-6 mt-6">
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-2">Delivery Information</h4>
-                            <p class="text-sm text-gray-600 mb-1">📅 {{ $order->deliveryDate ? $order->deliveryDate->format('F d, Y \a\t h:i A') : 'Not Set' }}</p>
-                            <p class="text-sm text-gray-600">📍 {{ $order->deliveryAddress }}</p>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-2">Payment Information</h4>
-                            <div class="text-sm text-gray-700 space-y-1">
-                                 @php
-                                $vatRate = 0.12;
-                                // The sum of items is the inclusive Total
-                                $totalAmount = $order->orderItems->sum('subtotal'); 
-                                
-                                // Extract VATable Sales (Subtotal)
-                                $subtotal = round($totalAmount / (1 + $vatRate), 2);
-                                
-                                // Extract VAT Amount
-                                $vatAmount = round($totalAmount - $subtotal, 2);
-                            @endphp
+<div class="grid md:grid-cols-2 gap-6 border-t border-gray-200 pt-6 mt-6">
+    <div>
+        <h4 class="font-semibold text-gray-700 mb-2">Delivery Information</h4>
+        <p class="text-sm text-gray-600 mb-1">📅 {{ $order->deliveryDate ? $order->deliveryDate->format('F d, Y \a\t h:i A') : 'Not Set' }}</p>
+        <p class="text-sm text-gray-600">📍 {{ $order->deliveryAddress }}</p>
+    </div>
 
-                            <p class="text-gray-500">VATable Sales 
-                                <span class="float-right font-semibold text-gray-800">₱{{ number_format($subtotal, 2) }}</span>
-                            </p>
-                            <p class="text-gray-500">VAT 
-                                <span class="float-right font-semibold text-gray-800">₱{{ number_format($vatAmount, 2) }}</span>
-                            </p>
-                            <div class="border-t border-dashed pt-2 mt-2">
-                                <p class="text-base font-bold text-gray-900">Total Amount Due 
-                                    <span class="float-right">₱{{ number_format($totalAmount, 2) }}</span>
-                                </p>
+    {{-- Payment Information --}}
+    <div>
+        <h4 class="font-semibold text-gray-700 mb-2">Payment Information</h4>
+        <div class="text-sm text-gray-700 space-y-1">
+            @php
+                $vatRate        = 0.12;
+                $totalAmount    = $order->orderItems->sum('subtotal');
+                $subtotal       = round($totalAmount / (1 + $vatRate), 2);
+                $vatAmount      = round($totalAmount - $subtotal, 2);
+                $paymentRecords = $order->payments->count()
+                    ? $order->payments
+                    : collect([$order->payment])->filter();
+            @endphp
 
-                            </div>
-                        </div>
-                    </div>
-                     </div>
+            @foreach($paymentRecords as $pay)
+                @php
+                    $typeLabel = match($pay->paymentType ?? 'fullpayment') {
+                        'downpayment'       => 'GCash Downpayment',
+                        'remaining_balance' => 'Remaining Balance (On Delivery)',
+                        default             => strtoupper($pay->method ?? 'COD') . ' Full Payment',
+                    };
+                    $badgeClass = $pay->status === 'approved'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700';
+                @endphp
+                <div class="flex justify-between items-center py-1 border-b border-dashed last:border-0">
+                    <span class="text-gray-500">{{ $typeLabel }}</span>
+                    <span class="flex items-center gap-2">
+                        <span class="font-semibold text-gray-800">₱{{ number_format($pay->amount, 2) }}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full {{ $badgeClass }}">
+                            {{ ucfirst($pay->status) }}
+                        </span>
+                    </span>
+                </div>
+            @endforeach
+
+            <div class="pt-2 mt-1 space-y-1">
+                <p class="text-gray-500">VATable Sales
+                    <span class="float-right font-semibold text-gray-800">₱{{ number_format($subtotal, 2) }}</span>
+                </p>
+                <p class="text-gray-500">VAT
+                    <span class="float-right font-semibold text-gray-800">₱{{ number_format($vatAmount, 2) }}</span>
+                </p>
+                <div class="border-t border-dashed pt-2 mt-2">
+                    <p class="text-base font-bold text-gray-900">Total Amount Due
+                        <span class="float-right">₱{{ number_format($totalAmount, 2) }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
                     {{-- Action Buttons --}}
                     <div class="flex flex-wrap gap-3 mt-6">
-                        {{-- View Receipt --}}
                         <button onclick="openReceiptModal('{{ $order->orderID }}')" 
                             class="bg-gray-900 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-gray-800 shadow transition">
                             <i class="far fa-file-alt mr-2"></i> View Receipt
                         </button>
 
                         @if($order->status === 'Pending')
-                            <button 
-    onclick="openCancelModal('{{ $order->orderID }}')" 
-    class="border border-red-300 text-red-600 text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-red-50 transition">
-    <i class="fas fa-times mr-2"></i> Cancel Order
-</button>
+                            <button onclick="openCancelModal('{{ $order->orderID }}')" 
+                                class="border border-red-300 text-red-600 text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-red-50 transition">
+                                <i class="fas fa-times mr-2"></i> Cancel Order
+                            </button>
                         @endif
 
                         @if($order->status === 'Done')
@@ -198,103 +219,120 @@
                         @endif
                     </div>
 
-                </div>
+                </div> {{-- END order card --}}
 
                 {{-- Receipt Modal --}}
-               <div id="receiptModal-{{ $order->orderID }}" class="fixed inset-0 bg-black/50 hidden z-[60] flex items-center justify-center p-4">
+                <div id="receiptModal-{{ $order->orderID }}" class="fixed inset-0 bg-black/50 hidden z-[60] flex items-center justify-center p-4">
                     <div class="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
 
                         {{-- Close Button --}}
-                        <div class="flex justify-end">
-                            <button onclick="closeReceiptModal('{{ $order->orderID }}')" class="text-xl font-bold">&times;</button>
+                        <div class="flex justify-end mb-2">
+                            <button onclick="closeReceiptModal('{{ $order->orderID }}')" class="text-xl font-bold text-gray-500 hover:text-gray-800">&times;</button>
                         </div>
 
                         {{-- Receipt Content --}}
-                        <div class="text-center mb-5">
-                            <div class="text-xl font-bold">Yvonne's Cakes & Pastries</div>
-                            <div class="text-sm text-gray-500">Bacaca Road</div>
-                            <div class="text-sm text-gray-500">Davao City</div>
-                            <div class="text-sm text-gray-500">Phone: 0912-345-6789</div>
-                            <div class="border-t mt-4 pt-4">
-                                <div class="text-center border-b border-dashed pb-4 mb-4">
-                                    <h3 class="text-xl font-bold text-gray-800">OFFICIAL RECEIPT</h3>
-                                    <p class="text-xs text-gray-500 uppercase tracking-widest">Order #{{ $order->orderID }}</p>
-                                    <p class="text-xs text-gray-400">{{ $order->orderDate->format('F d, Y \a\t h:i A') }}</p>
-                                </div>
-                            </div>
+                        <div class="text-center pb-4 border-b border-gray-100">
+                            <p class="text-base font-semibold text-gray-800">Yvonne's Cakes & Pastries</p>
+                            <p class="text-xs text-gray-500">Bacaca Road, Davao City · 0912-345-6789</p>
                         </div>
 
-                        <div class="mt-4 mb-4">
-                            <div class="flex justify-between text-sm">
-                                <span>Payment</span>
-                                <span class="font-semibold text-right">{{ strtoupper($order->payment->method ?? 'COD') }}</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span>Delivery</span>
-                                <span class="font-semibold text-right">{{ $order->deliveryDate ? $order->deliveryDate->format('Y-m-d h:i A') : 'Not Set' }}</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span>Address</span>
-                                <span class="font-semibold text-right text-xs">{{ $order->deliveryAddress }}</span>
-                            </div>
+                        <div class="text-center py-4 border-b border-dashed border-gray-200">
+                            <p class="text-xs font-semibold uppercase tracking-widest text-gray-400">Official Receipt</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Order #{{ $order->orderID }}</p>
+                            <p class="text-xs text-gray-400">{{ $order->orderDate->format('F d, Y \a\t h:i A') }}</p>
                         </div>
 
-                        <hr class="my-3">
+                        {{-- Delivery Info --}}
+                        <div class="py-3 border-b border-gray-100 space-y-1">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Payment</span>
+                                <span class="font-semibold">{{ strtoupper($order->payment->method ?? 'COD') }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Delivery</span>
+                                <span class="font-semibold">{{ $order->deliveryDate ? $order->deliveryDate->format('Y-m-d h:i A') : 'Not Set' }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Address</span>
+                                <span class="font-semibold text-xs text-right max-w-[60%]">{{ $order->deliveryAddress }}</span>
+                            </div>
+                        </div>
 
                         {{-- Items --}}
-                        <div class="text-xs">
-                            <div class="flex font-semibold text-xs">
-                                <span class="w-1/2">Item</span>
-                                <span class="w-1/4 justify">Qty</span>
-                                <span class="w-1/4 text-right">Total</span>
+                        <div class="py-3 border-b border-dashed border-gray-200">
+                            <div class="flex text-xs font-semibold text-gray-400 mb-2">
+                                <span class="flex-1">Item</span>
+                                <span class="w-10 text-center">Qty</span>
+                                <span class="w-20 text-right">Total</span>
                             </div>
-                            <div class="space-y-3 mb-6">
-                                @foreach($order->orderItems as $item)
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">{{ $item->qty }}x {{ $item->product->name ?? 'Product' }}</span>
-                                        <span class="font-medium text-gray-800">₱{{ number_format($item->subtotal, 2) }}</span>
-                                    </div>
-                                @endforeach
+                            @foreach($order->orderItems as $item)
+                            <div class="flex text-sm mb-1">
+                                <span class="flex-1 text-gray-600">{{ $item->product->name ?? 'Product' }}</span>
+                                <span class="w-10 text-center">{{ $item->qty }}</span>
+                                <span class="w-20 text-right font-medium text-gray-800">₱{{ number_format($item->subtotal, 2) }}</span>
                             </div>
+                            @endforeach
                         </div>
 
-                        <hr class="my-3">
+                        {{-- Payment Breakdown --}}
+                        @php
+                            $vatRate      = 0.12;
+                            $totalAmount  = $order->orderItems->sum('subtotal');
+                            $vatableSales = round($totalAmount / (1 + $vatRate), 2);
+                            $vatAmount    = round($totalAmount - $vatableSales, 2);
+                            $paymentRecords = $order->payments->count()
+                                ? $order->payments
+                                : collect([$order->payment])->filter();
+                        @endphp
 
-                        {{-- Totals --}}
-                         <div class="border-t border-dashed pt-4 space-y-2">
+                        <div class="py-3 border-b border-dashed border-gray-200">
+                            <p class="text-xs font-semibold text-gray-400 mb-2">Payment breakdown</p>
+                            @foreach($paymentRecords as $pay)
                             @php
-                                $vatRate = 0.12;
-                                $totalAmount = $order->orderItems->sum('subtotal');
-                                $vatableSales = round($totalAmount / (1 + $vatRate), 2);
-                                $vatAmount = round($totalAmount - $vatableSales, 2);
+                                $typeLabel = match($pay->paymentType ?? 'fullpayment') {
+                                    'downpayment'       => 'GCash Downpayment',
+                                    'remaining_balance' => 'Remaining Balance (On Delivery)',
+                                    default             => strtoupper($pay->method ?? 'COD') . ' Full Payment',
+                                };
+                                $badgeClass = $pay->status === 'approved'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-yellow-100 text-yellow-700';
                             @endphp
+                            <div class="flex justify-between items-center py-1 border-b border-dashed last:border-0 text-sm">
+                                <span class="text-gray-500">{{ $typeLabel }}</span>
+                                <span class="flex items-center gap-2">
+                                    <span class="font-semibold text-gray-800">₱{{ number_format($pay->amount, 2) }}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded-full {{ $badgeClass }}">{{ ucfirst($pay->status) }}</span>
+                                </span>
+                            </div>
+                            @endforeach
+                        </div>
 
+                        {{-- VAT & Total --}}
+                        <div class="py-3 space-y-1">
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-500">VATable Sales</span>
                                 <span class="text-gray-800">₱{{ number_format($vatableSales, 2) }}</span>
                             </div>
                             <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">VAT</span>
+                                <span class="text-gray-500">VAT (12%)</span>
                                 <span class="text-gray-800">₱{{ number_format($vatAmount, 2) }}</span>
                             </div>
-                            <div class="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
-                                <span>TOTAL</span>
+                            <div class="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-200 mt-1">
+                                <span>Total</span>
                                 <span>₱{{ number_format($totalAmount, 2) }}</span>
                             </div>
                         </div>
 
-                                    {{-- Footer Info --}}
-                        <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-                            <p class="mt-1">Thank you for ordering!</p>
-                        </div>
-                                {{-- EXPORT --}}
-                        <div class="flex justify-center mt-4">
+                        {{-- Footer & Export --}}
+                        <div class="pt-4 border-t border-gray-100 text-center">
+                            <p class="text-xs text-gray-400 mb-3">Thank you for ordering!</p>
                             <a href="{{ route('orders.receipt.pdf', $order->orderID) }}"
-                            class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm font-semibold transition flex items-center">
-                                <i class="fas fa-file-pdf mr-2"></i>
-                                Export PDF
+                               class="inline-flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 text-sm font-semibold transition">
+                                <i class="fas fa-file-pdf"></i> Export PDF
                             </a>
                         </div>
+
                     </div>
                 </div>
 

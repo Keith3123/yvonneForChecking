@@ -115,6 +115,8 @@ Route::post('/paluwagan/cancel/{id}', [PaluwaganPageController::class, 'cancel']
 Route::post('/paluwagan/entry/{entryID}/request-release',       [PaluwaganPageController::class, 'requestRelease']);
 Route::post('/paluwagan/entry/{entryID}/cancel-release-request',[PaluwaganPageController::class, 'cancelReleaseRequest']);
 
+Route::get('/user/paluwagan/available-days/{packageID}/{month}', [PaluwaganPageController::class, 'availableDays']);
+
 // PALUWAGAN GCASH
 Route::post('/paluwagan/pay-gcash', [PaluwaganPageController::class, 'payWithGcash'])->name('paluwagan.pay.gcash');
 

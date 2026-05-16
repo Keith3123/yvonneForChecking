@@ -20,138 +20,178 @@ class PaluwaganPageController extends Controller
     }
 
     public function index()
-    {
-        $customerID = session('logged_in_user.customerID');
+{
+    $customerID = session('logged_in_user.customerID');
 
-        if (!$customerID) {
-            return redirect()->route('login')
-                ->with('error', 'You must be logged in to access Paluwagan.');
-        }
-
-        $entries = PaluwaganEntry::with(['package', 'schedules.payment'])
-            ->where('customerID', $customerID)
-            ->get();
-
-        return view('user.PaluwaganPage', compact('entries'));
+    if (!$customerID) {
+        return redirect()->route('login')
+            ->with('error', 'You must be logged in to access Paluwagan.');
     }
 
-    public function join(Request $request)
+    $entries = PaluwaganEntry::with(['package', 'schedules.payment'])
+        ->where('customerID', $customerID)
+        ->get();
+
+    // ── Filter out stale waiting entries where customer is already
+    // active for the same package+month+day slot ─────────────────
+    $activeSlots = $entries
+        ->where('status', 'active')
+        ->map(fn($e) => $e->packageID . '-' . $e->startMonth . '-' . $e->startDay)
+        ->values()
+        ->toArray();
+
+    $entries = $entries->filter(function($e) use ($activeSlots) {
+        if ($e->status !== 'waiting') return true;
+        $slot = $e->packageID . '-' . $e->startMonth . '-' . $e->startDay;
+        return !in_array($slot, $activeSlots); // hide if already active on same slot
+    })->values();
+
+    return view('user.PaluwaganPage', compact('entries'));
+}
+
+public function join(Request $request)
 {
     $request->validate([
         'packageID'  => 'required|integer',
-        'startMonth' => 'required|integer|min:1|max:12'
+        'startMonth' => 'required|integer|min:1|max:12',
+        'startDay'   => 'required|integer|min:1|max:31',
     ]);
 
     $customerID = session('logged_in_user.customerID');
-    if (!$customerID) {
-        return response()->json(['error' => 'Login required.'], 401);
-    }
+    if (!$customerID) return response()->json(['error' => 'Login required.'], 401);
 
-    // Prevent duplicate — already active or waiting for same package+month
+    // ── Block exact duplicate ────────────────────────────────────
     $existing = PaluwaganEntry::where('customerID', $customerID)
-        ->where('packageID', $request->packageID)
-        ->whereIn('status', ['active', 'waiting'])
+        ->where('packageID',  $request->packageID)
         ->where('startMonth', $request->startMonth)
+        ->where('startDay',   $request->startDay)
+        ->whereIn('status', ['active', 'waiting'])
         ->first();
 
     if ($existing) {
         return response()->json([
             'error' => $existing->status === 'waiting'
-                ? 'You are already in the waiting list for this month.'
-                : 'You already have an active entry for this month.'
+                ? 'You are already in the waiting list for this slot.'
+                : 'You already have an active entry for this slot.',
         ], 409);
     }
 
-    // Check if month is taken by another active entry
-    $isTaken = PaluwaganEntry::where('packageID', $request->packageID)
+    // ── NEW: Day-level check — is this exact day already taken? ──
+    $dayTaken = PaluwaganEntry::where('packageID',  $request->packageID)
         ->where('startMonth', $request->startMonth)
+        ->where('startDay',   $request->startDay)
         ->where('status', 'active')
         ->exists();
 
-    if ($isTaken) {
-        // Add to waitlist — no schedules yet
+    if ($dayTaken) {
         PaluwaganEntry::create([
-            'customerID'  => $customerID,
-            'packageID'   => $request->packageID,
-            'startMonth'  => $request->startMonth,
-            'startYear'   => now()->year,
-            'status'      => 'waiting',
-            'joinDate'    => now(), 
+            'customerID' => $customerID,
+            'packageID'  => $request->packageID,
+            'startMonth' => $request->startMonth,
+            'startDay'   => $request->startDay,
+            'startYear'  => now()->year,
+            'status'     => 'waiting',
+            'joinDate'   => now(),
         ]);
+
+        $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
 
         return response()->json([
             'success' => true,
             'waiting' => true,
-            'message' => 'This month is taken. You have been added to the waiting list!'
+            'message' => "{$monthName} {$request->startDay} is already taken. You've been added to the waiting list for that exact slot!",
         ]);
     }
 
-    // Month is free — join normally
+    // ── Month cap check (20 active per month) ───────────────────
+    $activeCount = PaluwaganEntry::where('packageID',  $request->packageID)
+        ->where('startMonth', $request->startMonth)
+        ->where('status', 'active')
+        ->count();
+
+    if ($activeCount >= 20) {
+        PaluwaganEntry::create([
+            'customerID' => $customerID,
+            'packageID'  => $request->packageID,
+            'startMonth' => $request->startMonth,
+            'startDay'   => $request->startDay,
+            'startYear'  => now()->year,
+            'status'     => 'waiting',
+            'joinDate'   => now(),
+        ]);
+
+        $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
+
+        return response()->json([
+            'success' => true,
+            'waiting' => true,
+            'message' => "{$monthName} is full (20/20). You've been added to the waiting list for {$monthName} {$request->startDay}!",
+        ]);
+    }
+
+    // ── Join normally ────────────────────────────────────────────
     try {
         $this->paluwaganService->joinPaluwagan(
             $customerID,
             $request->packageID,
-            $request->startMonth
+            $request->startMonth,
+            $request->startDay
         );
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 409);
     }
 
+    $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
+
     return response()->json([
         'success' => true,
         'waiting' => false,
-        'message' => 'Successfully joined!'
+        'message' => "Successfully joined! Your delivery date: {$monthName} {$request->startDay}.",
     ]);
 }
 
-    public function viewSchedule($entryID)
+    // ── viewSchedule — show release date ─────────────────────────
+public function viewSchedule($entryID)
 {
-    $entry = PaluwaganEntry::with(['schedules.payment', 'package'])
-        ->find($entryID);
+    $entry = PaluwaganEntry::with(['schedules.payment', 'package'])->find($entryID);
 
     if (!$entry) {
-        return response()->json([
-            'status' => 'NOT_FOUND',
-            'message' => 'Entry not found'
-        ], 404);
+        return response()->json(['status' => 'NOT_FOUND', 'message' => 'Entry not found'], 404);
     }
 
     $schedules = $entry->schedules ?? collect();
+    $releaseDate = $entry->startDay
+        ? \Carbon\Carbon::create($entry->startYear ?? now()->year, $entry->startMonth, $entry->startDay)
+              ->format('F j, Y')
+        : \Carbon\Carbon::create()->month($entry->startMonth)->year($entry->startYear ?? now()->year)
+              ->format('F Y');
 
-    // If no schedules, return safe structure (NO JS crash)
     if ($schedules->isEmpty()) {
+        // Inside viewSchedule(), replace the entry array in the return:
         return response()->json([
             'entry' => [
-                'entryID' => $entry->paluwaganEntryID,
-                'name' => $entry->package->packageName ?? 'N/A',
-                'startDate' => \Carbon\Carbon::create()
-                ->month($entry->startMonth)
-                ->year($entry->startYear)
-                ->startOfMonth()
-                ->setDay(15)
-                ->format('F Y'),
-                'totalPackage' => (float) ($entry->package->totalAmount ?? 0),
-                'monthlyPayment' => (float) ($entry->package->monthlyPayment ?? 0),
+                'entryID'        => $entry->paluwaganEntryID,
+                'name'           => $entry->package->packageName ?? 'N/A',
+                'releaseDate'    => $releaseDate,
+                'totalPackage'   => (float)($entry->package->totalAmount ?? 0),
+                // ← Use actual schedule amount, not package default
+                'monthlyPayment' => $mapped->count() > 0
+                                    ? (float) $mapped->first()['amountDue']
+                                    : (float)($entry->package->monthlyPayment ?? 0),
             ],
-            'schedules' => [],
-            'status' => 'NO_SCHEDULES',
-            'message' => 'No schedules found for this entry'
+            'schedules' => $mapped,
+            'status'    => 'OK',
         ]);
     }
 
-$mapped = $schedules
-    ->sortBy('dueDate')
-    ->values()
-    ->map(function ($sched) {
-        // ✅ Check by actual amount, not just status
+    $mapped = $schedules->sortBy('dueDate')->values()->map(function ($sched) {
         $isPaid = (float)$sched->amountPaid >= (float)$sched->amountDue && (float)$sched->amountDue > 0;
-
         return [
             'scheduleID' => $sched->scheduleID,
             'monthName'  => \Carbon\Carbon::parse($sched->dueDate)->format('F'),
             'dueDate'    => $sched->dueDate,
-            'amountDue'  => (float) $sched->amountDue,
-            'amountPaid' => (float) $sched->amountPaid,
+            'amountDue'  => (float)$sched->amountDue,
+            'amountPaid' => (float)$sched->amountPaid,
             'isPaid'     => $isPaid,
             'status'     => $isPaid ? 'paid' : $sched->status,
         ];
@@ -159,85 +199,125 @@ $mapped = $schedules
 
     return response()->json([
         'entry' => [
-            'entryID' => $entry->paluwaganEntryID,
-            'name' => $entry->package->packageName ?? 'N/A',
-            'startDate' => \Carbon\Carbon::create()
-                ->month($entry->startMonth)
-                ->year($entry->startYear)
-                ->startOfMonth()
-                ->setDay(15)
-                ->format('F Y'),
-            'totalPackage' => (float) ($entry->package->totalAmount ?? 0),
-            'monthlyPayment' => (float) ($entry->package->monthlyPayment ?? 0),
+            'entryID'        => $entry->paluwaganEntryID,
+            'name'           => $entry->package->packageName ?? 'N/A',
+            'releaseDate'    => $releaseDate,
+            'totalPackage'   => (float)($entry->package->totalAmount ?? 0),
+            'monthlyPayment' => (float)($entry->package->monthlyPayment ?? 0),
         ],
         'schedules' => $mapped,
-        'status' => 'OK'
+        'status'    => 'OK',
     ]);
 }
 
-    public function availableMonths($packageID)
+// ──────────────────────────────────────────────────────────────
+//  availableMonths()  — returns activeCount / slotsLeft per month
+// ──────────────────────────────────────────────────────────────
+public function availableMonths($packageID)
 {
     try {
         $currentCustomerID = session('logged_in_user.customerID');
-
+ 
         $year = \App\Models\PaluwaganMonthAvailability::where('packageID', $packageID)
             ->max('year') ?? now()->year;
-
-        $activeMonths = \App\Models\PaluwaganMonthAvailability::where('packageID', $packageID)
-            ->where('year', $year)
+ 
+        $activeMonthNums = \App\Models\PaluwaganMonthAvailability::where('packageID', $packageID)
+            ->where('year',   $year)
             ->where('status', 'active')
             ->pluck('month');
-
-        // Who's occupying each month (active entries)
-        $takenMonths = PaluwaganEntry::with('customer')
-            ->where('packageID', $packageID)
-            ->where('status', 'active')
-            ->whereIn('startMonth', $activeMonths)
-            ->get()
-            ->keyBy('startMonth');
-
-        // Who's waiting per month
-        $waitingPerMonth = PaluwaganEntry::with('customer')
-            ->where('packageID', $packageID)
-            ->where('status', 'waiting')
-            ->whereIn('startMonth', $activeMonths)
-            ->get()
-            ->groupBy('startMonth');
-
-        $result = $activeMonths->map(function ($month) use (
-            $takenMonths, $waitingPerMonth, $currentCustomerID
-        ) {
-            $takenEntry   = $takenMonths->get($month);
-            $waitingList  = $waitingPerMonth->get($month, collect());
-
-            $isTaken      = !is_null($takenEntry);
-            $currentWaiting = $waitingList->firstWhere('customerID', $currentCustomerID);
-
+ 
+        // Load all entries for these months in one query
+        $entries = PaluwaganEntry::where('packageID', $packageID)
+            ->whereIn('startMonth', $activeMonthNums)
+            ->whereIn('status', ['active', 'waiting'])
+            ->get();
+ 
+        $result = $activeMonthNums->map(function ($month) use ($entries, $currentCustomerID) {
+            $monthEntries = $entries->where('startMonth', $month);
+ 
+            $activeCount  = $monthEntries->where('status', 'active')->count();
+            $waitingCount = $monthEntries->where('status', 'waiting')->count();
+            $isFull       = $activeCount >= 20;
+ 
+            // Check if current user already has an entry for this month
+            $userEntry = $monthEntries->firstWhere('customerID', $currentCustomerID);
+ 
             return [
-                'month'         => $month,
-                'label'         => \Carbon\Carbon::create()->month($month)->format('F'),
-                'status'        => $isTaken ? 'taken' : 'available',
-                'takenBy'       => $isTaken
-                                    ? ($takenEntry->customer->firstName ?? 'Someone')
-                                    : null,
-                'waitingCount'  => $waitingList->count(),
-                'waitingNames'  => $waitingList->map(fn($e) =>
-                                    $e->customer->firstName ?? 'Customer'
-                                   )->values(),
-                'currentUserWaitPosition' => $currentWaiting
-                                    ? ($waitingList->search(fn($e) =>
-                                        $e->customerID === $currentCustomerID
-                                      ) + 1)
-                                    : null,
+                'month'        => $month,
+                'label'        => \Carbon\Carbon::create()->month($month)->format('F'),
+                'activeCount'  => $activeCount,          // how many joined
+                'waitingCount' => $waitingCount,          // how many on waitlist
+                'slotsLeft'    => max(0, 20 - $activeCount),
+                'isFull'       => $isFull,
+                'userDay'      => $userEntry ? (int) $userEntry->startDay   : null,
+                'userStatus'   => $userEntry ? $userEntry->status           : null,
             ];
         })->values();
-
+ 
         return response()->json($result);
+ 
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+ 
+// ──────────────────────────────────────────────────────────────
+//  availableDays()  — just returns days 1..N, no per-day slot cap
+// ──────────────────────────────────────────────────────────────
+public function availableDays($packageID, $month)
+{
+    try {
+        $currentCustomerID = session('logged_in_user.customerID');
+        $year              = now()->year;
+        $daysInMonth       = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
+
+        // ── Load ALL entries for this package+month ─────────────
+        $entries = PaluwaganEntry::with('customer')
+            ->where('packageID',  $packageID)
+            ->where('startMonth', $month)
+            ->whereIn('status', ['active', 'waiting'])
+            ->get();
+
+        $byDay = $entries->groupBy('startDay');
+
+        $days = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dayEntries    = $byDay->get($d, collect());
+            $activeForDay  = $dayEntries->where('status', 'active');
+            $waitingForDay = $dayEntries->where('status', 'waiting')->values();
+
+            // Is this day taken by another active customer?
+            $isTaken = $activeForDay->count() > 0;
+
+            // Does the current user already have an entry for this day?
+            $userEntry = $dayEntries->firstWhere('customerID', $currentCustomerID);
+            $currentUserStatus = $userEntry ? $userEntry->status : null;
+
+            $userWaitPos = null;
+            if ($userEntry && $userEntry->status === 'waiting') {
+                $userWaitPos = $waitingForDay->search(
+                    fn($e) => $e->customerID === $currentCustomerID
+                ) + 1;
+            }
+
+            $days[] = [
+                'day'                => $d,
+                'isTaken'            => $isTaken,
+                'waitingCount'       => $waitingForDay->count(),
+                'currentUserStatus'  => $currentUserStatus,
+                'currentUserWaitPos' => $userWaitPos,
+            ];
+        }
+
+        return response()->json($days);
 
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }
 }
+
+
+
 
 // ==============================
     // GCASH PAYMENT FOR PALUWAGAN
@@ -365,47 +445,69 @@ public function cancel($id)
 {
     try {
         $entry = PaluwaganEntry::find($id);
-
         if (!$entry) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Entry not found'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Entry not found'], 404);
+        }
+        if ($entry->status === 'cancelled') {
+            return response()->json(['success' => true, 'message' => 'Already cancelled']);
         }
 
-        if ($entry->status === 'cancelled') {
+        $packageID  = $entry->packageID;
+        $startMonth = $entry->startMonth;
+        $startDay   = $entry->startDay;
+
+        // Find next waiting customer BEFORE changing anything
+        $next = PaluwaganEntry::with('customer')
+            ->where('packageID',  $packageID)
+            ->where('startMonth', $startMonth)
+            ->where('startDay',   $startDay)
+            ->where('status',     'waiting')
+            ->orderBy('paluwaganEntryID') // FIFO
+            ->first();
+
+        if ($next) {
+            $promotedCustomerID = $next->customerID;
+            $promotedName = trim(
+                ($next->customer->firstName ?? '') . ' ' . ($next->customer->lastName ?? '')
+            ) ?: 'Next customer';
+
+            // ── Delete the waiting placeholder FIRST by primary key ──
+            // Do this before reassigning so there's zero ambiguity
+            PaluwaganEntry::destroy($next->paluwaganEntryID);
+
+            // Reassign this entry to the promoted customer
+            $entry->customerID = $promotedCustomerID;
+            $entry->status     = 'active';
+            $entry->save();
+
+            // Reactivate unpaid/cancelled schedules
+            \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $id)
+                ->where('status', 'cancelled')
+                ->update(['status' => 'pending']);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Already cancelled'
+                'message' => "Slot passed to {$promotedName}. They inherited your payment progress.",
             ]);
         }
 
+        // No one waiting — cancel normally
         $entry->status = 'cancelled';
         $entry->save();
 
-        $schedules = \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $id)->get();
-
-        foreach ($schedules as $schedule) {
-            // ✅ Only cancel UNPAID schedules — preserve paid progress!
-            if ($schedule->status !== 'paid' && $schedule->amountPaid < $schedule->amountDue) {
-                $schedule->status = 'cancelled';
-                $schedule->save();
-            }
-            // ✅ Paid schedules stay as 'paid' — progress preserved!
-        }
+        \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $id)
+            ->where('status', '!=', 'paid')
+            ->whereColumn('amountPaid', '<', 'amountDue')
+            ->update(['status' => 'cancelled']);
 
         return response()->json([
             'success' => true,
-            'message' => 'Subscription cancelled successfully. Payment progress preserved.'
+            'message' => 'Subscription cancelled.',
         ]);
 
     } catch (\Throwable $e) {
-        \Log::error('Cancel error: ' . $e->getMessage());
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Server error (check logs)'
-        ], 500);
+        \Log::error('Cancel error: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -501,4 +603,53 @@ public function requestRelease(Request $request, $entryID)
         }
     }
 
+    /**
+ * Called after any payment is recorded — auto-completes if fully paid
+ * and release date has arrived.
+ */
+private function checkAndAutoComplete(int $entryID): void
+{
+    try {
+        $entry = PaluwaganEntry::with(['schedules', 'package'])->find($entryID);
+        if (!$entry || !in_array($entry->status, ['active', 'release_requested'])) return;
+
+        $totalPaid   = (float) $entry->schedules->sum('amountPaid');
+        $totalAmount = (float) ($entry->package->totalAmount ?? 0);
+
+        // Not fully paid yet — do nothing
+        if ($totalAmount <= 0 || $totalPaid < $totalAmount - 0.01) return;
+
+        // ── Only auto-complete if release date has arrived ────────
+        $releaseDate = \Carbon\Carbon::create(
+            $entry->startYear  ?? now()->year,
+            $entry->startMonth,
+            $entry->startDay   ?? 28
+        )->startOfDay();
+
+        if (now()->lessThan($releaseDate)) {
+            // Fully paid but release date not yet here —
+            // just let them request early release manually
+            \Log::info("Entry #{$entry->paluwaganEntryID} fully paid but release date not yet reached.");
+            return;
+        }
+
+        // Fully paid AND release date reached → auto-complete
+        foreach ($entry->schedules as $sched) {
+            if ($sched->status !== 'paid') {
+                $sched->status     = 'paid';
+                $sched->amountPaid = $sched->amountDue;
+                $sched->save();
+            }
+        }
+
+        $entry->status     = 'completed';
+        $entry->releasedAt = now();
+        $entry->save();
+
+        \Log::info("Auto-completed paluwagan entry #{$entry->paluwaganEntryID}");
+
+    } catch (\Throwable $e) {
+        \Log::error('checkAndAutoComplete error: ' . $e->getMessage());
+    }
+}
 }

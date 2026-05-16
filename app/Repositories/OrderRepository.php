@@ -62,26 +62,52 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function addPayment(int $orderID, CreateOrderDTO $dto): void
 {
-    $amount = collect($dto->items)
-        ->sum(fn($i) => $i['price'] * $i['qty']);
+    $total = collect($dto->items)->sum(fn($i) => $i['price'] * $i['qty']);
 
-    Log::info('💰 PAYMENT COMPUTED', [
-        'orderID' => $orderID,
-        'items' => $dto->items,
-        'amount' => $amount
-    ]);
+    $isGcash      = strtoupper($dto->payment) === 'GCASH';
+    $isDownpayment = $isGcash && $dto->paymentMode === 'downpayment' && $dto->downpaymentAmount > 0;
 
-    Payment::create([
-        'orderID'          => $orderID,
-        'paluwaganEntryID' => null,
-        'contextType'      => 'order',
-        'paymentType'      => 'fullpayment', // force correct enum
-        'amount'           => $amount,
-        'paymentDate'      => now(),
-        'method'           => strtolower($dto->payment) === 'gcash' ? 'GCASH' : 'COD',
-        'status'           => 'pending',
-        'meta'             => json_encode([]),
-    ]);
+    if ($isDownpayment) {
+        $downAmt   = round($dto->downpaymentAmount, 2);
+        $remaining = round($total - $downAmt, 2);
+
+        // Record 1 — GCash downpayment (will be approved via PayMongo webhook)
+        Payment::create([
+            'orderID'     => $orderID,
+            'contextType' => 'order',
+            'paymentType' => 'downpayment',
+            'amount'      => $downAmt,
+            'paymentDate' => now(),
+            'method'      => 'GCASH',
+            'status'      => 'pending',
+            'meta'        => json_encode(['stage' => 'downpayment']),
+        ]);
+
+        // Record 2 — Remaining balance on delivery (COD-style, admin marks paid)
+        Payment::create([
+            'orderID'     => $orderID,
+            'contextType' => 'order',
+            'paymentType' => 'remaining_balance',
+            'amount'      => $remaining,
+            'paymentDate' => now(),
+            'method'      => 'COD',
+            'status'      => 'pending',
+            'meta'        => json_encode(['stage' => 'remaining_balance']),
+        ]);
+
+    } else {
+        // Full payment — GCash or COD
+        Payment::create([
+            'orderID'     => $orderID,
+            'contextType' => 'order',
+            'paymentType' => 'fullpayment',
+            'amount'      => $total,
+            'paymentDate' => now(),
+            'method'      => $isGcash ? 'GCASH' : 'COD',
+            'status'      => 'pending',
+            'meta'        => json_encode([]),
+        ]);
+    }
 }
 
     public function getByCustomer(int $customerID): array

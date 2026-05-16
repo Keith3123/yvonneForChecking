@@ -48,177 +48,216 @@
         {{-- PALUWAGAN ENTRIES --}}
         {{-- ============================================ --}}
         @forelse ($entries as $entry)
-        @php
-            $schedules    = $entry->schedules ?? collect();
-            $totalPaid    = $schedules->sum('amountPaid');
-            $totalMonths  = $schedules->count();
-            $monthsPaid   = $schedules->filter(fn($s) =>
-                                (float)$s->amountPaid >= (float)$s->amountDue && (float)$s->amountDue > 0
-                            )->count();
-            $monthsLeft   = $totalMonths - $monthsPaid;
-            $nextSchedule = $schedules
-                ->filter(fn($s) => !in_array($s->status, ['paid', 'cancelled'])
-                                   && (float)$s->amountPaid < (float)$s->amountDue)
-                ->sortBy('dueDate')
-                ->first();
-            $package      = $entry->package;
-            $isReleased   = !is_null($entry->releasedAt);
-            $isRelReq     = $entry->status === 'release_requested';
-        @endphp
+@php
+    $package    = $entry->package;
+    $schedules  = $entry->schedules ?? collect();
+    $isReleased = !is_null($entry->releasedAt);
+    $isRelReq   = $entry->status === 'release_requested';
+@endphp
 
-        <div class="bg-white rounded-xl shadow-md border border-red-100 p-6 mb-8">
-
-            {{-- Entry Header --}}
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <span class="text-green-600">✔</span> {{ $package?->packageName }}
-                    </h3>
-                    @php $descLines = preg_split('/\r\n|\r|\n/', $package?->description ?? ''); @endphp
-                    <ul class="text-sm text-gray-600 mt-1 space-y-0.5 list-none">
-                        @foreach($descLines as $line)
-                            @if(trim($line))
-                            <li class="flex items-start gap-1.5">
-                                <span class="text-green-500 mt-0.5 flex-shrink-0">•</span>
-                                <span>{{ trim($line) }}</span>
-                            </li>
-                            @endif
-                        @endforeach
-                    </ul>
-                    <p class="text-sm text-gray-600 mt-1">
-                        Started:
-                        {{ \Carbon\Carbon::create()->month($entry->startMonth)->year($entry->startYear)->format('F Y') }}
-                        • Monthly:
-                        <span class="font-semibold">₱{{ number_format($package?->monthlyPayment ?? 0, 2) }}</span>
-                    </p>
-                </div>
-
-                <div class="flex flex-col items-end gap-1">
-                    {{-- Main status badge --}}
-                    <span class="text-sm font-semibold px-3 py-1 rounded-full
-                        @switch($entry->status)
-                            @case('active')            bg-green-100  text-green-800  ring-1 ring-green-300  @break
-                            @case('release_requested') bg-orange-100 text-orange-800 ring-1 ring-orange-300 @break
-                            @case('completed')         bg-gray-100   text-gray-800   ring-1 ring-gray-300   @break
-                            @case('cancelled')         bg-red-100    text-red-800    ring-1 ring-red-300    @break
-                        @endswitch">
-                        @if($isRelReq) ⏳ Release Pending
-                        @else {{ ucfirst($entry->status) }}
-                        @endif
-                    </span>
-
-                    {{-- Released badge --}}
-                    @if($isReleased)
-                        <span class="text-xs bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-semibold">
-                            📦 Released {{ \Carbon\Carbon::parse($entry->releasedAt)->format('M d, Y') }}
-                        </span>
-                    @endif
-                </div>
-            </div>
-
-            {{-- Progress bar --}}
-            <div class="mb-6">
-                <div class="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>{{ $monthsPaid }} of {{ $totalMonths }} months paid</span>
-                    <span>₱{{ number_format(($package?->totalAmount ?? 0) - $totalPaid, 2) }} remaining</span>
-                </div>
-                <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                    <div class="h-2 bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all"
-                         style="width: {{ $totalMonths > 0 ? ($monthsPaid / $totalMonths) * 100 : 0 }}%"></div>
-                </div>
-            </div>
-
-            {{-- Metrics --}}
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">₱{{ number_format($package?->totalAmount ?? 0, 2) }}</p>
-                    <p class="text-xs text-gray-500">Package Amount</p>
-                </div>
-                <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">₱{{ number_format($totalPaid, 2) }}</p>
-                    <p class="text-xs text-gray-500">Total Paid</p>
-                </div>
-                <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">{{ $monthsPaid }}</p>
-                    <p class="text-xs text-gray-500">Months Paid</p>
-                </div>
-                <div class="border rounded-lg p-4 text-center bg-gray-50">
-                    <p class="text-lg font-bold">{{ $monthsLeft }}</p>
-                    <p class="text-xs text-gray-500">Months Left</p>
-                </div>
-            </div>
-
-            {{-- Next payment alert --}}
-            @if($nextSchedule)
-            <div class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm mb-6">
-                📅 <span>Next payment due:
-                    <strong>
-                        {{ \Carbon\Carbon::parse($nextSchedule->dueDate)->format('M d, Y') }}
-                        – ₱{{ number_format($nextSchedule->amountDue, 2) }}
-                    </strong>
-                </span>
-            </div>
-            @endif
-
-            {{-- Release request note --}}
-            @if($isRelReq && $entry->releaseNote)
-            <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm mb-6">
-                📝 Your release note: <em class="text-orange-700">"{{ $entry->releaseNote }}"</em>
-            </div>
-            @endif
-
-            {{-- ===== ACTIONS ===== --}}
-            <div class="flex flex-wrap gap-3">
-
-                {{-- Make Payment --}}
-                @if(in_array($entry->status, ['active', 'release_requested']))
-                    <button onclick="openPaymentModal('{{ $entry->paluwaganEntryID }}')"
-                        class="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition">
-                        Make Payment
-                    </button>
-                @endif
-
-                {{-- View Schedule --}}
-                <button onclick="openScheduleModal('{{ $entry->paluwaganEntryID }}')"
-                        class="border px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 transition">
-                    View Schedule
-                </button>
-
-                {{-- Early Release Request --}}
-                @if($entry->status === 'active' && !$isReleased)
-                    <button onclick="openReleaseModal('{{ $entry->paluwaganEntryID }}')"
-                        class="border border-orange-300 text-orange-600 px-5 py-2.5 rounded-lg text-sm
-                               font-semibold hover:bg-orange-50 transition">
-                        📦 Request Early Release
-                    </button>
-                @endif
-
-                {{-- Withdraw Release Request --}}
-                @if($isRelReq)
-                    <button onclick="openWithdrawModal('{{ $entry->paluwaganEntryID }}')"
-                        class="text-gray-500 border border-gray-300 px-5 py-2.5 rounded-lg text-sm
-                               font-semibold hover:bg-gray-100 transition">
-                        Withdraw Release Request
-                    </button>
-                @endif
-
-                {{-- Cancel Subscription --}}
-                @if($entry->status === 'active' && !$isRelReq && !$isReleased)
-                    <button onclick="openCancelModal('{{ $entry->paluwaganEntryID }}')"
-                        class="text-red-600 border border-red-300 px-5 py-2.5 rounded-lg text-sm
-                            font-semibold hover:bg-red-50 transition">
-                        Cancel Subscription
-                    </button>
-                @endif
-            </div>
+{{-- ── WAITING ENTRY ── --}}
+@if($entry->status === 'waiting')
+@php
+    $waitSlot = $entry->startDay
+        ? \Carbon\Carbon::create(
+            $entry->startYear ?? now()->year,
+            $entry->startMonth,
+            $entry->startDay
+          )->format('F j, Y')
+        : \Carbon\Carbon::create()
+            ->month($entry->startMonth)
+            ->year($entry->startYear ?? now()->year)
+            ->format('F Y');
+@endphp
+<div class="bg-white rounded-xl shadow-md border border-yellow-200 p-6 mb-8">
+    <div class="flex justify-between items-start mb-4">
+        <div>
+            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span class="text-yellow-500">⏳</span>
+                {{ $package?->packageName }}
+                <span class="text-xs bg-yellow-100 text-yellow-700 border border-yellow-300
+                             px-2 py-0.5 rounded-full font-semibold">Waiting List</span>
+            </h3>
+            <p class="text-sm text-gray-500 mt-1">
+                Waiting for slot: <span class="font-semibold text-yellow-700">{{ $waitSlot }}</span>
+            </p>
+            <p class="text-xs text-gray-400 mt-1">
+                You'll be activated when this slot opens. You can also pick a different slot.
+            </p>
         </div>
+        <span class="text-sm font-semibold px-3 py-1 rounded-full
+                     bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300 whitespace-nowrap">
+            ⏳ Waiting
+        </span>
+    </div>
+    <div class="flex flex-wrap gap-3">
+        <button onclick="openLeaveWaitingModal('{{ $entry->paluwaganEntryID }}')"
+            class="text-red-500 border border-red-300 px-5 py-2.5 rounded-lg text-sm
+                   font-semibold hover:bg-red-50 transition">
+            Leave Waiting List
+        </button>
+    </div>
+</div>
+@continue {{-- ← Blade directive, not @php continue; @endphp --}}
+@endif
 
-        @empty
-        <p class="text-gray-500 text-center py-16">
-            You have no active paluwagan orders.
-            <a href="/catalog" class="text-orange-500 underline">Go to Catalog</a>
-        </p>
-        @endforelse
+{{-- ── ACTIVE / OTHER ENTRIES ────────────────────────────────── --}}
+@php
+    $totalPaid    = $schedules->sum('amountPaid');
+    $totalMonths  = $schedules->count();
+    $monthsPaid   = $schedules->filter(fn($s) =>
+                        (float)$s->amountPaid >= (float)$s->amountDue && (float)$s->amountDue > 0
+                    )->count();
+    $monthsLeft   = $totalMonths - $monthsPaid;
+    $nextSchedule = $schedules
+        ->filter(fn($s) => !in_array($s->status, ['paid','cancelled'])
+                           && (float)$s->amountPaid < (float)$s->amountDue)
+        ->sortBy('dueDate')
+        ->first();
+    $releaseDate  = $entry->startDay
+        ? \Carbon\Carbon::create($entry->startYear ?? now()->year, $entry->startMonth, $entry->startDay)->format('F j, Y')
+        : \Carbon\Carbon::create()->month($entry->startMonth)->year($entry->startYear ?? now()->year)->format('F Y');
+    // Monthly payment from actual schedules (recalculated)
+    $actualMonthly = $schedules->count() > 0
+        ? $schedules->sortBy('dueDate')->first()->amountDue
+        : ($package?->monthlyPayment ?? 0);
+@endphp
+
+<div class="bg-white rounded-xl shadow-md border border-red-100 p-6 mb-8">
+
+    {{-- Entry Header --}}
+    <div class="flex justify-between items-start mb-4">
+        <div>
+            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span class="text-green-600">✔</span> {{ $package?->packageName }}
+            </h3>
+            @php $descLines = preg_split('/\r\n|\r|\n/', $package?->description ?? ''); @endphp
+            <ul class="text-sm text-gray-600 mt-1 space-y-0.5 list-none">
+                @foreach($descLines as $line)
+                    @if(trim($line))
+                    <li class="flex items-start gap-1.5">
+                        <span class="text-green-500 mt-0.5 flex-shrink-0">•</span>
+                        <span>{{ trim($line) }}</span>
+                    </li>
+                    @endif
+                @endforeach
+            </ul>
+            <p class="text-sm text-gray-600 mt-1">
+                📦 Delivery: <span class="font-semibold text-purple-700">{{ $releaseDate }}</span>
+                • Monthly: <span class="font-semibold">₱{{ number_format($actualMonthly, 2) }}</span>
+            </p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+            <span class="text-sm font-semibold px-3 py-1 rounded-full
+                @switch($entry->status)
+                    @case('active')            bg-green-100  text-green-800  ring-1 ring-green-300  @break
+                    @case('release_requested') bg-orange-100 text-orange-800 ring-1 ring-orange-300 @break
+                    @case('completed')         bg-gray-100   text-gray-800   ring-1 ring-gray-300   @break
+                    @case('cancelled')         bg-red-100    text-red-800    ring-1 ring-red-300    @break
+                @endswitch">
+                @if($isRelReq) ⏳ Release Pending
+                @else {{ ucfirst($entry->status) }}
+                @endif
+            </span>
+            @if($isReleased)
+                <span class="text-xs bg-green-100 text-green-700 border border-green-200
+                             px-2 py-0.5 rounded-full font-semibold">
+                    📦 Released {{ \Carbon\Carbon::parse($entry->releasedAt)->format('M d, Y') }}
+                </span>
+            @endif
+        </div>
+    </div>
+
+    {{-- Progress bar --}}
+    <div class="mb-6">
+        <div class="flex justify-between text-xs text-gray-500 mb-1">
+            <span>{{ $monthsPaid }} of {{ $totalMonths }} months paid</span>
+            <span>₱{{ number_format(($package?->totalAmount ?? 0) - $totalPaid, 2) }} remaining</span>
+        </div>
+        <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+            <div class="h-2 bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all"
+                 style="width: {{ $totalMonths > 0 ? ($monthsPaid / $totalMonths) * 100 : 0 }}%"></div>
+        </div>
+    </div>
+
+    {{-- Metrics --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="border rounded-lg p-4 text-center bg-gray-50">
+            <p class="text-lg font-bold">₱{{ number_format($package?->totalAmount ?? 0, 2) }}</p>
+            <p class="text-xs text-gray-500">Package Amount</p>
+        </div>
+        <div class="border rounded-lg p-4 text-center bg-gray-50">
+            <p class="text-lg font-bold">₱{{ number_format($totalPaid, 2) }}</p>
+            <p class="text-xs text-gray-500">Total Paid</p>
+        </div>
+        <div class="border rounded-lg p-4 text-center bg-gray-50">
+            <p class="text-lg font-bold">{{ $monthsPaid }}</p>
+            <p class="text-xs text-gray-500">Months Paid</p>
+        </div>
+        <div class="border rounded-lg p-4 text-center bg-gray-50">
+            <p class="text-lg font-bold">{{ $monthsLeft }}</p>
+            <p class="text-xs text-gray-500">Months Left</p>
+        </div>
+    </div>
+
+    @if($nextSchedule)
+    <div class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm mb-6">
+        📅 <span>Next payment due:
+            <strong>
+                {{ \Carbon\Carbon::parse($nextSchedule->dueDate)->format('M d, Y') }}
+                – ₱{{ number_format($nextSchedule->amountDue, 2) }}
+            </strong>
+        </span>
+    </div>
+    @endif
+
+    @if($isRelReq && $entry->releaseNote)
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm mb-6">
+        📝 Your release note: <em class="text-orange-700">"{{ $entry->releaseNote }}"</em>
+    </div>
+    @endif
+
+    <div class="flex flex-wrap gap-3">
+        @if(in_array($entry->status, ['active', 'release_requested']))
+            <button onclick="openPaymentModal('{{ $entry->paluwaganEntryID }}')"
+                class="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition">
+                Make Payment
+            </button>
+        @endif
+        <button onclick="openScheduleModal('{{ $entry->paluwaganEntryID }}')"
+                class="border px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-100 transition">
+            View Schedule
+        </button>
+        @if($entry->status === 'active' && !$isReleased)
+            <button onclick="openReleaseModal('{{ $entry->paluwaganEntryID }}')"
+                class="border border-orange-300 text-orange-600 px-5 py-2.5 rounded-lg text-sm
+                       font-semibold hover:bg-orange-50 transition">
+                📦 Request Early Release
+            </button>
+        @endif
+        @if($isRelReq)
+            <button onclick="openWithdrawModal('{{ $entry->paluwaganEntryID }}')"
+                class="text-gray-500 border border-gray-300 px-5 py-2.5 rounded-lg text-sm
+                       font-semibold hover:bg-gray-100 transition">
+                Withdraw Release Request
+            </button>
+        @endif
+        @if($entry->status === 'active' && !$isRelReq && !$isReleased)
+            <button onclick="openCancelModal('{{ $entry->paluwaganEntryID }}')"
+                class="text-red-600 border border-red-300 px-5 py-2.5 rounded-lg text-sm
+                    font-semibold hover:bg-red-50 transition">
+                Cancel Subscription
+            </button>
+        @endif
+    </div>
+</div>
+
+@empty
+<p class="text-gray-500 text-center py-16">
+    You have no active paluwagan orders.
+    <a href="/catalog" class="text-orange-500 underline">Go to Catalog</a>
+</p>
+@endforelse
 
     </div>
 </div>
@@ -281,12 +320,12 @@
         </div>
 
         <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 text-sm">
-            <p class="font-semibold text-yellow-800 mb-1">⚠️ Before you request:</p>
+            <p class="font-semibold text-yellow-800 mb-1">📦 Early Release Request</p>
             <ul class="list-disc list-inside text-yellow-700 space-y-1 text-xs">
-                <li>Your product will be delivered before full payment</li>
-                <li>Monthly payment schedule <strong>continues as normal</strong></li>
-                <li>You are still obligated to complete all remaining payments</li>
-                <li>Admin will contact you to arrange delivery</li>
+                <li>You are requesting to receive your product <strong>before your scheduled delivery date</strong></li>
+                <li>Early release requires <strong>full payment</strong> of all remaining balance</li>
+                <li>Admin will verify your payment status before approving</li>
+                <li>Once approved, your subscription will be marked as completed</li>
             </ul>
         </div>
 
@@ -353,55 +392,177 @@
     </div>
 </div>
 
+{{-- Cancel Waiting Modal --}}
+<div id="cancel-waiting-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 text-center">
+        <div class="mx-auto w-14 h-14 flex items-center justify-center rounded-full bg-yellow-100 mb-4">
+            <span class="text-2xl">⏳</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Leave Waiting List?</h2>
+        <p class="text-sm text-gray-500 mb-6">
+            You'll lose your position in the waiting list. You can rejoin anytime.
+        </p>
+        <div class="flex gap-3">
+            <button onclick="closeCancelWaitingModal()"
+                class="w-full bg-gray-100 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-200 transition">
+                Keep My Spot
+            </button>
+            <button id="confirm-cancel-waiting-btn"
+                class="w-full bg-yellow-500 text-white py-2.5 rounded-lg font-semibold hover:bg-yellow-600 transition">
+                Yes, Leave
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- Leave Waiting List Modal --}}
+<div id="leave-waiting-modal"
+     class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 text-center">
+        <div class="mx-auto w-14 h-14 flex items-center justify-center rounded-full bg-yellow-100 mb-4">
+            <span class="text-2xl">⏳</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Leave Waiting List?</h2>
+        <p class="text-sm text-gray-500 mb-6">
+            You'll lose your position. You can rejoin or pick another slot anytime.
+        </p>
+        <div class="flex gap-3">
+            <button onclick="closeLeaveWaitingModal()"
+                class="w-full bg-gray-100 text-gray-700 py-2.5 rounded-xl font-semibold
+                       hover:bg-gray-200 transition text-sm">Keep My Spot</button>
+            <button id="confirm-leave-waiting-btn"
+                class="w-full bg-yellow-500 text-white py-2.5 rounded-xl font-semibold
+                       hover:bg-yellow-600 transition text-sm flex items-center justify-center gap-2">
+                <span id="leave-waiting-text">Yes, Leave</span>
+                <svg id="leave-waiting-spinner" class="hidden animate-spin h-4 w-4 text-white"
+                     fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 // =============================================
 // SCHEDULE MODAL
 // =============================================
 async function openScheduleModal(entryID) {
-    const modal = document.getElementById('paluwagan-schedule-modal');
+    const modal     = document.getElementById('paluwagan-schedule-modal');
+    const loading   = document.getElementById('sched-loading');
+    const cards     = document.getElementById('sched-card-list');
+    const empty     = document.getElementById('sched-empty');
+    const reminders = document.getElementById('sched-reminders');
+
+    // reset state
+    loading.classList.remove('hidden');
+    cards.classList.add('hidden');
+    empty.classList.add('hidden');
+    reminders.classList.add('hidden');
+    cards.innerHTML = '';
+    document.getElementById('sched-package-name').textContent   = '';
+    document.getElementById('sched-release-date').textContent   = '';
+    document.getElementById('sched-total-package').textContent  = '';
+    document.getElementById('sched-monthly-payment').textContent = '';
+    document.getElementById('sched-months-paid').textContent    = '0';
+    document.getElementById('sched-total-months').textContent   = '0';
+
     modal.classList.remove('hidden');
 
     try {
-        const response = await fetch(`/paluwagan/schedule/${entryID}`);
-        const data     = await response.json();
-        const entry    = data.entry;
-        const schedules = data.schedules;
+        const response  = await fetch(`/paluwagan/schedule/${entryID}`);
+        const data      = await response.json();
+        const entry     = data.entry;
+        const schedules = data.schedules ?? [];
 
-        document.getElementById('sched-package-name').textContent   = entry.name;
-        document.getElementById('sched-start-month').textContent     = 'Start: ' + entry.startDate;
-        document.getElementById('sched-total-package').textContent   = parseFloat(entry.totalPackage).toFixed(2);
-        document.getElementById('sched-monthly-payment').textContent = parseFloat(entry.monthlyPayment).toFixed(2);
+        document.getElementById('sched-package-name').textContent    = entry.name;
+        document.getElementById('sched-release-date').textContent     = entry.releaseDate
+            ? '📦 Delivery: ' + entry.releaseDate : '';
+        document.getElementById('sched-total-package').textContent   = parseFloat(entry.totalPackage)
+            .toLocaleString('en-PH', { minimumFractionDigits: 2 });
+        document.getElementById('sched-monthly-payment').textContent = parseFloat(entry.monthlyPayment)
+            .toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
-        const tbody = document.getElementById('schedule-table-body');
-        tbody.innerHTML = '';
+        loading.classList.add('hidden');
 
-        schedules.forEach(sched => {
-            const isLate       = new Date() > new Date(sched.dueDate);
-            const status       = sched.isPaid ? 'Paid' : (isLate ? 'Late' : 'Pending');
-            const statusColor  = sched.isPaid ? 'text-green-600' : (isLate ? 'text-red-600' : 'text-yellow-600');
+        if (!schedules.length) {
+            empty.classList.remove('hidden');
+            return;
+        }
 
-            tbody.innerHTML += `
-                <tr class="border-b">
-                    <td class="p-2 text-center">${sched.monthName}</td>
-                    <td class="p-2 text-center">${new Date(sched.dueDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</td>
-                    <td class="p-2 text-center">₱${parseFloat(sched.amountDue).toFixed(2)}</td>
-                    <td class="p-2 text-center">₱${parseFloat(sched.amountPaid).toFixed(2)}</td>
-                    <td class="p-2 text-center ${statusColor} font-semibold">${status}</td>
-                </tr>`;
+        const paidCount = schedules.filter(s => s.isPaid).length;
+        document.getElementById('sched-months-paid').textContent  = paidCount;
+        document.getElementById('sched-total-months').textContent = schedules.length;
+
+        schedules.forEach((sched, i) => {
+            const isLate  = !sched.isPaid && new Date() > new Date(sched.dueDate);
+            const status  = sched.isPaid ? 'paid' : isLate ? 'late' : 'pending';
+
+            const dueFormatted = new Date(sched.dueDate).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric'
+            });
+
+            const amountDue  = parseFloat(sched.amountDue);
+            const amountPaid = parseFloat(sched.amountPaid);
+            const remaining  = amountDue - amountPaid;
+
+            let bgClass, badgeClass, badgeLabel, numberBg;
+            if (status === 'paid') {
+                bgClass = 'bg-green-50 border-green-200'; badgeClass = 'bg-green-100 text-green-700';
+                badgeLabel = 'Paid'; numberBg = 'bg-green-500';
+            } else if (status === 'late') {
+                bgClass = 'bg-red-50 border-red-200'; badgeClass = 'bg-red-100 text-red-700';
+                badgeLabel = 'Late'; numberBg = 'bg-red-500';
+            } else {
+                bgClass = 'bg-gray-50 border-gray-200'; badgeClass = 'bg-gray-100 text-gray-600';
+                badgeLabel = 'Pending'; numberBg = 'bg-pink-400';
+            }
+
+            const card = document.createElement('div');
+            card.className = `flex items-center justify-between p-3 rounded-xl border ${bgClass}`;
+            card.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center
+                                text-xs font-bold text-white flex-shrink-0 ${numberBg}">
+                        ${i + 1}
+                    </div>
+                    <div>
+                        <p class="font-semibold text-sm text-gray-800">${sched.monthName}</p>
+                        <p class="text-xs text-gray-500">Due: ${dueFormatted}</p>
+                        ${amountPaid > 0 && !sched.isPaid
+                            ? `<p class="text-xs text-yellow-600">Partial: ₱${amountPaid.toLocaleString('en-PH',{minimumFractionDigits:2})}</p>`
+                            : ''}
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-sm ${status === 'paid' ? 'text-green-600' : status === 'late' ? 'text-red-600' : 'text-gray-700'}">
+                        ₱${amountDue.toLocaleString('en-PH', {minimumFractionDigits:2})}
+                    </p>
+                    ${!sched.isPaid && remaining < amountDue
+                        ? `<p class="text-[10px] text-gray-400">₱${remaining.toLocaleString('en-PH',{minimumFractionDigits:2})} left</p>`
+                        : ''}
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${badgeClass}">
+                        ${badgeLabel}
+                    </span>
+                </div>`;
+            cards.appendChild(card);
         });
 
-        document.getElementById('sched-months-paid').textContent  = schedules.filter(s => s.isPaid).length;
-        document.getElementById('sched-total-months').textContent = schedules.length;
+        cards.classList.remove('hidden');
+        reminders.classList.remove('hidden');
 
     } catch (err) {
         console.error('Schedule load error:', err);
+        loading.innerHTML =
+            `<p class="text-red-500 text-sm text-center py-4">Failed to load schedule: ${err.message}</p>`;
+        loading.classList.remove('hidden');
     }
 }
 
 function closeScheduleModal() {
-    const modal = document.getElementById('paluwagan-schedule-modal');
-    if (modal) modal.classList.add('hidden');
+    document.getElementById('paluwagan-schedule-modal').classList.add('hidden');
 }
 
 // =============================================
@@ -455,6 +616,58 @@ document.getElementById('confirm-cancel-btn').addEventListener('click', async fu
     } finally {
         isCancelling        = false;
         btnText.textContent = 'Yes, Cancel';
+        spinner.classList.add('hidden');
+    }
+});
+
+// =============================================
+// LEAVE WAITING LIST
+// =============================================
+let leaveWaitingEntryID = null;
+let isLeavingWaiting    = false;
+
+function openLeaveWaitingModal(entryID) {
+    leaveWaitingEntryID = entryID;
+    const modal = document.getElementById('leave-waiting-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeLeaveWaitingModal() {
+    document.getElementById('leave-waiting-modal').classList.add('hidden');
+    document.getElementById('leave-waiting-modal').classList.remove('flex');
+    leaveWaitingEntryID = null;
+}
+
+document.getElementById('confirm-leave-waiting-btn').addEventListener('click', async function () {
+    if (!leaveWaitingEntryID || isLeavingWaiting) return;
+    isLeavingWaiting = true;
+
+    const text    = document.getElementById('leave-waiting-text');
+    const spinner = document.getElementById('leave-waiting-spinner');
+    text.textContent = 'Leaving...';
+    spinner.classList.remove('hidden');
+
+    try {
+        const res  = await fetch(`/paluwagan/cancel/${leaveWaitingEntryID}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Failed');
+
+        closeLeaveWaitingModal();
+        if (typeof showToast === 'function') showToast('Removed from waiting list.', 'success');
+        setTimeout(() => location.reload(), 1200);
+
+    } catch (err) {
+        if (typeof showToast === 'function') showToast(err.message || 'Error', 'error');
+    } finally {
+        isLeavingWaiting     = false;
+        text.textContent     = 'Yes, Leave';
         spinner.classList.add('hidden');
     }
 });
@@ -777,6 +990,60 @@ document.getElementById('confirm-withdraw-btn').addEventListener('click', async 
         isWithdrawing       = false;
         btnText.textContent = 'Yes, Withdraw';
         spinner.classList.add('hidden');
+    }
+});
+// =============================================
+// WAITING LIST — SELECT ANOTHER SLOT
+// =============================================
+function openSelectAnotherSlot(entryID, packageID) {
+    // Store for reference
+    window._waitingEntryID  = entryID;
+    window._waitingPackageID = packageID;
+    // Open the paluwagan catalog modal reusing existing flow
+    // We'll redirect to catalog with the package pre-selected
+    window.location.href = `/catalog?openPaluwagan=${packageID}`;
+}
+
+// =============================================
+// CANCEL WAITING MODAL
+// =============================================
+let cancelWaitingEntryID = null;
+
+function openCancelWaitingModal(entryID) {
+    cancelWaitingEntryID = entryID;
+    const modal = document.getElementById('cancel-waiting-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeCancelWaitingModal() {
+    document.getElementById('cancel-waiting-modal').classList.add('hidden');
+    document.getElementById('cancel-waiting-modal').classList.remove('flex');
+    cancelWaitingEntryID = null;
+}
+
+document.getElementById('confirm-cancel-waiting-btn')?.addEventListener('click', async function () {
+    if (!cancelWaitingEntryID) return;
+    this.disabled = true;
+    this.textContent = 'Removing...';
+
+    try {
+        const res = await fetch(`/paluwagan/cancel/${cancelWaitingEntryID}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        closeCancelWaitingModal();
+        if (typeof showToast === 'function') showToast('Removed from waiting list.', 'success');
+        setTimeout(() => location.reload(), 1200);
+    } catch (err) {
+        if (typeof showToast === 'function') showToast(err.message || 'Error', 'error');
+        this.disabled = false;
+        this.textContent = 'Yes, Leave';
     }
 });
 </script>

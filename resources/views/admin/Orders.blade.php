@@ -130,9 +130,22 @@
 
                 @forelse($orders as $order)
                 @php
-                    $payMethod  = $order->payment->method  ?? 'COD';
-                    $payStatus  = $order->payment->status  ?? 'pending';
-                    $isCOD      = $payMethod === 'COD';
+                    // Downpayment detection (GCash DP + COD remaining balance)
+                    $gcashPayment   = $order->payments->firstWhere('paymentType', 'downpayment');
+                    $codPayment     = $order->payments->firstWhere('paymentType', 'remaining_balance')
+                                ?? $order->payments->firstWhere('method', 'COD');
+                    $hasDownpayment = !is_null($gcashPayment);
+
+                    // Statuses for split-payment rows
+                    $gcashStatus  = $gcashPayment->status ?? 'pending';
+                    $codStatus    = $codPayment->status   ?? 'pending';
+                    $canToggleCod = $order->status === 'Done' || $codStatus === 'approved';
+
+                    // Single-payment fallback
+                    $payMethod = $order->payment->method ?? 'COD';
+                    $payStatus = $order->payment->status ?? 'pending';
+                    $isCOD     = $payMethod === 'COD';
+                    $canToggle = $order->status === 'Done' || $payStatus === 'approved';
 
                     $payBadgeClass = match($payStatus) {
                         'approved' => 'bg-green-100 text-green-700 border border-green-300',
@@ -165,60 +178,112 @@
                             {{ $order->deliveryDate ? $order->deliveryDate->format('Y-m-d') : 'N/A' }}
                         </td>
 
+                        {{-- Payment Method --}}
                         <td class="py-3 px-4">
-                            {{ $payMethod }}
+                            {{ $hasDownpayment ? 'GCASH + COD' : $payMethod }}
                         </td>
-
-                        {{-- PAY STATUS COLUMN --}}
+ 
+                        {{-- Pay Status --}}
                         <td class="py-3 px-4">
-                            <div class="flex items-center gap-2">
-                                {{-- Status badge --}}
-                                <span class="pay-status-badge inline-block px-2 py-0.5 rounded-full text-xs font-semibold {{ $payBadgeClass }}">
-                                    {{ ucfirst($payStatus) }}
-                                </span>
-
-                                {{-- Toggle button — COD only --}}
-                                @if($isCOD)
-                                    @php
-                                        // Can approve only if order is Done; can always revert approved → pending
-                                        $canToggle = ($order->status === 'Done' || $payStatus === 'approved');
-                                    @endphp
-                                    <button
-                                        onclick="{{ $canToggle ? "togglePayStatus({$order->orderID}, this)" : 'void(0)' }}"
-                                        title="{{ $canToggle ? ($payStatus === 'approved' ? 'Mark as Pending' : 'Mark as Paid') : 'Order must be Done to approve payment' }}"
-                                        {{ !$canToggle ? 'disabled' : '' }}
-                                        class="pay-toggle-btn p-1 rounded-lg transition text-xs
-                                            {{ !$canToggle
+                            @if($hasDownpayment)
+                                <div class="flex flex-col gap-1">
+ 
+                                    {{-- GCash downpayment — auto-managed, no toggle --}}
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-xs text-gray-400">DP:</span>
+                                        <span class="pay-status-badge inline-block px-2 py-0.5 rounded-full text-xs font-semibold
+                                            {{ $gcashStatus === 'approved'
+                                                ? 'bg-green-100 text-green-700 border border-green-300'
+                                                : 'bg-yellow-100 text-yellow-700 border border-yellow-300' }}">
+                                            {{ ucfirst($gcashStatus) }}
+                                        </span>
+                                        <span class="text-gray-300 text-xs" title="Auto-managed via GCash">
+                                            <i class="fas fa-lock"></i>
+                                        </span>
+                                    </div>
+ 
+                                    {{-- COD remaining balance + toggle --}}
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-xs text-gray-400">RB:</span>
+                                        <span class="pay-status-badge-cod inline-block px-2 py-0.5 rounded-full text-xs font-semibold
+                                            {{ $codStatus === 'approved'
+                                                ? 'bg-green-100 text-green-700 border border-green-300'
+                                                : 'bg-yellow-100 text-yellow-700 border border-yellow-300' }}">
+                                            {{ ucfirst($codStatus) }}
+                                        </span>
+                                        <button
+                                            onclick="{{ $canToggleCod ? "togglePayStatus({$order->orderID}, this)" : 'void(0)' }}"
+                                            title="{{ $canToggleCod
+                                                ? ($codStatus === 'approved' ? 'Mark as Pending' : 'Mark Remaining as Paid')
+                                                : 'Order must be Done first' }}"
+                                            {{ !$canToggleCod ? 'disabled' : '' }}
+                                            class="pay-toggle-btn p-1 rounded-lg transition text-xs
+                                                {{ !$canToggleCod
+                                                    ? 'text-gray-300 cursor-not-allowed opacity-40'
+                                                    : ($codStatus === 'approved'
+                                                        ? 'text-yellow-600 hover:bg-yellow-50'
+                                                        : 'text-green-600 hover:bg-green-50') }}">
+                                            <i class="{{ $codStatus === 'approved' ? 'fas fa-undo' : 'fas fa-check-circle' }}"></i>
+                                        </button>
+                                    </div>
+ 
+                                </div>
+                            @else
+                                {{-- Single payment --}}
+                                <div class="flex items-center gap-2">
+                                    <span class="pay-status-badge inline-block px-2 py-0.5 rounded-full text-xs font-semibold
+                                        {{ match($payStatus) {
+                                            'approved' => 'bg-green-100 text-green-700 border border-green-300',
+                                            'rejected' => 'bg-red-100 text-red-700 border border-red-300',
+                                            default    => 'bg-yellow-100 text-yellow-700 border border-yellow-300',
+                                        } }}">
+                                        {{ ucfirst($payStatus) }}
+                                    </span>
+ 
+                                    @if($isCOD)
+                                        <button
+                                            onclick="{{ $canToggle ? "togglePayStatus({$order->orderID}, this)" : 'void(0)' }}"
+                                            title="{{ $canToggle
+                                                ? ($payStatus === 'approved' ? 'Mark as Pending' : 'Mark as Paid')
+                                                : 'Order must be Done' }}"
+                                            {{ !$canToggle ? 'disabled' : '' }}
+                                            class="pay-toggle-btn p-1 rounded-lg transition text-xs
+                                                {{ !$canToggle
                                                     ? 'text-gray-300 cursor-not-allowed opacity-40'
                                                     : ($payStatus === 'approved'
                                                         ? 'text-yellow-600 hover:bg-yellow-50'
                                                         : 'text-green-600 hover:bg-green-50') }}">
-                                        <i class="{{ $payStatus === 'approved' ? 'fas fa-undo' : 'fas fa-check-circle' }}"></i>
-                                    </button>
-                                @else
-                                    <span class="text-gray-300 text-xs" title="Auto-managed">
-                                        <i class="fas fa-lock"></i>
-                                    </span>
-                                @endif
-                            </div>
+                                            <i class="{{ $payStatus === 'approved' ? 'fas fa-undo' : 'fas fa-check-circle' }}"></i>
+                                        </button>
+                                    @else
+                                        <span class="text-gray-300 text-xs" title="Auto-managed">
+                                            <i class="fas fa-lock"></i>
+                                        </span>
+                                    @endif
+                                </div>
+                            @endif
                         </td>
-
+ 
+                        {{-- Order Status --}}
                         <td class="py-3 px-4 status">
                             <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold {{ $statusClasses[$order->status] ?? 'bg-gray-200 text-gray-700' }}">
                                 {{ $order->status }}
                             </span>
                         </td>
-
+ 
+                        {{-- Total --}}
                         <td class="py-3 px-4 font-semibold">
                             ₱{{ number_format($order->totalAmount, 2) }}
                         </td>
-
+ 
+                        {{-- View --}}
                         <td class="py-3 px-4">
                             <button onclick="viewOrder({{ $order->orderID }})"
                                     class="p-2 rounded-lg hover:bg-gray-100 transition text-pink-500">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </td>
+ 
                     </tr>
                 @empty
                     <tr>
@@ -231,13 +296,10 @@
             </table>
         </div>
 
-        {{-- Orders Pagination --}}
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs text-gray-500">
-            <span id="orders-count-label"></span>
-            <div class="flex items-center gap-1" id="orders-page-buttons"></div>
-        </div>
-
-    </div>
+        {{-- PAGINATION --}}
+<div class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500">
+    <span id="orders-count-label"></span>
+    <div id="orders-page-buttons" class="flex flex-wrap gap-1"></div>
 </div>
 
 {{-- ================= VIEW ORDER MODAL ================= --}}
@@ -287,7 +349,7 @@ let confirmCallback = null;
 function showMessage(message, status = null) {
     const box  = document.getElementById('actionMessage');
     const text = document.getElementById('actionText');
-    let bg = 'bg-gray-100';
+    let bg = 'bg-gray-700';
     if (status === 'Confirmed')        bg = 'bg-green-600';
     if (status === 'Cancelled')        bg = 'bg-red-600';
     if (status === 'Preparing')        bg = 'bg-purple-600';
@@ -317,12 +379,17 @@ document.getElementById('confirmBtn').addEventListener('click', function () {
 
 // ── COD Pay Status Toggle ──
 window.togglePayStatus = function (orderID, btn) {
-    const row    = btn.closest('tr');
-    const badge  = row.querySelector('.pay-status-badge');
+    const row = btn.closest('tr');
+
+    // ✅ For downpayment rows, target the COD badge (pay-status-badge-cod)
+    // For regular COD rows, target pay-status-badge
+    const badge = row.querySelector('.pay-status-badge-cod') 
+               ?? row.querySelector('.pay-status-badge');
+
     const isApproved = badge.textContent.trim().toLowerCase() === 'approved';
     const action = isApproved ? 'mark as Pending' : 'mark as Paid';
 
-    showConfirm(`COD Order #${orderID}: ${action}?`, () => {
+    showConfirm(`Order #${orderID}: ${action}?`, () => {
         fetch(`/admin/orders/${orderID}/update-payment-status`, {
             method: 'POST',
             headers: {
@@ -334,32 +401,32 @@ window.togglePayStatus = function (orderID, btn) {
         .then(res => res.json())
         .then(data => {
             if (data.status !== 'success') {
-                showMessage(data.message || 'Error updating payment status');
+                showMessage(data.message || 'Error');
                 return;
             }
 
-            const newStatus = data.new_status; // 'approved' or 'pending'
+            const newStatus = data.new_status;
             const isPaid    = newStatus === 'approved';
 
-            // Update badge text + classes
             badge.textContent = isPaid ? 'Approved' : 'Pending';
-            badge.className = 'pay-status-badge inline-block px-2 py-0.5 rounded-full text-xs font-semibold ' +
-                (isPaid
+            badge.className = badge.className.replace(
+                /bg-\w+-100 text-\w+-\d+ border border-\w+-\d+/,
+                isPaid
                     ? 'bg-green-100 text-green-700 border border-green-300'
-                    : 'bg-yellow-100 text-yellow-700 border border-yellow-300');
+                    : 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+            );
 
-            // Update toggle button icon + color
-            btn.title = isPaid ? 'Mark as Pending' : 'Mark as Paid';
+            btn.title = isPaid ? 'Mark as Pending' : 'Mark Remaining as Paid';
             btn.className = 'pay-toggle-btn p-1 rounded-lg transition text-xs ' +
                 (isPaid ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50');
             btn.innerHTML = `<i class="${isPaid ? 'fas fa-undo' : 'fas fa-check-circle'}"></i>`;
 
             showMessage(
-                `Order #${orderID} payment ${isPaid ? 'approved' : 'set to pending'}`,
+                `Order #${orderID} remaining balance ${isPaid ? 'approved' : 'set to pending'}`,
                 isPaid ? 'pay_approved' : 'pay_pending'
             );
         })
-        .catch(() => showMessage('Network error. Please try again.'));
+        .catch(() => showMessage('Network error.'));
     });
 };
 
@@ -563,27 +630,31 @@ window.updateStatus = function (orderId, newStatus) {
         if (data.status === 'success') {
             const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
 
-            // Update order status badge
             row.querySelector('.status').innerHTML =
                 `<span class="inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(newStatus)}">${newStatus}</span>`;
             row.dataset.status = newStatus;
 
-            // ✅ Auto-update pay status badge + toggle button if COD
             if (data.new_pay_status) {
                 const isPaid = data.new_pay_status === 'approved';
-                const badge  = row.querySelector('.pay-status-badge');
-                const btn    = row.querySelector('.pay-toggle-btn');
+
+                // ✅ Targets both regular COD and GCASH+COD remaining balance
+                const badge = row.querySelector('.pay-status-badge-cod')
+                           ?? row.querySelector('.pay-status-badge');
+                const btn   = row.querySelector('.pay-toggle-btn');
 
                 if (badge) {
                     badge.textContent = isPaid ? 'Approved' : 'Pending';
-                    badge.className = 'pay-status-badge inline-block px-2 py-0.5 rounded-full text-xs font-semibold ' +
-                        (isPaid
+                    badge.className = badge.className.replace(
+                        /bg-\w+-100 text-\w+-\d+ border border-\w+-\d+/,
+                        isPaid
                             ? 'bg-green-100 text-green-700 border border-green-300'
-                            : 'bg-yellow-100 text-yellow-700 border border-yellow-300');
+                            : 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                    );
                 }
 
                 if (btn) {
-                    btn.title = isPaid ? 'Mark as Pending' : 'Mark as Paid';
+                    btn.disabled  = false;
+                    btn.title     = isPaid ? 'Mark as Pending' : 'Mark as Paid';
                     btn.className = 'pay-toggle-btn p-1 rounded-lg transition text-xs ' +
                         (isPaid ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50');
                     btn.innerHTML = `<i class="${isPaid ? 'fas fa-undo' : 'fas fa-check-circle'}"></i>`;
@@ -595,87 +666,114 @@ window.updateStatus = function (orderId, newStatus) {
     });
 };
 
-    window.viewOrder = function (orderID) {
-        fetch(`/admin/orders/${orderID}/view`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.status !== 'success') return;
-            const order = data.order;
-            let itemsHtml = '';
-            order.order_items.forEach(item => {
-                let extras = [];
-                if (item.size)    extras.push(`<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Size: ${item.size}</span>`);
-                if (item.message) extras.push(`<span class="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full">📝 "${item.message}"</span>`);
-                if (item.customization) {
-                    const c = typeof item.customization === 'string' ? JSON.parse(item.customization) : item.customization;
-                    if (c.flavor) extras.push(`<span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full">Flavor: ${c.flavor}</span>`);
-                    if (c.shape)  extras.push(`<span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">Shape: ${c.shape}</span>`);
-                    if (c.icing)  extras.push(`<span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">Icing: ${c.icing}</span>`);
+window.viewOrder = function (orderID) {
+    fetch(`/admin/orders/${orderID}/view`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.status !== 'success') return;
+        const order = data.order;
+
+        // ✅ Payment breakdown (supports multiple payment records)
+        const paymentsHtml = (order.payments?.length ? order.payments : (order.payment ? [order.payment] : []))
+            .map(p => `
+                <div class="flex justify-between text-sm py-1 border-b last:border-0">
+                    <span class="text-gray-500 capitalize">
+                        ${(p.paymentType ?? 'payment').replace(/_/g,' ')} — ${p.method}
+                    </span>
+                    <span class="flex items-center gap-2">
+                        ₱${parseFloat(p.amount).toFixed(2)}
+                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                            ${p.status === 'approved'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'}">
+                            ${p.status}
+                        </span>
+                    </span>
+                </div>
+            `).join('');
+
+        let itemsHtml = '';
+        order.order_items.forEach(item => {
+            let extras = [];
+            if (item.size)    extras.push(`<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Size: ${item.size}</span>`);
+            if (item.message) extras.push(`<span class="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full">📝 "${item.message}"</span>`);
+            if (item.customization) {
+                const c = typeof item.customization === 'string' ? JSON.parse(item.customization) : item.customization;
+                if (c.flavor) extras.push(`<span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full">Flavor: ${c.flavor}</span>`);
+                if (c.shape)  extras.push(`<span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">Shape: ${c.shape}</span>`);
+                if (c.icing)  extras.push(`<span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">Icing: ${c.icing}</span>`);
+            }
+            let includesHtml = '';
+            if (item.includes) {
+                const inc = typeof item.includes === 'string' ? JSON.parse(item.includes) : item.includes;
+                if (Array.isArray(inc) && inc.length) {
+                    includesHtml = `<p class="text-xs text-gray-400 mt-1 font-medium">Includes:</p>
+                        <ul class="list-disc ml-4 text-xs text-gray-500">${inc.map(i => `<li>${i}</li>`).join('')}</ul>`;
                 }
-                let includesHtml = '';
-                if (item.includes) {
-                    const inc = typeof item.includes === 'string' ? JSON.parse(item.includes) : item.includes;
-                    if (Array.isArray(inc) && inc.length) {
-                        includesHtml = `<p class="text-xs text-gray-400 mt-1 font-medium">Includes:</p>
-                            <ul class="list-disc ml-4 text-xs text-gray-500">${inc.map(i => `<li>${i}</li>`).join('')}</ul>`;
-                    }
-                }
-                itemsHtml += `
-                    <tr>
-                        <td class="border-b py-2 px-4">
-                            <div class="font-medium">${item.product.name}</div>
-                            ${extras.length ? `<div class="flex flex-wrap gap-1 mt-1">${extras.join('')}</div>` : ''}
-                            ${includesHtml}
-                        </td>
-                        <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.price).toFixed(2)}</td>
-                        <td class="border-b py-2 px-4 text-center">${item.qty}</td>
-                        <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.subtotal).toFixed(2)}</td>
-                    </tr>`;
-            });
-            document.getElementById('order-content').innerHTML = `
-                <div class="grid grid-cols-3 gap-6 text-sm text-gray-700">
-                    <div class="col-span-2 border p-4 rounded-lg bg-white shadow-sm">
-                        <h4 class="font-semibold mb-3">Order Items</h4>
-                        <table class="w-full table-auto border-collapse">
-                            <thead>
-                                <tr class="bg-gray-100">
-                                    <th class="text-left py-2 px-4 border-b">Product</th>
-                                    <th class="text-right py-2 px-4 border-b">Price</th>
-                                    <th class="text-center py-2 px-4 border-b">QTY</th>
-                                    <th class="text-right py-2 px-4 border-b">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${itemsHtml}
-                                <tr>
-                                    <td colspan="3" class="text-right font-semibold py-2 px-4">Total:</td>
-                                    <td class="text-right font-semibold py-2 px-4">₱${parseFloat(order.totalAmount).toFixed(2)}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="border p-4 rounded-lg bg-white shadow-sm">
-                        <h4 class="font-semibold mb-3">Customer</h4>
-                        <p class="font-semibold">${order.customer.firstName} ${order.customer.lastName}</p>
-                        <p>${order.customer.address || 'N/A'}</p>
-                        <p>${order.customer.phone   || 'N/A'}</p>
-                        <p>${order.customer.email   || 'N/A'}</p>
-                    </div>
-                    <div class="col-span-3 border p-4 rounded-lg bg-white shadow-sm mt-6">
-                        <h4 class="font-semibold mb-3">Order Details</h4>
-                        <p><strong>Order Status:</strong> ${order.status}</p>
-                        <p><strong>Payment Method:</strong> ${order.payment?.method ?? 'COD'}</p>
-                        <p><strong>Payment Status:</strong> ${order.payment?.status ?? 'pending'}</p>
-                        <p><strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleString()}</p>
-                        <p><strong>Delivery Date:</strong> ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</p>
-                        <p><strong>Delivery Time:</strong> ${order.deliveryTime ? new Date('1970-01-01T' + order.deliveryTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:true}) : 'N/A'}</p>
-                        <p><strong>Delivery Address:</strong> ${order.deliveryAddress ?? 'N/A'}</p>
-                        <p><strong>Order Message:</strong> ${order.remarks ?? 'N/A'}</p>
-                    </div>
-                </div>`;
-            document.getElementById('view-order-modal').classList.remove('hidden');
+            }
+            itemsHtml += `
+                <tr>
+                    <td class="border-b py-2 px-4">
+                        <div class="font-medium">${item.product.name}</div>
+                        ${extras.length ? `<div class="flex flex-wrap gap-1 mt-1">${extras.join('')}</div>` : ''}
+                        ${includesHtml}
+                    </td>
+                    <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.price).toFixed(2)}</td>
+                    <td class="border-b py-2 px-4 text-center">${item.qty}</td>
+                    <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.subtotal).toFixed(2)}</td>
+                </tr>`;
         });
-    };
+
+        document.getElementById('order-content').innerHTML = `
+            <div class="grid grid-cols-3 gap-6 text-sm text-gray-700">
+                <div class="col-span-2 border p-4 rounded-lg bg-white shadow-sm">
+                    <h4 class="font-semibold mb-3">Order Items</h4>
+                    <table class="w-full table-auto border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="text-left py-2 px-4 border-b">Product</th>
+                                <th class="text-right py-2 px-4 border-b">Price</th>
+                                <th class="text-center py-2 px-4 border-b">QTY</th>
+                                <th class="text-right py-2 px-4 border-b">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                            <tr>
+                                <td colspan="3" class="text-right font-semibold py-2 px-4">Total:</td>
+                                <td class="text-right font-semibold py-2 px-4">₱${parseFloat(order.totalAmount).toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="border p-4 rounded-lg bg-white shadow-sm">
+                    <h4 class="font-semibold mb-3">Customer</h4>
+                    <p class="font-semibold">${order.customer.firstName} ${order.customer.lastName}</p>
+                    <p>${order.customer.address || 'N/A'}</p>
+                    <p>${order.customer.phone   || 'N/A'}</p>
+                    <p>${order.customer.email   || 'N/A'}</p>
+                </div>
+                <div class="col-span-3 border p-4 rounded-lg bg-white shadow-sm mt-6">
+                    <h4 class="font-semibold mb-3">Order Details</h4>
+                    <p><strong>Order Status:</strong> ${order.status}</p>
+
+                    <div class="mt-2 mb-2">
+                        <p class="font-semibold text-sm mb-1">Payment Breakdown:</p>
+                        <div class="border rounded-lg px-3 py-2 bg-gray-50">
+                            ${paymentsHtml || '<p class="text-xs text-gray-400">No payment records</p>'}
+                        </div>
+                    </div>
+
+                    <p><strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleString()}</p>
+                    <p><strong>Delivery Date:</strong> ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</p>
+                    <p><strong>Delivery Time:</strong> ${order.deliveryTime ? new Date('1970-01-01T' + order.deliveryTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:true}) : 'N/A'}</p>
+                    <p><strong>Delivery Address:</strong> ${order.deliveryAddress ?? 'N/A'}</p>
+                    <p><strong>Order Message:</strong> ${order.remarks ?? 'N/A'}</p>
+                </div>
+            </div>`;
+        document.getElementById('view-order-modal').classList.remove('hidden');
+    });
+};
 
     window.closeViewModal = function () {
         document.getElementById('view-order-modal').classList.add('hidden');

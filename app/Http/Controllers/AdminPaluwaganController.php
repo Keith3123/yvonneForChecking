@@ -22,7 +22,7 @@ class AdminPaluwaganController extends AdminBaseController
         if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 4)) {
             abort(403, 'Unauthorized');
         }
-
+ 
         // Fetch packages with schedules
         $packages = PaluwaganPackage::with(['schedules' => function($q) {
             $q->orderBy('dueDate', 'asc');
@@ -63,6 +63,7 @@ class AdminPaluwaganController extends AdminBaseController
  
             return [
                 'entryID'              => $entry->paluwaganEntryID,
+                'customerID'           => $entry->customerID,
                 'packageName'          => $package?->packageName ?? 'N/A',
                 'packageID'            => $entry->packageID,       // ← ADD
                 'startMonth'           => $entry->startMonth,      // ← ADD
@@ -74,6 +75,14 @@ class AdminPaluwaganController extends AdminBaseController
                 'totalAmount'          => $package?->totalAmount ?? 0,
                 'nextDueDate'          => $nextSchedule?->dueDate,
                 'status'               => $entry->status,
+                'startDay'             => $entry->startDay,
+                'releaseDate'          => ($entry->startMonth && $entry->startDay)
+                                            ? \Carbon\Carbon::create(
+                                                $entry->startYear ?? now()->year,
+                                                $entry->startMonth,
+                                                $entry->startDay
+                                            )->format('M d, Y')
+                                            : null,
                 'customerName'         => trim(
                     ($entry->customer->firstName ?? '') . ' ' . ($entry->customer->lastName ?? '')
                 ) ?: 'N/A',
@@ -87,11 +96,30 @@ class AdminPaluwaganController extends AdminBaseController
             ];
         });
 
+        // After the $subscriptions = PaluwaganEntry::with(...)->get()->map(...) block,
+// add this filter before returning the view:
+
+// After the $subscriptions ->map() block, before return view():
+
+$subscriptions = $subscriptions->filter(function($sub) use ($subscriptions) {
+    if ($sub['status'] !== 'waiting') return true;
+
+    // Only hide if THIS SAME customer already has an active entry
+    // for the exact same slot — means it's a stale orphan
+    return !$subscriptions->contains(function($other) use ($sub) {
+        return $other['status']     === 'active'
+            && $other['customerID'] == $sub['customerID']  // == not === (avoids type mismatch)
+            && $other['packageID']  == $sub['packageID']
+            && $other['startMonth'] == $sub['startMonth']
+            && $other['startDay']   == $sub['startDay'];
+    });
+})->values();
 
         $paluwaganItems = PaluwaganItem::where('isActive', 1)
         ->orderBy('category')
         ->orderBy('name')
         ->get();
+        
         
         return view('admin.paluwagan', [
             'packages' => $packages,
@@ -275,55 +303,54 @@ class AdminPaluwaganController extends AdminBaseController
 public function complete($id)
 {
     try {
-        $entry = PaluwaganEntry::with('schedules')->find($id);
-
+        $entry = PaluwaganEntry::with(['schedules', 'package'])->find($id);
+ 
         if (!$entry) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Entry not found'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Entry not found'], 404);
         }
-
-        // 🚨 Only ACTIVE can be completed
-        if ($entry->status !== 'active') {
+ 
+        if (!in_array($entry->status, ['active', 'release_requested'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Only active entries can be completed'
+                'message' => 'Only active subscriptions can be completed.'
             ], 400);
         }
-
-        // If already completed (extra safety)
-        if ($entry->status === 'completed') {
+ 
+        // ── Block if balance not fully paid ──────────────────────
+        $totalPaid   = (float) $entry->schedules->sum('amountPaid');
+        $totalAmount = (float) ($entry->package->totalAmount ?? 0);
+        $remaining   = $totalAmount - $totalPaid;
+ 
+        if ($remaining > 0.01) {
             return response()->json([
-                'success' => true,
-                'message' => 'Already completed'
-            ]);
+                'success' => false,
+                'message' => "Cannot complete. Customer still has ₱" .
+                             number_format($remaining, 2) .
+                             " remaining balance. All payments must be settled first."
+            ], 400);
         }
-
-        $entry->status = 'completed';
+ 
+        // ── Fully paid → complete ─────────────────────────────────
+        $entry->status     = 'completed';
+        $entry->releasedAt = $entry->releasedAt ?? now();
         $entry->save();
-
-        // Mark all schedules as fully paid
-        if ($entry->schedules) {
-            foreach ($entry->schedules as $schedule) {
-                $schedule->status = 'paid';
+ 
+        foreach ($entry->schedules as $schedule) {
+            if ($schedule->status !== 'paid') {
+                $schedule->status     = 'paid';
                 $schedule->amountPaid = $schedule->amountDue;
                 $schedule->save();
             }
         }
-
+ 
         return response()->json([
             'success' => true,
-            'message' => 'Subscription completed'
+            'message' => 'Subscription completed successfully.'
         ]);
-
+ 
     } catch (\Throwable $e) {
         \Log::error('Complete error: ' . $e->getMessage());
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Server error'
-        ], 500);
+        return response()->json(['success' => false, 'message' => 'Server error'], 500);
     }
 }
 
@@ -331,18 +358,18 @@ public function reassign(Request $request, $entryID)
 {
     try {
         $customerID = $request->input('customerID');
-        $customer = \App\Models\Customer::find($customerID);
+        $customer   = \App\Models\Customer::find($customerID);
 
         if (!$customer) {
             return response()->json(['success' => false, 'message' => 'Customer not found']);
         }
 
-        $entry = PaluwaganEntry::where('paluwaganEntryID', $entryID)->first();
+        $entry = PaluwaganEntry::find($entryID);
         if (!$entry) {
             return response()->json(['success' => false, 'message' => 'Entry not found']);
         }
 
-        // Check if customer already has an ACTIVE subscription for this package
+        // Block if customer already has active entry for this package
         $alreadyActive = PaluwaganEntry::where('customerID', $customerID)
             ->where('packageID', $entry->packageID)
             ->where('status', 'active')
@@ -351,32 +378,33 @@ public function reassign(Request $request, $entryID)
         if ($alreadyActive) {
             return response()->json([
                 'success' => false,
-                'message' => 'This customer already has an active subscription for this package'
+                'message' => 'This customer already has an active subscription for this package',
             ]);
         }
 
-        // ✅ DELETE the customer's WAITING entry for this same package+month
-        // (remove duplicate, don't cancel it)
+        // Delete the customer's waiting entry for this same slot (if any)
+        // so we don't create a duplicate
         PaluwaganEntry::where('customerID', $customerID)
-            ->where('packageID', $entry->packageID)
+            ->where('packageID',  $entry->packageID)
             ->where('startMonth', $entry->startMonth)
+            ->where('startDay',   $entry->startDay)
             ->where('status', 'waiting')
-            ->where('paluwaganEntryID', '!=', $entryID)
             ->delete();
 
-        // Reassign the cancelled entry to this customer
+        // Reassign this cancelled entry to the new customer
+        // New customer inherits all paid schedule history (free benefit)
         $entry->customerID = $customer->customerID;
         $entry->status     = 'active';
         $entry->save();
 
-        // Reactivate any cancelled schedules for this entry
+        // Reactivate cancelled (unpaid) schedules only
         \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $entryID)
             ->where('status', 'cancelled')
             ->update(['status' => 'pending']);
 
         return response()->json([
             'success' => true,
-            'message' => 'Customer replaced successfully. Previous payments retained.'
+            'message' => 'Customer replaced successfully. Previous payments are now free credit for the new customer.',
         ]);
 
     } catch (\Exception $e) {
@@ -415,55 +443,63 @@ private function promoteNextWaiting(int $packageID, int $startMonth): void
 public function getPayments($entryID)
 {
     try {
-        // ✅ Use where() instead of findOrFail() since custom primary key
-        $entry = PaluwaganEntry::with(['schedules', 'package'])
+        $entry = PaluwaganEntry::with('package')
             ->where('paluwaganEntryID', $entryID)
             ->firstOrFail();
 
-        $payments = $entry->schedules->sortBy('dueDate')->values()->map(function($schedule) {
-            return [
-                'monthLabel'  => Carbon::parse($schedule->dueDate)->format('F Y'),
-                'dueDate'     => Carbon::parse($schedule->dueDate)->format('M d, Y'),
-                'amountDue'   => (float) $schedule->amountDue,
-                'amountPaid'  => (float) $schedule->amountPaid,
-                'status'      => $schedule->amountPaid >= $schedule->amountDue ? 'paid' : $schedule->status,
-                'paidAt'      => $schedule->status === 'paid' && $schedule->updated_at
-                                    ? Carbon::parse($schedule->updated_at)->format('M d, Y') 
-                                    : null,
-            ];
-        });
+        // ── Include both approved AND pending payments ──────────────
+        $payments = \App\Models\Payment::where('paluwaganEntryID', $entryID)
+            ->where('contextType', 'paluwagan')
+            ->whereIn('status', ['approved', 'pending', 'paid'])  // ← was only 'approved'
+            ->orderBy('paymentDate', 'asc')
+            ->get()
+            ->map(function ($payment) {
+                $schedule   = \App\Models\PaluwaganSchedule::find($payment->scheduleID);
+                $monthLabel = $schedule
+                    ? \Carbon\Carbon::parse($schedule->dueDate)->format('F Y')
+                    : \Carbon\Carbon::parse($payment->paymentDate)->format('F Y');
+
+                return [
+                    'monthLabel' => $monthLabel,
+                    'amountPaid' => (float) $payment->amount,
+                    'paidAt'     => \Carbon\Carbon::parse($payment->paymentDate)->format('M d, Y h:i A'),
+                    'method'     => $payment->method ?? 'GCash',
+                    'status'     => $payment->status,  // show status in UI
+                ];
+            });
+
+        $totalPaid   = (float) \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $entryID)
+                        ->sum('amountPaid');
+        $totalAmount = (float) ($entry->package->totalAmount ?? 0);
 
         return response()->json([
             'success'     => true,
             'payments'    => $payments,
-            'totalPaid'   => (float) $entry->schedules->sum('amountPaid'),
-            'totalAmount' => (float) ($entry->package->totalAmount ?? 0),
+            'totalPaid'   => $totalPaid,
+            'totalAmount' => $totalAmount,
         ]);
 
     } catch (\Exception $e) {
         \Log::error('getPayments error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 500);
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
 }
 
-/**
- * Search ALL customers for replacement
- */
+
 public function searchCustomers(Request $request)
 {
     try {
         $query      = $request->input('q', '');
         $packageID  = $request->input('packageID');
         $startMonth = $request->input('startMonth');
+        $startDay   = $request->input('startDay'); 
  
         // ── CASE 1: Slot is known → show ONLY waiting customers for that slot ──
         if ($packageID && $startMonth) {
             $waitingEntries = PaluwaganEntry::with('customer')
                 ->where('packageID',  $packageID)
                 ->where('startMonth', $startMonth)
+                ->where('startDay',   $startDay)
                 ->where('status',     'waiting')
                 ->orderBy('paluwaganEntryID') // FIFO
                 ->get();
@@ -532,36 +568,55 @@ public function searchCustomers(Request $request)
 }
 
  public function approveRelease($entryID)
-    {
-        try {
-            $entry = PaluwaganEntry::find($entryID);
- 
-            if (!$entry) {
-                return response()->json(['success' => false, 'message' => 'Entry not found'], 404);
-            }
- 
-            if ($entry->status !== 'release_requested') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No pending release request for this entry.'
-                ], 400);
-            }
- 
-            // ✅ Mark as physically released, but keep collecting payments
-            $entry->releasedAt = now();
-            $entry->status     = 'active';  // stays active — payments continue!
-            $entry->save();
- 
-            return response()->json([
-                'success' => true,
-                'message' => 'Product released. Payment schedule continues as normal.'
-            ]);
- 
-        } catch (\Throwable $e) {
-            \Log::error('approveRelease error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+{
+    try {
+        $entry = PaluwaganEntry::with(['schedules', 'package'])->find($entryID);
+
+        if (!$entry) {
+            return response()->json(['success' => false, 'message' => 'Entry not found'], 404);
         }
+
+        if ($entry->status !== 'release_requested') {
+            return response()->json(['success' => false, 'message' => 'No pending release request.'], 400);
+        }
+
+        // ── Must be fully paid before releasing ───────────────────
+        $totalPaid   = (float) $entry->schedules->sum('amountPaid');
+        $totalAmount = (float) ($entry->package->totalAmount ?? 0);
+        $remaining   = $totalAmount - $totalPaid;
+
+        if ($remaining > 0.01) {
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot release. Customer still has ₱" .
+                             number_format($remaining, 2) .
+                             " remaining balance. Full payment required before early release."
+            ], 400);
+        }
+
+        // Fully paid → approve, release, complete
+        $entry->releasedAt = now();
+        $entry->status     = 'completed';
+        $entry->save();
+
+        foreach ($entry->schedules as $sched) {
+            if ($sched->status !== 'paid') {
+                $sched->status     = 'paid';
+                $sched->amountPaid = $sched->amountDue;
+                $sched->save();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Early release approved! Subscription completed.'
+        ]);
+
+    } catch (\Throwable $e) {
+        \Log::error('approveRelease error: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
     }
+}
  
     /**
      * Admin rejects early release request.

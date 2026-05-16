@@ -56,6 +56,7 @@
         replaceSearch: '',
         replacePackageID: null,
         replaceStartMonth: null,
+        replaceStartDay: null,
 
         openPaymentHistory(entryID, customerName, packageName) {
             this.historyEntryID   = entryID;
@@ -75,13 +76,14 @@
                 .catch(() => { this.historyLoading = false; });
         },
 
-        openReplaceModal(entryID, packageName, previousPaid, monthsPaid, packageID, startMonth) {
+        openReplaceModal(entryID, packageName, previousPaid, monthsPaid, packageID, startMonth, startDay) {
     this.replaceEntryID          = entryID;
     this.replacePackageName      = packageName;
     this.replacePreviousPaid     = previousPaid;
     this.replaceMonthsPaid       = monthsPaid;
     this.replacePackageID        = packageID;
     this.replaceStartMonth       = startMonth;
+    this.replaceStartDay = startDay;        // ← now correctly in scope
     this.replaceSelectedCustomer = '';
     this.replaceSearch           = '';
     this.replaceCustomers        = [];
@@ -95,6 +97,7 @@
     const params = new URLSearchParams({ q: query });
     if (this.replacePackageID)  params.append('packageID',  this.replacePackageID);
     if (this.replaceStartMonth) params.append('startMonth', this.replaceStartMonth);
+    if (this.replaceStartDay)   params.append('startDay',   this.replaceStartDay);
 
     fetch(`/admin/paluwagan/customers/search?${params}`)
         .then(r => r.json())
@@ -303,39 +306,39 @@ searchAllCustomers(query) {
                     </template>
 
                     <div class="space-y-2">
-                        <template x-for="(payment, index) in historyPayments" :key="index">
-                            <div class="flex items-center justify-between p-3 rounded-xl border"
-                                 :class="payment.status === 'paid'    ? 'bg-green-50 border-green-200' :
-                                         payment.status === 'partial' ? 'bg-yellow-50 border-yellow-200' :
-                                         'bg-gray-50 border-gray-200'">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                                         :class="payment.status === 'paid'    ? 'bg-green-500 text-white' :
-                                                  payment.status === 'partial' ? 'bg-yellow-500 text-white' :
-                                                  'bg-gray-300 text-gray-600'"
-                                         x-text="index + 1"></div>
-                                    <div>
-                                        <p class="font-semibold text-sm" x-text="payment.monthLabel"></p>
-                                        <p class="text-xs text-gray-500" x-text="'Due: ' + payment.dueDate"></p>
-                                        <p x-show="payment.paidAt" class="text-xs text-green-600"
-                                           x-text="'Paid: ' + payment.paidAt"></p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="font-bold text-sm"
-                                       :class="payment.status === 'paid' ? 'text-green-600' : 'text-gray-600'"
-                                       x-text="'₱' + Number(payment.amountPaid).toLocaleString('en', {minimumFractionDigits:2})"></p>
-                                    <p class="text-xs"
-                                       x-text="'/ ₱' + Number(payment.amountDue).toLocaleString('en', {minimumFractionDigits:2})"></p>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                                          :class="payment.status === 'paid'    ? 'bg-green-100 text-green-700' :
-                                                   payment.status === 'partial' ? 'bg-yellow-100 text-yellow-700' :
-                                                   payment.status === 'late'    ? 'bg-red-100 text-red-700' :
-                                                   'bg-gray-100 text-gray-600'"
-                                          x-text="payment.status.charAt(0).toUpperCase() + payment.status.slice(1)"></span>
-                                </div>
-                            </div>
-                        </template>
+                        {{-- inside the x-for template for each payment --}}
+<template x-for="(payment, index) in historyPayments" :key="index">
+    <div class="flex items-center justify-between p-3 rounded-xl border"
+         :class="payment.status === 'approved' || payment.status === 'paid'
+                 ? 'bg-green-50 border-green-200'
+                 : 'bg-yellow-50 border-yellow-200'">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                 :class="payment.status === 'approved' || payment.status === 'paid'
+                         ? 'bg-green-500 text-white'
+                         : 'bg-yellow-400 text-white'"
+                 x-text="index + 1"></div>
+            <div>
+                <p class="font-semibold text-sm text-gray-800" x-text="payment.monthLabel"></p>
+                <p class="text-xs text-green-600" x-text="'Paid: ' + payment.paidAt"></p>
+                <p x-show="payment.method" class="text-xs text-gray-400"
+                   x-text="'via ' + payment.method"></p>
+            </div>
+        </div>
+        <div class="text-right">
+            <p class="font-bold text-sm"
+               :class="payment.status === 'approved' || payment.status === 'paid'
+                       ? 'text-green-600' : 'text-yellow-600'"
+               x-text="'₱' + Number(payment.amountPaid).toLocaleString('en', {minimumFractionDigits:2})"></p>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                  :class="payment.status === 'approved' || payment.status === 'paid'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'"
+                  x-text="payment.status === 'pending' ? 'Processing' : 'Paid'">
+            </span>
+        </div>
+    </div>
+</template>
                     </div>
                 </div>
             </div>
@@ -1101,6 +1104,7 @@ searchAllCustomers(query) {
                     <th class="py-2 px-3">Paid</th>
                     <th class="py-2 px-3">Remaining</th>
                     <th class="py-2 px-3">Next Due</th>
+                    <th class="py-2 px-3">Release Date</th>
                     <th class="py-2 px-3">Status</th>
                     <th class="py-2 px-3">Actions</th>
                 </tr>
@@ -1145,6 +1149,10 @@ searchAllCustomers(query) {
                         {{ $sub['nextDueDate']
                             ? \Carbon\Carbon::parse($sub['nextDueDate'])->format('M d, Y')
                             : '-' }}
+                    </td>
+
+                    <td class="py-2 px-3 text-purple-700 font-medium text-xs">
+                        {{ $sub['releaseDate'] ?? '-' }}
                     </td>
 
                     <td class="py-2 px-3">
@@ -1196,17 +1204,18 @@ searchAllCustomers(query) {
                                 </button>
                             @endif
                             @if($sub['status'] === 'cancelled')
-                                <button @click="openReplaceModal(
-                                            '{{ $sub['entryID'] }}',
-                                            '{{ addslashes($sub['packageName']) }}',
-                                            {{ $sub['totalPaid'] }},
-                                            {{ $sub['monthsPaid'] }},
-                                            '{{ $sub['packageID'] ?? '' }}',
-                                            '{{ $sub['startMonth'] ?? '' }}')"
-                                    class="bg-blue-500 text-white px-2.5 py-1 rounded text-xs hover:bg-blue-600">
-                                    <i class="fas fa-user-plus"></i> Replace
-                                </button>
-                            @endif
+    <button @click="openReplaceModal(
+                '{{ $sub['entryID'] }}',
+                '{{ addslashes($sub['packageName']) }}',
+                {{ $sub['totalPaid'] }},
+                {{ $sub['monthsPaid'] }},
+                '{{ $sub['packageID'] ?? '' }}',
+                '{{ $sub['startMonth'] ?? '' }}',
+                '{{ $sub['startDay'] ?? '' }}')"
+        class="bg-blue-500 text-white px-2.5 py-1 rounded text-xs hover:bg-blue-600">
+        <i class="fas fa-user-plus"></i> Replace
+    </button>
+@endif
                         </div>
                     </td>
                 </tr>
@@ -1524,18 +1533,52 @@ function getVisibleSubs() {
     const sq      = searchInput.value.toLowerCase();
     const statusV = statusFilter.value;
     const dueV    = dueFilter.value;
-    const today   = new Date();
+
+    // ── Use local date only, no time component ────────────────────
+    const now       = new Date();
+    const todayStr  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const todayDate = new Date(todayStr); // local midnight
+
+    const weekLater = new Date(todayDate);
+    weekLater.setDate(weekLater.getDate() + 7);
 
     return subRows.filter(row => {
         let show = true;
-        if (sq && !row.dataset.name.includes(sq))          show = false;
-        if (statusV && row.dataset.status !== statusV)     show = false;
-        if (dueV && row.dataset.due) {
-            const dueDate = new Date(row.dataset.due);
-            if (dueV === 'today')   show = dueDate.toDateString() === today.toDateString();
-            if (dueV === 'week')  { const diff = (dueDate - today) / 86400000; show = diff >= 0 && diff <= 7; }
-            if (dueV === 'overdue') show = dueDate < today;
+
+        // Search filter
+        if (sq && !row.dataset.name.includes(sq)) show = false;
+
+        // Status filter
+        if (statusV && row.dataset.status !== statusV) show = false;
+
+        // Due date filter — only apply if row has a due date
+        if (dueV) {
+            const rawDue = row.dataset.due;
+
+            if (!rawDue) {
+                // No due date — hide from all due date filters
+                show = show && false;
+            } else {
+                // Parse as local date by replacing - with / 
+                // "2026-06-15" → "2026/06/15" → parsed as local midnight
+                const dueDate = new Date(rawDue.replace(/-/g, '/'));
+
+                if (dueV === 'today') {
+                    show = show && (dueDate.toDateString() === todayDate.toDateString());
+                }
+
+                if (dueV === 'week') {
+                    // Due from today up to 7 days from now (inclusive)
+                    show = show && (dueDate >= todayDate && dueDate <= weekLater);
+                }
+
+                if (dueV === 'overdue') {
+                    // Strictly before today (not including today)
+                    show = show && (dueDate < todayDate);
+                }
+            }
         }
+
         return show;
     });
 }

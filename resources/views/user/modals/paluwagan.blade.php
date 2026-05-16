@@ -44,70 +44,97 @@
 
         <!-- STEP 2 -->
         <div id="paluwagan-step2" class="hidden">
-            <h2 class="text-2xl font-bold mb-1">Select Start Month</h2>
-            <p class="text-gray-500 text-sm mb-4">Choose an available month to start your Paluwagan.</p>
+            <h2 class="text-2xl font-bold mb-1">Select Delivery Slot</h2>
+            {{-- Updated subtitle: limit is per month, not per day --}}
+            <p class="text-gray-500 text-sm mb-4">
+                Choose your delivery month and day. Max <strong>20 customers per month</strong>.
+            </p>
 
-            <img id="paluwagan-image2"
-                 src=""
-                 class="rounded-lg w-full h-44 object-cover mb-5">
+            <img id="paluwagan-image2" src="" class="rounded-lg w-full h-36 object-cover mb-4">
 
-            <!-- Month loading state -->
-            <div id="months-loading" class="text-center py-6">
-                <svg class="animate-spin h-6 w-6 text-pink-500 mx-auto" fill="none" viewBox="0 0 24 24">
+            <!-- ── MONTH PICKER ───────────────────────────────────── -->
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">① Pick a Month</p>
+
+            <div id="months-loading" class="text-center py-4">
+                <svg class="animate-spin h-5 w-5 text-pink-500 mx-auto" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                 </svg>
-                <p class="text-gray-400 text-sm mt-2">Loading available months...</p>
+                <p class="text-gray-400 text-xs mt-1">Loading months...</p>
             </div>
 
-            <!-- Legend -->
-            <div id="months-legend" class="hidden flex flex-wrap gap-3 mb-3 text-xs">
+            {{-- Month legend --}}
+            <div class="flex flex-wrap gap-3 mb-2 text-xs text-gray-500">
                 <span class="flex items-center gap-1.5">
-                    <span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span> Available
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-400 inline-block"></span> Open
                 </span>
                 <span class="flex items-center gap-1.5">
-                    <span class="w-3 h-3 rounded-full bg-red-300 inline-block"></span> Taken
+                    <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> Almost full
                 </span>
                 <span class="flex items-center gap-1.5">
-                    <span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> You're Waiting
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-300 inline-block"></span> Full (join waitlist)
                 </span>
             </div>
 
-            <!-- Month grid — filled by JS -->
             <div id="month-cards-grid"
-                 class="hidden grid grid-cols-3 gap-2 mb-4 max-h-72 overflow-y-auto pr-1">
-                <!-- JS renders cards here -->
+                 class="hidden grid grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto pr-1"></div>
+
+            <!-- ── DAY PICKER ────────────────────────────────────── -->
+            <div id="day-picker-section" class="hidden">
+                <div class="flex items-center gap-2 mb-2 mt-3">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">② Pick a Day</p>
+                    <span id="selected-month-label"
+                          class="text-xs font-semibold text-pink-600 bg-pink-50 border border-pink-200
+                                 px-2 py-0.5 rounded-full"></span>
+                    <span class="text-xs text-gray-400">— your delivery date</span>
+                </div>
+
+                <div id="day-loading" class="hidden text-center py-3">
+                    <svg class="animate-spin h-4 w-4 text-pink-500 mx-auto" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                    </svg>
+                </div>
+
+                {{--
+                    grid-cols-7 is required for the calendar layout.
+                    JS inserts: 7 weekday headers + offset blank cells + day cells.
+                --}}
+                <div id="day-cards-grid"
+                     class="hidden grid grid-cols-7 gap-1 mb-1 max-h-52 overflow-y-auto pr-0.5"></div>
+
+                {{-- Legend rendered by JS (_renderDayGrid appends #day-legend here) --}}
             </div>
 
-            <!-- Hidden input to carry selected month value -->
+            <!-- Hidden inputs -->
             <input type="hidden" id="start-month" value="">
+            <input type="hidden" id="start-day"   value="">
 
-            <!-- Waitlist notice (shown when user picks a taken month) -->
-            <div id="waitlist-notice" class="hidden bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm">
-                <p class="font-semibold text-yellow-800">📋 You'll be added to the waiting list</p>
+            <!-- Waitlist notice (shown when month is full OR day is full) -->
+            <div id="waitlist-notice" class="hidden bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-3 text-sm mt-3">
+                <p class="font-semibold text-yellow-800">📋 Waiting list</p>
                 <p class="text-yellow-700 text-xs mt-1" id="waitlist-notice-text"></p>
             </div>
 
-            <div class="bg-[#FFF1F0] p-3 rounded-lg mb-4 text-sm text-gray-800">
+            <div class="bg-[#FFF1F0] p-3 rounded-lg mb-4 text-sm text-gray-800 mt-3">
                 <p class="font-semibold mb-1">Important Reminders</p>
-                <ul class="list-disc list-inside text-gray-700 space-y-1">
-                    <li>Payments are due on the 15th of each month.</li>
-                    <li>No cancellation or refund once payment starts.</li>
+                <ul class="list-disc list-inside text-gray-700 space-y-1 text-xs">
+                    <li>Payments start from the <strong>first available month</strong> the admin opened.</li>
+                    <li>Your selected date is your <strong>delivery deadline</strong>.</li>
+                    <li>Full payment is required before delivery can be processed.</li>
                     <li>All payments are non-refundable.</li>
                 </ul>
             </div>
 
-            <div class="flex justify-end gap-3 mt-6">
+            <div class="flex justify-end gap-3 mt-4">
                 <button id="back-paluwagan"
-                        class="border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-100 transition">
+                        class="border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-100 transition text-sm">
                     Back
                 </button>
-
-                <button id="confirmEnrollmentBtn"
-                        disabled
+                <button id="confirmEnrollmentBtn" disabled
                         class="bg-pink-600 hover:bg-pink-700 disabled:opacity-40 disabled:cursor-not-allowed
-                               text-white font-semibold px-4 py-2 rounded transition">
-                    Confirm Enrollment
+                               text-white font-semibold px-4 py-2 rounded text-sm transition">
+                    Confirm Subscription
                 </button>
             </div>
         </div>

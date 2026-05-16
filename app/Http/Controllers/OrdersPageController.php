@@ -25,14 +25,14 @@ class OrdersPageController extends Controller
         ->update(['is_read' => true]);
         
         $orders = Order::where('customerID', $customerID)
-            ->with(['orderItems.product'])
-            ->orderByRaw("CASE 
+    ->with(['orderItems.product', 'payments'])  // ✅ add 'payments'
+    ->orderByRaw("CASE 
         WHEN status IN ('Confirmed', 'Preparing', 'Out for Delivery', 'Pending') THEN 0 
         WHEN status IN ('Done', 'Cancelled') THEN 1 
         ELSE 2 
     END ASC")
-            ->orderBy('updated_at', 'desc')
-            ->get();
+    ->orderBy('updated_at', 'desc')
+    ->get();
 
         $vatRate = 0.12;
 
@@ -147,7 +147,7 @@ class OrdersPageController extends Controller
             return redirect()->back()->with('error', 'Please log in first.');
         }
 
-        $order = Order::with(['orderItems.product', 'payment'])
+        $order = Order::with(['orderItems.product', 'payment', 'payments'])  // eager load payments
             ->where('orderID', $orderID)
             ->where('customerID', $customerID)
             ->first();

@@ -35,11 +35,27 @@ class Order extends Model
         return $this->hasMany(OrderItem::class, 'orderID', 'orderID');
     }
 
-    public function payment()
+    // Keep the existing hasOne for backwards compat (returns first payment)
+public function payment()
 {
-    return $this->hasOne(Payment::class, 'orderID', 'orderID')->withDefault([
-        'method' => 'COD'
-    ]);
+    return $this->hasOne(Payment::class, 'orderID', 'orderID')
+                ->where('contextType', 'order')
+                ->withDefault(['method' => 'COD', 'status' => 'pending']);
+}
+
+// NEW — all payment records for this order
+public function payments()
+{
+    return $this->hasMany(Payment::class, 'orderID', 'orderID')
+                ->where('contextType', 'order');
+}
+
+// NEW — helper: is everything fully paid?
+public function isFullyPaid(): bool
+{
+    return $this->payments()
+                ->where('status', '!=', 'approved')
+                ->doesntExist();
 }
 
     public function customer()
