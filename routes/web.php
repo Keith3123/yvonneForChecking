@@ -139,6 +139,10 @@ Route::prefix('admin')->group(function() {
     Route::get('/orders/{orderID}/view', [AdminOrdersController::class, 'viewOrder']);
     Route::post('/orders/{orderID}/update-status', [AdminOrdersController::class, 'updateStatus']);
     Route::post('/orders/{orderID}/update-payment-status', [AdminOrdersController::class, 'updatePaymentStatus']);
+    // web.php — inside admin prefix group
+    Route::get('/orders/unread-count',    [AdminOrdersController::class, 'unreadCount'])->name('admin.orders.unread-count');
+    Route::post('/orders/mark-all-read',  [AdminOrdersController::class, 'markAllRead'])->name('admin.orders.mark-all-read');
+
 
     // Sales Report
     Route::get('/salesreport', [AdminSalesReportController::class, 'index'])->name('admin.salesreport');
@@ -168,6 +172,11 @@ Route::get('/salesreport/export-pdf', [AdminSalesReportController::class, 'expor
     Route::post('/paluwagan/entry/{entryID}/approve-release', [AdminPaluwaganController::class, 'approveRelease'])->name('admin.paluwagan.approve-release');
     Route::post('/paluwagan/entry/{entryID}/reject-release',  [AdminPaluwaganController::class, 'rejectRelease'])->name('admin.paluwagan.reject-release');
 
+    Route::post('/paluwagan/apply-penalties', function () {
+    app(\App\Services\PaluwaganPenaltyService::class)->applyPenalties();
+    return response()->json(['success' => true, 'message' => 'Penalties applied.']);
+    })->name('admin.paluwagan.apply-penalties');
+
     // Inventory Routes
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('admin.inventory');
  
@@ -177,7 +186,9 @@ Route::get('/salesreport/export-pdf', [AdminSalesReportController::class, 'expor
  
     Route::post('/inventory/supplier', [AdminInventoryController::class, 'storeSupplier'])->name('inventory.supplier.store');
     Route::put('/inventory/supplier/{id}', [AdminInventoryController::class, 'updateSupplier'])->name('inventory.supplier.update');
- 
+    
+    Route::get('/inventory/expired', [AdminInventoryController::class, 'expired'])->name('admin.inventory.expired');
+
     // Wildcard {id} routes MUST be last so they don't swallow the named routes above
     Route::put('/inventory/{id}', [AdminInventoryController::class, 'update'])->name('inventory.update');
     Route::delete('/inventory/{id}', [AdminInventoryController::class, 'destroy'])->name('inventory.destroy');

@@ -18,10 +18,11 @@ class PaluwaganEntry extends Model
         'status',
         'startMonth',
         'startDay',
+        'startTime',
         'startYear',
-        'releasedAt',          // ✅ NEW: when product was actually released
-        'releaseRequestedAt',  // ✅ NEW: when customer requested early release
-        'releaseNote',         // ✅ NEW: optional note from customer
+        'releasedAt',          
+        'releaseRequestedAt',  
+        'releaseNote',         
     ];
 
     protected $casts = [

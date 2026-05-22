@@ -14,80 +14,97 @@ use App\Models\PullOutDetail;
 class AdminInventoryController extends AdminBaseController
 {
     public function index()
-    {
-        parent::__construct();
+{
+    parent::__construct();
 
-        $user = session('admin_user');
-        if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 2)) {
-            abort(403, 'Unauthorized');
+    $user = session('admin_user');
+    if (!$user || ($user['username'] !== 'masteradmin' && $user['roleID'] != 2)) {
+        abort(403, 'Unauthorized');
+    }
+
+    $ingredients = Ingredient::all()->map(function ($ingredient) {
+        $totalIn  = DeliveryReceiptDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyDelivered') ?? 0;
+        $totalOut = PullOutDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyPulled') ?? 0;
+
+        // Derived available — this is the source of truth
+        $computedStock = max(0, $totalIn - $totalOut);
+
+        // Silently sync currentStock if it drifted (old data, manual DB edits, etc.)
+        if ((float) $ingredient->currentStock !== (float) $computedStock) {
+            Ingredient::where('ingredientID', $ingredient->ingredientID)
+                ->update(['currentStock' => $computedStock]);
+            $ingredient->currentStock = $computedStock;
         }
 
-        // SoftDeletes: automatically excludes soft-deleted ingredients
-        $ingredients = Ingredient::all()->map(function ($ingredient) {
-            $ingredient->totalIn  = DeliveryReceiptDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyDelivered') ?? 0;
-            $ingredient->totalOut = PullOutDetail::where('ingredientID', $ingredient->ingredientID)->sum('qtyPulled') ?? 0;
-            return $ingredient;
+        $ingredient->totalIn  = $totalIn;
+        $ingredient->totalOut = $totalOut;
+
+        // Nearest UPCOMING expiry date for this ingredient
+        $ingredient->nearestExpiry = DeliveryReceiptDetail::where('ingredientID', $ingredient->ingredientID)
+            ->whereNotNull('expiryDate')
+            ->where('expiryDate', '>', today()->endOfDay())  // strictly after today
+            ->orderBy('expiryDate')
+            ->value('expiryDate');
+
+        return $ingredient;
+    });
+
+    $stockIn = DeliveryReceipt::with(['details.ingredient', 'supplier'])->get()->flatMap(function ($dr) {
+        $receivedByUser = DB::table('user')->where('userID', $dr->receivedBy)->first();
+        $receivedByName = $receivedByUser ? $receivedByUser->username : 'masteradmin';
+        return $dr->details->map(function ($detail) use ($dr, $receivedByName) {
+            return [
+                'date'       => $dr->drDate,
+                'type'       => 'in',
+                'ingredient' => $detail->ingredient->name ?? '—',
+                'qty'        => $detail->qtyDelivered,
+                'by'         => $receivedByName,
+                'remarks'    => $dr->remarks ?? 'Supplier delivery',
+            ];
         });
+    });
 
-        $stockIn = DeliveryReceipt::with(['details.ingredient', 'supplier'])->get()->flatMap(function ($dr) {
-            $receivedByUser = DB::table('user')->where('userID', $dr->receivedBy)->first();
-            $receivedByName = $receivedByUser ? $receivedByUser->username : 'masteradmin';
-            return $dr->details->map(function ($detail) use ($dr, $receivedByName) {
-                return [
-                    'date'       => $dr->drDate,
-                    'type'       => 'in',
-                    'ingredient' => $detail->ingredient->name ?? '—',
-                    'qty'        => $detail->qtyDelivered,
-                    'by'         => $receivedByName,
-                    'remarks'    => $dr->remarks ?? 'Supplier delivery',
-                ];
-            });
+    $stockOut = PullOut::with(['details.ingredient'])->get()->flatMap(function ($po) {
+        $pulledByUser = DB::table('user')->where('userID', $po->pullOutBy)->first();
+        $pulledByName = $pulledByUser ? $pulledByUser->username : 'masteradmin';
+        return $po->details->map(function ($detail) use ($po, $pulledByName) {
+            return [
+                'date'       => $po->pullDate,
+                'type'       => 'out',
+                'ingredient' => $detail->ingredient->name ?? '—',
+                'qty'        => $detail->qtyPulled,
+                'by'         => $pulledByName,
+                'remarks'    => $po->pullType ?? $po->remarks ?? '—',
+            ];
         });
+    });
 
-        $stockOut = PullOut::with(['details.ingredient'])->get()->flatMap(function ($po) {
-            $pulledByUser = DB::table('user')->where('userID', $po->pullOutBy)->first();
-            $pulledByName = $pulledByUser ? $pulledByUser->username : 'masteradmin';
-            return $po->details->map(function ($detail) use ($po, $pulledByName) {
-                return [
-                    'date'       => $po->pullDate,
-                    'type'       => 'out',
-                    'ingredient' => $detail->ingredient->name ?? '—',
-                    'qty'        => $detail->qtyPulled,
-                    'by'         => $pulledByName,
-                    'remarks'    => $po->pullType ?? $po->remarks ?? '—',
-                ];
-            });
-        });
+    $transactions  = $stockIn->concat($stockOut)->sortByDesc('date')->values();
+    $totalStockIn  = DeliveryReceiptDetail::sum('qtyDelivered');
+    $totalStockOut = PullOutDetail::sum('qtyPulled');
+    $suppliers     = Supplier::all();
 
-        $transactions  = $stockIn->concat($stockOut)->sortByDesc('date')->values();
-        $totalStockIn  = DeliveryReceiptDetail::sum('qtyDelivered');
-        $totalStockOut = PullOutDetail::sum('qtyPulled');
-        $suppliers     = Supplier::all();
-
-        // Admin users for "Received By" / "Pulled By" dropdowns (roleID = admin or inventory)
-        $adminUsers = DB::table('user')
+    $adminUsers = DB::table('user')
         ->whereIn('roleID', [1, 2])
         ->select('userID', 'username')
         ->orderBy('username')
         ->get();
 
-        return view('admin.inventory', compact(
-            'ingredients', 'transactions', 'totalStockIn', 'totalStockOut', 'suppliers', 'adminUsers'
-        ));
-    }
+    return view('admin.inventory', compact(
+        'ingredients', 'transactions', 'totalStockIn', 'totalStockOut', 'suppliers', 'adminUsers'
+    ));
+}
 
     public function store(Request $request)
     {
         $request->validate([
             'name'        => 'required',
-            'description' => 'required',
             'unit'        => 'required',
             'min_stock'   => 'required|numeric|min:0',
         ]);
 
         Ingredient::create([
             'name'          => $request->name,
-            'description'   => $request->description,
             'unit'          => $request->unit,
             'minStockLevel' => $request->min_stock,
             'currentStock'  => 0,
@@ -101,7 +118,6 @@ class AdminInventoryController extends AdminBaseController
         try {
             $request->validate([
                 'name'        => 'required',
-                'description' => 'required',
                 'unit'        => 'required',
                 'min_stock'   => 'required|numeric|min:0',
             ]);
@@ -109,7 +125,6 @@ class AdminInventoryController extends AdminBaseController
             $ingredient = Ingredient::where('ingredientID', $id)->firstOrFail();
             $ingredient->update([
                 'name'          => $request->name,
-                'description'   => $request->description,
                 'unit'          => $request->unit,
                 'minStockLevel' => $request->min_stock,
             ]);
@@ -151,45 +166,52 @@ class AdminInventoryController extends AdminBaseController
     }
 
     public function receive(Request $request)
-    {
-        try {
-            $request->validate([
-                'received_by'           => 'required|exists:user,userID',
-                'supplier'              => 'required',
-                'items'                 => 'required|array|min:1',
-                'items.*.ingredient_id' => 'required|exists:ingredient,ingredientID',
-                'items.*.qty'           => 'required|numeric|min:0.01',
-                'items.*.unit_cost'     => 'required|numeric|min:0',
-                'items.*.expiry_date'   => 'required|date',
-            ]);
+{
+    try {
+        $isManual = $request->receive_type === 'Manual Adjustment';
 
-            $dr = DeliveryReceipt::create([
-                'supplierID' => $request->supplier,
-                'receivedBy' => $request->received_by,
-                'drDate'     => now(),
-                'remarks'    => $request->remarks ?? 'Supplier delivery',
-            ]);
+        $rules = [
+            'received_by'           => 'required|exists:user,userID',
+            'items'                 => 'required|array|min:1',
+            'items.*.ingredient_id' => 'required|exists:ingredient,ingredientID',
+            'items.*.qty'           => 'required|numeric|min:0.01',
+            'items.*.unit_cost'     => 'required|numeric|min:0',
+            'items.*.expiry_date'   => 'required|date',
+        ];
 
-            foreach ($request->items as $item) {
-                DeliveryReceiptDetail::create([
-                    'drID'         => $dr->drID,
-                    'ingredientID' => $item['ingredient_id'],
-                    'qtyDelivered' => $item['qty'],
-                    'unitCost'     => $item['unit_cost'],
-                    'expiryDate'   => $item['expiry_date'],
-                ]);
-                Ingredient::where('ingredientID', $item['ingredient_id'])
-                    ->increment('currentStock', $item['qty']);
-            }
-
-            return response()->json(['success' => true]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        if (!$isManual) {
+            $rules['supplier'] = 'required';
         }
+
+        $request->validate($rules);
+
+        $dr = DeliveryReceipt::create([
+            'supplierID' => $isManual ? null : $request->supplier,
+            'receivedBy' => $request->received_by,
+            'drDate'     => now(),
+            'remarks'    => $request->receive_type ?? 'Supplier Delivery',
+        ]);
+
+        foreach ($request->items as $item) {
+            DeliveryReceiptDetail::create([
+                'drID'         => $dr->drID,
+                'ingredientID' => $item['ingredient_id'],
+                'qtyDelivered' => $item['qty'],
+                'unitCost'     => $item['unit_cost'],
+                'expiryDate'   => $item['expiry_date'],
+            ]);
+            Ingredient::where('ingredientID', $item['ingredient_id'])
+                ->increment('currentStock', $item['qty']);
+        }
+
+        return response()->json(['success' => true]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
+}
 
     public function pullout(Request $request)
     {
@@ -253,4 +275,43 @@ class AdminInventoryController extends AdminBaseController
         Supplier::where('supplierID', $id)->update(['supplierName' => $request->supplierName, 'phone' => $request->phone]);
         return redirect()->route('admin.inventory')->with('success', 'Supplier updated!');
     }
+
+
+    public function expired()
+{
+    // Get ingredientIDs that have at least one expired DR record
+    $expiredIngredientIDs = DeliveryReceiptDetail::whereNotNull('expiryDate')
+        ->where('expiryDate', '<', today()->startOfDay())
+        ->pluck('ingredientID')
+        ->unique();
+
+    $result = [];
+
+    foreach ($expiredIngredientIDs as $ingredientID) {
+        $ingredient = Ingredient::find($ingredientID);
+        if (!$ingredient || $ingredient->currentStock <= 0) continue;
+
+        // Has future stock? Owner already restocked — skip
+        $hasFutureStock = DeliveryReceiptDetail::where('ingredientID', $ingredientID)
+            ->whereNotNull('expiryDate')
+            ->where('expiryDate', '>', today()->startOfDay())
+            ->exists();
+
+        if ($hasFutureStock) continue;
+
+        // Get the most recent expired date for display
+        $latestExpiry = DeliveryReceiptDetail::where('ingredientID', $ingredientID)
+            ->whereNotNull('expiryDate')
+            ->where('expiryDate', '<', today()->startOfDay())
+            ->orderByDesc('expiryDate')
+            ->value('expiryDate');
+
+        $result[] = [
+            'name'        => $ingredient->name,
+            'expiry_date' => \Carbon\Carbon::parse($latestExpiry)->format('M d, Y'),
+        ];
+    }
+
+    return response()->json(array_values($result));
+}
 }

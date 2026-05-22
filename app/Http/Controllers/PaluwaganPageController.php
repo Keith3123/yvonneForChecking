@@ -49,22 +49,27 @@ class PaluwaganPageController extends Controller
     return view('user.PaluwaganPage', compact('entries'));
 }
 
+
 public function join(Request $request)
 {
     $request->validate([
         'packageID'  => 'required|integer',
         'startMonth' => 'required|integer|min:1|max:12',
         'startDay'   => 'required|integer|min:1|max:31',
+        'startTime'  => 'nullable|string|regex:/^\d{2}:\d{2}$/',
     ]);
 
     $customerID = session('logged_in_user.customerID');
     if (!$customerID) return response()->json(['error' => 'Login required.'], 401);
 
-    // ── Block exact duplicate ────────────────────────────────────
+    $startTime = $request->startTime ?? null;
+
+    // ── Block exact duplicate (same slot = package+month+day+time) ──
     $existing = PaluwaganEntry::where('customerID', $customerID)
         ->where('packageID',  $request->packageID)
         ->where('startMonth', $request->startMonth)
         ->where('startDay',   $request->startDay)
+        ->when($startTime, fn($q) => $q->where('startTime', $startTime))
         ->whereIn('status', ['active', 'waiting'])
         ->first();
 
@@ -76,12 +81,17 @@ public function join(Request $request)
         ], 409);
     }
 
-    // ── NEW: Day-level check — is this exact day already taken? ──
-    $dayTaken = PaluwaganEntry::where('packageID',  $request->packageID)
+    // ── Day+time level check — is this exact slot already taken? ──
+    $slotQuery = PaluwaganEntry::where('packageID',  $request->packageID)
         ->where('startMonth', $request->startMonth)
         ->where('startDay',   $request->startDay)
-        ->where('status', 'active')
-        ->exists();
+        ->where('status', 'active');
+
+    if ($startTime) {
+        $slotQuery->where('startTime', $startTime);
+    }
+
+    $dayTaken = $slotQuery->exists();
 
     if ($dayTaken) {
         PaluwaganEntry::create([
@@ -89,17 +99,21 @@ public function join(Request $request)
             'packageID'  => $request->packageID,
             'startMonth' => $request->startMonth,
             'startDay'   => $request->startDay,
+            'startTime'  => $startTime,
             'startYear'  => now()->year,
             'status'     => 'waiting',
             'joinDate'   => now(),
         ]);
 
         $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
+        $timeLabel = $startTime
+            ? ' at ' . \Carbon\Carbon::parse($entry->startTime)->format('g:i A')
+            : '';
 
         return response()->json([
             'success' => true,
             'waiting' => true,
-            'message' => "{$monthName} {$request->startDay} is already taken. You've been added to the waiting list for that exact slot!",
+            'message' => "{$monthName} {$request->startDay}{$timeLabel} is already taken. You've been added to the waiting list!",
         ]);
     }
 
@@ -115,6 +129,7 @@ public function join(Request $request)
             'packageID'  => $request->packageID,
             'startMonth' => $request->startMonth,
             'startDay'   => $request->startDay,
+            'startTime'  => $startTime,
             'startYear'  => now()->year,
             'status'     => 'waiting',
             'joinDate'   => now(),
@@ -125,7 +140,7 @@ public function join(Request $request)
         return response()->json([
             'success' => true,
             'waiting' => true,
-            'message' => "{$monthName} is full (20/20). You've been added to the waiting list for {$monthName} {$request->startDay}!",
+            'message' => "{$monthName} is full (20/20). You've been added to the waiting list!",
         ]);
     }
 
@@ -135,24 +150,34 @@ public function join(Request $request)
             $customerID,
             $request->packageID,
             $request->startMonth,
-            $request->startDay
+            $request->startDay,
+            $startTime
         );
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 409);
     }
 
     $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
+    $timeLabel = $startTime
+        ? ' at ' . \Carbon\Carbon::createFromFormat('H:i', $startTime)->format('g:i A')
+        : '';
 
     return response()->json([
         'success' => true,
         'waiting' => false,
-        'message' => "Successfully joined! Your delivery date: {$monthName} {$request->startDay}.",
+        'message' => "Successfully joined! Your delivery: {$monthName} {$request->startDay}{$timeLabel}.",
     ]);
 }
 
+
     // ── viewSchedule — show release date ─────────────────────────
 public function viewSchedule($entryID)
-{
+{   
+    // ── Auto-apply penalties before loading schedule ─────────
+    app(\App\Services\PaluwaganPenaltyService::class)
+        ->applyPenaltiesForEntry($entryID);
+
+        
     $entry = PaluwaganEntry::with(['schedules.payment', 'package'])->find($entryID);
 
     if (!$entry) {
@@ -161,10 +186,13 @@ public function viewSchedule($entryID)
 
     $schedules = $entry->schedules ?? collect();
     $releaseDate = $entry->startDay
-        ? \Carbon\Carbon::create($entry->startYear ?? now()->year, $entry->startMonth, $entry->startDay)
-              ->format('F j, Y')
-        : \Carbon\Carbon::create()->month($entry->startMonth)->year($entry->startYear ?? now()->year)
-              ->format('F Y');
+    ? \Carbon\Carbon::create($entry->startYear ?? now()->year, $entry->startMonth, $entry->startDay)
+          ->format('F j, Y') .
+      ($entry->startTime
+          ? ' at ' . \Carbon\Carbon::parse($entry->startTime)->format('g:i A')
+          : '')
+    : \Carbon\Carbon::create()->month($entry->startMonth)->year($entry->startYear ?? now()->year)
+          ->format('F Y');  
 
     if ($schedules->isEmpty()) {
         // Inside viewSchedule(), replace the entry array in the return:
@@ -173,7 +201,7 @@ public function viewSchedule($entryID)
                 'entryID'        => $entry->paluwaganEntryID,
                 'name'           => $entry->package->packageName ?? 'N/A',
                 'releaseDate'    => $releaseDate,
-                'totalPackage'   => (float)($entry->package->totalAmount ?? 0),
+                'totalPackage'   => $mapped->sum(fn($s) => (float)$s['totalDue']),
                 // ← Use actual schedule amount, not package default
                 'monthlyPayment' => $mapped->count() > 0
                                     ? (float) $mapped->first()['amountDue']
@@ -185,24 +213,41 @@ public function viewSchedule($entryID)
     }
 
     $mapped = $schedules->sortBy('dueDate')->values()->map(function ($sched) {
-        $isPaid = (float)$sched->amountPaid >= (float)$sched->amountDue && (float)$sched->amountDue > 0;
-        return [
-            'scheduleID' => $sched->scheduleID,
-            'monthName'  => \Carbon\Carbon::parse($sched->dueDate)->format('F'),
-            'dueDate'    => $sched->dueDate,
-            'amountDue'  => (float)$sched->amountDue,
-            'amountPaid' => (float)$sched->amountPaid,
-            'isPaid'     => $isPaid,
-            'status'     => $isPaid ? 'paid' : $sched->status,
-        ];
-    });
+    $penalty    = (float)$sched->penaltyAmount;
+    $totalDue   = (float)$sched->amountDue + $penalty;
+    $isPaid     = (float)$sched->amountPaid >= $totalDue && $totalDue > 0;
+
+    $today          = \Carbon\Carbon::today();
+    $dueDate        = \Carbon\Carbon::parse($sched->dueDate);
+    $gracePeriodEnd = $sched->gracePeriodEnd
+        ? \Carbon\Carbon::parse($sched->gracePeriodEnd)
+        : $dueDate->copy()->addDays(5);
+
+    $inGrace   = $today->greaterThan($dueDate) && $today->lessThanOrEqualTo($gracePeriodEnd);
+    $daysLeft  = $inGrace ? (int)$today->diffInDays($gracePeriodEnd) : 0;
+
+    return [
+        'scheduleID'     => $sched->scheduleID,
+        'monthName'      => \Carbon\Carbon::parse($sched->dueDate)->format('F'),
+        'dueDate'        => $sched->dueDate,
+        'amountDue'      => (float)$sched->amountDue,
+        'penaltyAmount'  => $penalty,
+        'totalDue'       => $totalDue,
+        'amountPaid'     => (float)$sched->amountPaid,
+        'isPaid'         => $isPaid,
+        'status'         => $isPaid ? 'paid' : $sched->status,
+        'inGrace'        => $inGrace,
+        'graceDaysLeft'  => $daysLeft,
+        'gracePeriodEnd' => $gracePeriodEnd->format('M d, Y'),
+    ];
+});
 
     return response()->json([
         'entry' => [
             'entryID'        => $entry->paluwaganEntryID,
             'name'           => $entry->package->packageName ?? 'N/A',
             'releaseDate'    => $releaseDate,
-            'totalPackage'   => (float)($entry->package->totalAmount ?? 0),
+            'totalPackage'   => $mapped->sum(fn($s) => (float)$s['totalDue']),
             'monthlyPayment' => (float)($entry->package->monthlyPayment ?? 0),
         ],
         'schedules' => $mapped,
@@ -363,12 +408,16 @@ public function availableDays($packageID, $month)
             }
 
             // Validate amount doesn't exceed total remaining
-            $totalRemaining = $pendingSchedules->sum(fn($s) => $s->amountDue - $s->amountPaid);
+            $totalRemaining = $pendingSchedules->sum(function($s) {
+                return ((float)$s->amountDue + (float)$s->penaltyAmount) - (float)$s->amountPaid;
+            });
+
             if ($amount > $totalRemaining) {
                 return response()->json([
                     'error' => 'Amount exceeds total remaining balance of ₱' . number_format($totalRemaining, 2)
                 ], 400);
             }
+
 
             // =========================
             // CREATE CHECKOUT SESSION
@@ -602,54 +651,4 @@ public function requestRelease(Request $request, $entryID)
             return response()->json(['success' => false, 'message' => 'Server error'], 500);
         }
     }
-
-    /**
- * Called after any payment is recorded — auto-completes if fully paid
- * and release date has arrived.
- */
-private function checkAndAutoComplete(int $entryID): void
-{
-    try {
-        $entry = PaluwaganEntry::with(['schedules', 'package'])->find($entryID);
-        if (!$entry || !in_array($entry->status, ['active', 'release_requested'])) return;
-
-        $totalPaid   = (float) $entry->schedules->sum('amountPaid');
-        $totalAmount = (float) ($entry->package->totalAmount ?? 0);
-
-        // Not fully paid yet — do nothing
-        if ($totalAmount <= 0 || $totalPaid < $totalAmount - 0.01) return;
-
-        // ── Only auto-complete if release date has arrived ────────
-        $releaseDate = \Carbon\Carbon::create(
-            $entry->startYear  ?? now()->year,
-            $entry->startMonth,
-            $entry->startDay   ?? 28
-        )->startOfDay();
-
-        if (now()->lessThan($releaseDate)) {
-            // Fully paid but release date not yet here —
-            // just let them request early release manually
-            \Log::info("Entry #{$entry->paluwaganEntryID} fully paid but release date not yet reached.");
-            return;
-        }
-
-        // Fully paid AND release date reached → auto-complete
-        foreach ($entry->schedules as $sched) {
-            if ($sched->status !== 'paid') {
-                $sched->status     = 'paid';
-                $sched->amountPaid = $sched->amountDue;
-                $sched->save();
-            }
-        }
-
-        $entry->status     = 'completed';
-        $entry->releasedAt = now();
-        $entry->save();
-
-        \Log::info("Auto-completed paluwagan entry #{$entry->paluwaganEntryID}");
-
-    } catch (\Throwable $e) {
-        \Log::error('checkAndAutoComplete error: ' . $e->getMessage());
-    }
-}
 }

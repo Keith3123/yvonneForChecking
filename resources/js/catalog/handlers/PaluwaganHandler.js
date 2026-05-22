@@ -7,16 +7,18 @@ export default class PaluwaganHandler {
         this.packageId            = null;
         this._selectedMonth       = null;
         this._selectedDay         = null;
+        this._selectedTime        = null;
         this._isSelectedMonthFull = false;
     }
 
     populateModal(card, modal) {
-        this.modal                = modal;
-        this.packageId            = card.dataset.id;
+        this.modal                 = modal;
+        this.packageId             = card.dataset.id;
         this.modal.dataset.package = this.packageId;
-        this._selectedMonth       = null;
-        this._selectedDay         = null;
-        this._isSelectedMonthFull = false;
+        this._selectedMonth        = null;
+        this._selectedDay          = null;
+        this._selectedTime         = null;
+        this._isSelectedMonthFull  = false;
 
         modal.querySelector('#paluwagan-name').textContent = card.dataset.name;
         modal.querySelector('#paluwagan-image').src        = card.dataset.image;
@@ -98,13 +100,18 @@ export default class PaluwaganHandler {
         if (this.modal) this.modal.classList.remove('hidden');
     }
 
+    // ─────────────────────────────────────────────────────────
+    //  RESET STEP 2
+    // ─────────────────────────────────────────────────────────
     _resetStep2() {
         this._selectedMonth       = null;
         this._selectedDay         = null;
+        this._selectedTime        = null;
         this._isSelectedMonthFull = false;
 
         const $ = id => this.modal.querySelector(`#${id}`);
 
+        // Month grid
         $('month-cards-grid').innerHTML = '';
         $('month-cards-grid').classList.add('hidden');
         $('months-loading').classList.remove('hidden');
@@ -115,22 +122,35 @@ export default class PaluwaganHandler {
             </svg>
             <p class="text-gray-400 text-xs mt-1">Loading months...</p>`;
 
+        // Day grid
         $('day-picker-section').classList.add('hidden');
         $('day-cards-grid').innerHTML = '';
         $('day-cards-grid').classList.add('hidden');
         $('day-loading').classList.add('hidden');
+
+        // Time picker — just hide the section and clear the input
+        const timeSection = this.modal.querySelector('#time-picker-section');
+        if (timeSection) timeSection.classList.add('hidden');
+        const hourEl = this.modal.querySelector('#time-hour');
+        const minEl  = this.modal.querySelector('#time-minute');
+        if (hourEl) hourEl.value = '';
+        if (minEl)  minEl.value  = '';
+
+        // Hidden inputs & button
         $('waitlist-notice').classList.add('hidden');
         $('start-month').value = '';
         $('start-day').value   = '';
+        $('start-time').value  = '';
         $('confirmEnrollmentBtn').disabled    = true;
         $('confirmEnrollmentBtn').textContent = 'Confirm Subscription';
 
+        // Remove day legend if present
         const oldLegend = this.modal.querySelector('#day-legend');
         if (oldLegend) oldLegend.remove();
     }
 
     // ─────────────────────────────────────────────────────────
-    //  MONTH GRID — X/20 slots taken per month
+    //  MONTH GRID
     // ─────────────────────────────────────────────────────────
     loadAvailableMonths(packageID) {
         fetch(`/user/paluwagan/available-months/${packageID}`, { credentials: 'same-origin' })
@@ -184,7 +204,6 @@ export default class PaluwaganHandler {
 
             const waitlistNote = isFull
                 ? `<p class="text-[9px] text-red-500 mt-0.5">Tap to join waitlist</p>` : '';
-
             const userBadge = item.userDay
                 ? `<p class="text-[9px] text-blue-600 mt-0.5">You: day ${item.userDay}${item.userStatus === 'waiting' ? ' ⏳' : ' ✓'}</p>`
                 : '';
@@ -212,12 +231,20 @@ export default class PaluwaganHandler {
 
         this._selectedMonth       = item;
         this._selectedDay         = null;
+        this._selectedTime        = null;
         this._isSelectedMonthFull = item.isFull ?? false;
 
         this.modal.querySelector('#start-month').value = item.month;
         this.modal.querySelector('#start-day').value   = '';
+        this.modal.querySelector('#start-time').value  = '';
         this.modal.querySelector('#confirmEnrollmentBtn').disabled    = true;
         this.modal.querySelector('#confirmEnrollmentBtn').textContent = 'Pick a day…';
+
+        // Hide & reset time picker when month changes
+        const timeSection = this.modal.querySelector('#time-picker-section');
+        if (timeSection) timeSection.classList.add('hidden');
+        const timeInput = this.modal.querySelector('#time-input');
+        if (timeInput) timeInput.value = '';
 
         const notice     = this.modal.querySelector('#waitlist-notice');
         const noticeText = this.modal.querySelector('#waitlist-notice-text');
@@ -226,9 +253,8 @@ export default class PaluwaganHandler {
             notice.classList.remove('hidden');
             const waitPos = (item.waitingCount ?? 0) + 1;
             noticeText.textContent =
-                `${item.label} is full (20/20). Pick your preferred day — ` +
-                `you'll join the waiting list as position #${waitPos} ` +
-                `and be activated when a slot opens.`;
+                `${item.label} is full (20/20). Pick your preferred day and time — ` +
+                `you'll join the waiting list as position #${waitPos}.`;
         } else {
             notice.classList.add('hidden');
         }
@@ -248,8 +274,7 @@ export default class PaluwaganHandler {
     }
 
     // ─────────────────────────────────────────────────────────
-    //  DAY GRID — calendar layout, taken days shown in orange
-    //  isTaken = another active customer owns this exact day slot
+    //  DAY GRID
     // ─────────────────────────────────────────────────────────
     loadAvailableDays(packageID, month) {
         fetch(`/user/paluwagan/available-days/${packageID}/${month}`, { credentials: 'same-origin' })
@@ -277,7 +302,7 @@ export default class PaluwaganHandler {
         const oldLegend = this.modal.querySelector('#day-legend');
         if (oldLegend) oldLegend.remove();
 
-        // ── Weekday headers ───────────────────────────────────────
+        // Weekday headers
         ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(label => {
             const h = document.createElement('div');
             h.className   = 'text-center text-[9px] font-bold text-gray-400 pb-0.5';
@@ -285,48 +310,32 @@ export default class PaluwaganHandler {
             grid.appendChild(h);
         });
 
-        // ── Offset blanks for proper calendar alignment ───────────
+        // Blank offset cells for calendar alignment
         const month    = this._selectedMonth?.month ?? 1;
         const year     = new Date().getFullYear();
-        const firstDow = new Date(year, month - 1, 1).getDay(); // 0 = Sunday
+        const firstDow = new Date(year, month - 1, 1).getDay();
         for (let i = 0; i < firstDow; i++) {
             grid.appendChild(document.createElement('div'));
         }
 
-        // ── Day cells ─────────────────────────────────────────────
+        // Day cells
         days.forEach(dayItem => {
             const { day, isTaken, currentUserStatus } = dayItem;
 
             let bg, numColor, subLabel, subColor, canPick;
 
             if (currentUserStatus === 'active') {
-                // This user already joined this day
-                bg        = 'bg-blue-100 border-blue-400';
-                numColor  = 'text-blue-700';
-                subLabel  = '✓ You';
-                subColor  = 'text-blue-500';
-                canPick   = false;
+                bg = 'bg-blue-100 border-blue-400'; numColor = 'text-blue-700';
+                subLabel = '✓ You'; subColor = 'text-blue-500'; canPick = false;
             } else if (currentUserStatus === 'waiting') {
-                // This user is on waitlist for this day
-                bg        = 'bg-yellow-100 border-yellow-400';
-                numColor  = 'text-yellow-700';
-                subLabel  = '⏳';
-                subColor  = 'text-yellow-500';
-                canPick   = false;
+                bg = 'bg-yellow-100 border-yellow-400'; numColor = 'text-yellow-700';
+                subLabel = '⏳'; subColor = 'text-yellow-500'; canPick = false;
             } else if (isTaken) {
-                // Another active customer owns this day → can join day-level waitlist
-                bg        = 'bg-orange-50 border-orange-300';
-                numColor  = 'text-orange-600';
-                subLabel  = 'taken';
-                subColor  = 'text-orange-400';
-                canPick   = true;
+                bg = 'bg-orange-50 border-orange-300'; numColor = 'text-orange-600';
+                subLabel = 'taken'; subColor = 'text-orange-400'; canPick = true;
             } else {
-                // Open slot
-                bg        = 'bg-green-50 border-green-300';
-                numColor  = 'text-gray-800';
-                subLabel  = '';
-                subColor  = '';
-                canPick   = true;
+                bg = 'bg-green-50 border-green-300'; numColor = 'text-gray-800';
+                subLabel = ''; subColor = ''; canPick = true;
             }
 
             const card = document.createElement('div');
@@ -349,7 +358,7 @@ export default class PaluwaganHandler {
             grid.appendChild(card);
         });
 
-        // ── Legend ────────────────────────────────────────────────
+        // Legend
         const legend = document.createElement('div');
         legend.id        = 'day-legend';
         legend.className = 'flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px] text-gray-500';
@@ -358,7 +367,7 @@ export default class PaluwaganHandler {
                 <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Open
             </span>
             <span class="flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-orange-400 inline-block"></span> Taken (tap = waitlist)
+                <span class="w-2 h-2 rounded-full bg-orange-400 inline-block"></span> Taken (tap to join waitlist)
             </span>
             <span class="flex items-center gap-1">
                 <span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span> You joined
@@ -371,45 +380,120 @@ export default class PaluwaganHandler {
         grid.classList.remove('hidden');
     }
 
+    // ─────────────────────────────────────────────────────────
+    //  DAY SELECTION → show time input
+    // ─────────────────────────────────────────────────────────
     _selectDay(card, dayItem) {
-        this.modal.querySelectorAll('#day-cards-grid > div').forEach(c =>
-            c.classList.remove('ring-2', 'ring-pink-500', 'ring-offset-1')
-        );
-        card.classList.add('ring-2', 'ring-pink-500', 'ring-offset-1');
+    this.modal.querySelectorAll('#day-cards-grid > div').forEach(c =>
+        c.classList.remove('ring-2', 'ring-pink-500', 'ring-offset-1')
+    );
+    card.classList.add('ring-2', 'ring-pink-500', 'ring-offset-1');
 
-        this._selectedDay = dayItem;
-        this.modal.querySelector('#start-day').value = dayItem.day;
+    this._selectedDay  = dayItem;
+    this._selectedTime = null;
+    this.modal.querySelector('#start-day').value  = dayItem.day;
+    this.modal.querySelector('#start-time').value = '';
+    this.modal.querySelector('#confirmEnrollmentBtn').disabled    = true;
+    this.modal.querySelector('#confirmEnrollmentBtn').textContent = 'Pick a time…';
 
+    // Show time picker section
+    const monthLabel = this._selectedMonth?.label ?? '';
+    const dayLabel   = `${monthLabel} ${dayItem.day}`;
+    this.modal.querySelector('#selected-day-label').textContent = dayLabel;
+    this.modal.querySelector('#time-picker-section').classList.remove('hidden');
+
+    // Reset dropdowns
+    const hourSelect   = this.modal.querySelector('#time-hour');
+    const minuteSelect = this.modal.querySelector('#time-minute');
+    hourSelect.value   = '';
+    minuteSelect.value = '';
+
+    // Clone to remove old listeners
+    const newHour   = hourSelect.cloneNode(true);
+    const newMinute = minuteSelect.cloneNode(true);
+    hourSelect.parentNode.replaceChild(newHour, hourSelect);
+    minuteSelect.parentNode.replaceChild(newMinute, minuteSelect);
+
+    const onTimeChange = () => {
+    const h = newHour.value;
+    const m = newMinute.value;
+
+    // When 6 PM (18) is selected, force minutes to 00 and disable the dropdown
+    if (h === '18') {
+        newMinute.value   = '00';
+        newMinute.disabled = true;
+
+        const val = '18:00';
+        this._selectedTime = val;
+        this.modal.querySelector('#start-time').value = val;
+
+        const timeLabel  = '6:00 PM';
         const confirm    = this.modal.querySelector('#confirmEnrollmentBtn');
         const notice     = this.modal.querySelector('#waitlist-notice');
         const noticeText = this.modal.querySelector('#waitlist-notice-text');
-        const monthLabel = this._selectedMonth?.label ?? '';
 
-        if (dayItem.isTaken) {
-            // Day-level waitlist — specific slot taken by another customer
-            notice.classList.remove('hidden');
-            noticeText.textContent =
-                `${monthLabel} ${dayItem.day} is already taken by another customer. ` +
-                `You'll join the waiting list for this exact slot and be activated ` +
-                `automatically if they cancel.`;
-            confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}`;
-            confirm.disabled    = false;
-        } else if (this._isSelectedMonthFull) {
-            // Month-level waitlist — 20/20 reached
+        if (this._isSelectedMonthFull) {
             notice.classList.remove('hidden');
             const waitPos = (this._selectedMonth?.waitingCount ?? 0) + 1;
             noticeText.textContent =
-                `${monthLabel} is full (20/20). You'll join the waiting list as position #${waitPos} ` +
-                `and be activated when a slot opens.`;
-            confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}`;
+                `${monthLabel} is full (20/20). You'll join the waiting list as position #${waitPos}.`;
+            confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
+            confirm.disabled    = false;
+        } else if (dayItem.isTaken) {
+            notice.classList.remove('hidden');
+            noticeText.textContent =
+                `${monthLabel} ${dayItem.day} is already taken. You'll join the waiting list for this slot.`;
+            confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
             confirm.disabled    = false;
         } else {
-            // Normal open slot
             notice.classList.add('hidden');
-            confirm.textContent = `Confirm — ${monthLabel} ${dayItem.day}`;
+            confirm.textContent = `Confirm — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
             confirm.disabled    = false;
         }
+        return;
     }
+
+    // For all other hours, re-enable minutes
+    newMinute.disabled = false;
+    if (!h || !m) return;
+
+    const val = `${h}:${m}`;
+    this._selectedTime = val;
+    this.modal.querySelector('#start-time').value = val;
+
+    const hNum      = parseInt(h);
+    const ampm      = hNum >= 12 ? 'PM' : 'AM';
+    const h12       = hNum % 12 || 12;
+    const timeLabel = `${h12}:${m} ${ampm}`;
+
+    const confirm    = this.modal.querySelector('#confirmEnrollmentBtn');
+    const notice     = this.modal.querySelector('#waitlist-notice');
+    const noticeText = this.modal.querySelector('#waitlist-notice-text');
+
+    if (this._isSelectedMonthFull) {
+        notice.classList.remove('hidden');
+        const waitPos = (this._selectedMonth?.waitingCount ?? 0) + 1;
+        noticeText.textContent =
+            `${monthLabel} is full (20/20). You'll join the waiting list as position #${waitPos}.`;
+        confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
+        confirm.disabled    = false;
+    } else if (dayItem.isTaken) {
+        notice.classList.remove('hidden');
+        noticeText.textContent =
+            `${monthLabel} ${dayItem.day} is already taken. You'll join the waiting list for this slot.`;
+        confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
+        confirm.disabled    = false;
+    } else {
+        notice.classList.add('hidden');
+        confirm.textContent = `Confirm — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
+        confirm.disabled    = false;
+    }
+};
+
+newHour.addEventListener('change', onTimeChange);
+newMinute.addEventListener('change', onTimeChange);
+}
+
 
     // ─────────────────────────────────────────────────────────
     //  CONFIRM ENROLLMENT
@@ -419,9 +503,11 @@ export default class PaluwaganHandler {
 
         const startMonth = this.modal.querySelector('#start-month').value;
         const startDay   = this.modal.querySelector('#start-day').value;
+        const startTime  = this.modal.querySelector('#start-time').value;
 
         if (!startMonth) { showToast('Please select a month.'); return; }
         if (!startDay)   { showToast('Please select a day.');   return; }
+        if (!startTime)  { showToast('Please enter a delivery time.'); return; }
 
         const confirm    = this.modal.querySelector('#confirmEnrollmentBtn');
         const origText   = confirm.textContent;
@@ -439,6 +525,7 @@ export default class PaluwaganHandler {
                 packageID:  this.packageId,
                 startMonth: parseInt(startMonth),
                 startDay:   parseInt(startDay),
+                startTime:  startTime,
             }),
         })
         .then(async res => {

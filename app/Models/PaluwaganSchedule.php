@@ -14,8 +14,41 @@ class PaluwaganSchedule extends Model
         'dueDate',
         'status',
         'amountDue',
-        'amountPaid'
+        'amountPaid',
+        'penaltyAmount',   
+        'gracePeriodEnd',
     ];
+
+    protected $casts = [
+    'dueDate'        => 'date',
+    'gracePeriodEnd' => 'date',
+];
+
+/**
+ * Total amount customer must pay including penalty.
+ */
+public function totalDue(): float
+{
+    return (float)$this->amountDue + (float)$this->penaltyAmount;
+}
+
+/**
+ * Is this schedule currently in grace period?
+ */
+public function inGracePeriod(): bool
+{
+    if (!$this->gracePeriodEnd) return false;
+    return now()->lessThanOrEqualTo($this->gracePeriodEnd);
+}
+
+/**
+ * Is this overdue beyond grace period?
+ */
+public function isPastGrace(): bool
+{
+    if (!$this->gracePeriodEnd) return false;
+    return now()->greaterThan($this->gracePeriodEnd);
+}
 
     // Link to payment (single payment per schedule)
     public function payment()

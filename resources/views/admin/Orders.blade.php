@@ -342,8 +342,26 @@
 </div>
 @endsection
 
+
+
 @section('scripts')
+<style>
+@keyframes newOrderPulse {
+    0%   { background-color: #fef9c3; box-shadow: inset 0 0 0 2px #fbbf24; }
+    50%  { background-color: #fef08a; box-shadow: inset 0 0 0 3px #f59e0b; }
+    100% { background-color: #fef9c3; box-shadow: inset 0 0 0 2px #fbbf24; }
+}
+tr.is-new-order {
+    animation: newOrderPulse 1s ease-in-out 3;
+    background-color: #fef9c3 !important;
+}
+tr.is-new-order td:first-child {
+    border-left: 4px solid #f59e0b;
+}
+</style>
+
 <script>
+const NEW_ORDER_IDS = @json($newOrderIds ?? []);
 let confirmCallback = null;
 
 function showMessage(message, status = null) {
@@ -379,15 +397,11 @@ document.getElementById('confirmBtn').addEventListener('click', function () {
 
 // ── COD Pay Status Toggle ──
 window.togglePayStatus = function (orderID, btn) {
-    const row = btn.closest('tr');
-
-    // ✅ For downpayment rows, target the COD badge (pay-status-badge-cod)
-    // For regular COD rows, target pay-status-badge
-    const badge = row.querySelector('.pay-status-badge-cod') 
-               ?? row.querySelector('.pay-status-badge');
-
+    const row    = btn.closest('tr');
+    const badge  = row.querySelector('.pay-status-badge-cod')
+                ?? row.querySelector('.pay-status-badge');
     const isApproved = badge.textContent.trim().toLowerCase() === 'approved';
-    const action = isApproved ? 'mark as Pending' : 'mark as Paid';
+    const action     = isApproved ? 'mark as Pending' : 'mark as Paid';
 
     showConfirm(`Order #${orderID}: ${action}?`, () => {
         fetch(`/admin/orders/${orderID}/update-payment-status`, {
@@ -400,27 +414,18 @@ window.togglePayStatus = function (orderID, btn) {
         })
         .then(res => res.json())
         .then(data => {
-            if (data.status !== 'success') {
-                showMessage(data.message || 'Error');
-                return;
-            }
-
-            const newStatus = data.new_status;
-            const isPaid    = newStatus === 'approved';
-
+            if (data.status !== 'success') { showMessage(data.message || 'Error'); return; }
+            const isPaid = data.new_status === 'approved';
             badge.textContent = isPaid ? 'Approved' : 'Pending';
             badge.className = badge.className.replace(
                 /bg-\w+-100 text-\w+-\d+ border border-\w+-\d+/,
-                isPaid
-                    ? 'bg-green-100 text-green-700 border border-green-300'
-                    : 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                isPaid ? 'bg-green-100 text-green-700 border border-green-300'
+                       : 'bg-yellow-100 text-yellow-700 border border-yellow-300'
             );
-
-            btn.title = isPaid ? 'Mark as Pending' : 'Mark Remaining as Paid';
+            btn.title     = isPaid ? 'Mark as Pending' : 'Mark Remaining as Paid';
             btn.className = 'pay-toggle-btn p-1 rounded-lg transition text-xs ' +
                 (isPaid ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50');
             btn.innerHTML = `<i class="${isPaid ? 'fas fa-undo' : 'fas fa-check-circle'}"></i>`;
-
             showMessage(
                 `Order #${orderID} remaining balance ${isPaid ? 'approved' : 'set to pending'}`,
                 isPaid ? 'pay_approved' : 'pay_pending'
@@ -453,9 +458,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnClass = (active) =>
         `px-2.5 py-1 rounded-lg border text-xs font-medium transition ${
-            active
-            ? 'bg-pink-500 text-white border-pink-500'
-            : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300'
+            active ? 'bg-pink-500 text-white border-pink-500'
+                   : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300'
         }`;
 
     function getVisible() {
@@ -471,11 +475,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const date     = row.dataset.date      || '';
             const customer = row.dataset.customer  || '';
             let show = true;
-            if (sq      && !id.includes(sq))   show = false;
-            if (statusV && status !== statusV)  show = false;
-            if (custV   && customer !== custV)  show = false;
-            if (start   && date < start)        show = false;
-            if (end     && date > end)          show = false;
+            if (sq      && !id.includes(sq))  show = false;
+            if (statusV && status !== statusV) show = false;
+            if (custV   && customer !== custV) show = false;
+            if (start   && date < start)       show = false;
+            if (end     && date > end)         show = false;
             return show;
         });
     }
@@ -490,6 +494,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         allRows.forEach(row => row.style.display = 'none');
         visible.slice(start, end).forEach(row => row.style.display = '');
+
+        // ✅ Highlight new orders from PHP (direct page visit)
+        if (NEW_ORDER_IDS.length) {
+            visible.slice(start, end).forEach(row => {
+                if (NEW_ORDER_IDS.includes(parseInt(row.dataset.orderId))) {
+                    row.classList.add('is-new-order');
+                }
+            });
+        }
 
         if (emptyRow) emptyRow.style.display = total === 0 ? '' : 'none';
 
@@ -526,6 +539,65 @@ document.addEventListener('DOMContentLoaded', () => {
             pageButtons.appendChild(makeBtn(p, p, p === currentPage, false));
         }
         pageButtons.appendChild(makeBtn('›', currentPage + 1, false, currentPage === totalPages));
+    }
+
+    // ✅ Highlight helper — navigates to correct page if needed, then scrolls
+    function highlightNewOrders(ids) {
+        if (!ids || !ids.length) return;
+
+        const numIds = ids.map(Number);
+
+        // Find all matching rows
+        const targetRows = numIds
+            .map(id => document.querySelector(`tr[data-order-id="${id}"]`))
+            .filter(Boolean);
+
+        if (!targetRows.length) return;
+
+        // Check if any target row is hidden (on different page)
+        const firstTarget  = targetRows[0];
+        const isHidden     = firstTarget.style.display === 'none';
+
+        if (isHidden) {
+            // Find which page it's on
+            const visible  = getVisible();
+            const rowIndex = visible.indexOf(firstTarget);
+            if (rowIndex !== -1) {
+                currentPage = Math.floor(rowIndex / perPage) + 1;
+                render(); // re-render to correct page
+            }
+        }
+
+        // Small delay to let render() finish painting
+        setTimeout(() => {
+            let firstVisible = null;
+
+            targetRows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    row.classList.add('is-new-order');
+                    if (!firstVisible) firstVisible = row;
+                }
+            });
+
+            // Scroll to first highlighted row
+            if (firstVisible) {
+                firstVisible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // ✅ Fade out after 6 seconds
+            setTimeout(() => {
+                targetRows.forEach(row => {
+                    row.style.transition = 'background-color 1.5s ease, box-shadow 1.5s ease';
+                    row.style.backgroundColor = '';
+                    row.style.boxShadow = '';
+                    setTimeout(() => {
+                        row.classList.remove('is-new-order');
+                        row.style.transition = '';
+                    }, 1500);
+                });
+            }, 6000);
+
+        }, 150);
     }
 
     function applyFilters() { currentPage = 1; render(); deselectAll(); }
@@ -590,190 +662,172 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Helper: refresh pay toggle button based on current order status ──
-function refreshPayToggleState(row, orderStatus) {
-    const btn = row.querySelector('.pay-toggle-btn');
-    if (!btn) return; // non-COD rows have no toggle btn
-
-    const badge      = row.querySelector('.pay-status-badge');
-    const isApproved = badge.textContent.trim().toLowerCase() === 'approved';
-    const canToggle  = orderStatus === 'Done' || isApproved;
-
-    if (canToggle) {
-        btn.disabled  = false;
-        btn.title     = isApproved ? 'Mark as Pending' : 'Mark as Paid';
-        btn.className = 'pay-toggle-btn p-1 rounded-lg transition text-xs ' +
-            (isApproved ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50');
-        btn.style.cursor = '';
-        const orderId = parseInt(row.dataset.orderId);
-        btn.onclick = function () { togglePayStatus(orderId, btn); };
-    } else {
-        btn.disabled  = true;
-        btn.title     = 'Order must be Done to approve payment';
-        btn.className = 'pay-toggle-btn p-1 rounded-lg transition text-xs text-gray-300 cursor-not-allowed opacity-40';
-        btn.style.cursor = 'not-allowed';
-        btn.onclick = null;
-    }
-}
-
-window.updateStatus = function (orderId, newStatus) {
-    fetch(`/admin/orders/${orderId}/update-status`, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
-
-            row.querySelector('.status').innerHTML =
-                `<span class="inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(newStatus)}">${newStatus}</span>`;
-            row.dataset.status = newStatus;
-
-            if (data.new_pay_status) {
-                const isPaid = data.new_pay_status === 'approved';
-
-                // ✅ Targets both regular COD and GCASH+COD remaining balance
-                const badge = row.querySelector('.pay-status-badge-cod')
-                           ?? row.querySelector('.pay-status-badge');
-                const btn   = row.querySelector('.pay-toggle-btn');
-
-                if (badge) {
-                    badge.textContent = isPaid ? 'Approved' : 'Pending';
-                    badge.className = badge.className.replace(
-                        /bg-\w+-100 text-\w+-\d+ border border-\w+-\d+/,
-                        isPaid
-                            ? 'bg-green-100 text-green-700 border border-green-300'
-                            : 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                    );
-                }
-
-                if (btn) {
-                    btn.disabled  = false;
-                    btn.title     = isPaid ? 'Mark as Pending' : 'Mark as Paid';
-                    btn.className = 'pay-toggle-btn p-1 rounded-lg transition text-xs ' +
-                        (isPaid ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50');
-                    btn.innerHTML = `<i class="${isPaid ? 'fas fa-undo' : 'fas fa-check-circle'}"></i>`;
-                }
-            }
-
-            showMessage(`Order #${orderId} updated to ${newStatus}`, newStatus);
+    function refreshPayToggleState(row, orderStatus) {
+        const btn = row.querySelector('.pay-toggle-btn');
+        if (!btn) return;
+        const badge      = row.querySelector('.pay-status-badge');
+        const isApproved = badge.textContent.trim().toLowerCase() === 'approved';
+        const canToggle  = orderStatus === 'Done' || isApproved;
+        if (canToggle) {
+            btn.disabled     = false;
+            btn.title        = isApproved ? 'Mark as Pending' : 'Mark as Paid';
+            btn.className    = 'pay-toggle-btn p-1 rounded-lg transition text-xs ' +
+                (isApproved ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50');
+            btn.style.cursor = '';
+            const orderId    = parseInt(row.dataset.orderId);
+            btn.onclick      = function () { togglePayStatus(orderId, btn); };
+        } else {
+            btn.disabled     = true;
+            btn.title        = 'Order must be Done to approve payment';
+            btn.className    = 'pay-toggle-btn p-1 rounded-lg transition text-xs text-gray-300 cursor-not-allowed opacity-40';
+            btn.style.cursor = 'not-allowed';
+            btn.onclick      = null;
         }
-    });
-};
+    }
 
-window.viewOrder = function (orderID) {
-    fetch(`/admin/orders/${orderID}/view`)
-    .then(res => res.json())
-    .then(data => {
-        if (data.status !== 'success') return;
-        const order = data.order;
+    window.updateStatus = function (orderId, newStatus) {
+        fetch(`/admin/orders/${orderId}/update-status`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+                row.querySelector('.status').innerHTML =
+                    `<span class="inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(newStatus)}">${newStatus}</span>`;
+                row.dataset.status = newStatus;
 
-        // ✅ Payment breakdown (supports multiple payment records)
-        const paymentsHtml = (order.payments?.length ? order.payments : (order.payment ? [order.payment] : []))
-            .map(p => `
-                <div class="flex justify-between text-sm py-1 border-b last:border-0">
-                    <span class="text-gray-500 capitalize">
-                        ${(p.paymentType ?? 'payment').replace(/_/g,' ')} — ${p.method}
-                    </span>
-                    <span class="flex items-center gap-2">
-                        ₱${parseFloat(p.amount).toFixed(2)}
-                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold
-                            ${p.status === 'approved'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-yellow-100 text-yellow-700'}">
-                            ${p.status}
-                        </span>
-                    </span>
-                </div>
-            `).join('');
-
-        let itemsHtml = '';
-        order.order_items.forEach(item => {
-            let extras = [];
-            if (item.size)    extras.push(`<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Size: ${item.size}</span>`);
-            if (item.message) extras.push(`<span class="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full">📝 "${item.message}"</span>`);
-            if (item.customization) {
-                const c = typeof item.customization === 'string' ? JSON.parse(item.customization) : item.customization;
-                if (c.flavor) extras.push(`<span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full">Flavor: ${c.flavor}</span>`);
-                if (c.shape)  extras.push(`<span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">Shape: ${c.shape}</span>`);
-                if (c.icing)  extras.push(`<span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">Icing: ${c.icing}</span>`);
-            }
-            let includesHtml = '';
-            if (item.includes) {
-                const inc = typeof item.includes === 'string' ? JSON.parse(item.includes) : item.includes;
-                if (Array.isArray(inc) && inc.length) {
-                    includesHtml = `<p class="text-xs text-gray-400 mt-1 font-medium">Includes:</p>
-                        <ul class="list-disc ml-4 text-xs text-gray-500">${inc.map(i => `<li>${i}</li>`).join('')}</ul>`;
+                if (data.new_pay_status) {
+                    const isPaid = data.new_pay_status === 'approved';
+                    const badge  = row.querySelector('.pay-status-badge-cod')
+                                ?? row.querySelector('.pay-status-badge');
+                    const btn    = row.querySelector('.pay-toggle-btn');
+                    if (badge) {
+                        badge.textContent = isPaid ? 'Approved' : 'Pending';
+                        badge.className   = badge.className.replace(
+                            /bg-\w+-100 text-\w+-\d+ border border-\w+-\d+/,
+                            isPaid ? 'bg-green-100 text-green-700 border border-green-300'
+                                   : 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                        );
+                    }
+                    if (btn) {
+                        btn.disabled  = false;
+                        btn.title     = isPaid ? 'Mark as Pending' : 'Mark as Paid';
+                        btn.className = 'pay-toggle-btn p-1 rounded-lg transition text-xs ' +
+                            (isPaid ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50');
+                        btn.innerHTML = `<i class="${isPaid ? 'fas fa-undo' : 'fas fa-check-circle'}"></i>`;
+                    }
                 }
+                showMessage(`Order #${orderId} updated to ${newStatus}`, newStatus);
             }
-            itemsHtml += `
-                <tr>
-                    <td class="border-b py-2 px-4">
-                        <div class="font-medium">${item.product.name}</div>
-                        ${extras.length ? `<div class="flex flex-wrap gap-1 mt-1">${extras.join('')}</div>` : ''}
-                        ${includesHtml}
-                    </td>
-                    <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.price).toFixed(2)}</td>
-                    <td class="border-b py-2 px-4 text-center">${item.qty}</td>
-                    <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.subtotal).toFixed(2)}</td>
-                </tr>`;
         });
+    };
 
-        document.getElementById('order-content').innerHTML = `
-            <div class="grid grid-cols-3 gap-6 text-sm text-gray-700">
-                <div class="col-span-2 border p-4 rounded-lg bg-white shadow-sm">
-                    <h4 class="font-semibold mb-3">Order Items</h4>
-                    <table class="w-full table-auto border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="text-left py-2 px-4 border-b">Product</th>
-                                <th class="text-right py-2 px-4 border-b">Price</th>
-                                <th class="text-center py-2 px-4 border-b">QTY</th>
-                                <th class="text-right py-2 px-4 border-b">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                            <tr>
-                                <td colspan="3" class="text-right font-semibold py-2 px-4">Total:</td>
-                                <td class="text-right font-semibold py-2 px-4">₱${parseFloat(order.totalAmount).toFixed(2)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="border p-4 rounded-lg bg-white shadow-sm">
-                    <h4 class="font-semibold mb-3">Customer</h4>
-                    <p class="font-semibold">${order.customer.firstName} ${order.customer.lastName}</p>
-                    <p>${order.customer.address || 'N/A'}</p>
-                    <p>${order.customer.phone   || 'N/A'}</p>
-                    <p>${order.customer.email   || 'N/A'}</p>
-                </div>
-                <div class="col-span-3 border p-4 rounded-lg bg-white shadow-sm mt-6">
-                    <h4 class="font-semibold mb-3">Order Details</h4>
-                    <p><strong>Order Status:</strong> ${order.status}</p>
+    window.viewOrder = function (orderID) {
+        fetch(`/admin/orders/${orderID}/view`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status !== 'success') return;
+            const order = data.order;
 
-                    <div class="mt-2 mb-2">
-                        <p class="font-semibold text-sm mb-1">Payment Breakdown:</p>
-                        <div class="border rounded-lg px-3 py-2 bg-gray-50">
-                            ${paymentsHtml || '<p class="text-xs text-gray-400">No payment records</p>'}
-                        </div>
+            const paymentsHtml = (order.payments?.length ? order.payments : (order.payment ? [order.payment] : []))
+                .map(p => `
+                    <div class="flex justify-between text-sm py-1 border-b last:border-0">
+                        <span class="text-gray-500 capitalize">
+                            ${(p.paymentType ?? 'payment').replace(/_/g,' ')} — ${p.method}
+                        </span>
+                        <span class="flex items-center gap-2">
+                            ₱${parseFloat(p.amount).toFixed(2)}
+                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                ${p.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
+                                ${p.status}
+                            </span>
+                        </span>
                     </div>
+                `).join('');
 
-                    <p><strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleString()}</p>
-                    <p><strong>Delivery Date:</strong> ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</p>
-                    <p><strong>Delivery Time:</strong> ${order.deliveryTime ? new Date('1970-01-01T' + order.deliveryTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:true}) : 'N/A'}</p>
-                    <p><strong>Delivery Address:</strong> ${order.deliveryAddress ?? 'N/A'}</p>
-                    <p><strong>Order Message:</strong> ${order.remarks ?? 'N/A'}</p>
-                </div>
-            </div>`;
-        document.getElementById('view-order-modal').classList.remove('hidden');
-    });
-};
+            let itemsHtml = '';
+            order.order_items.forEach(item => {
+                let extras = [];
+                if (item.size)    extras.push(`<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Size: ${item.size}</span>`);
+                if (item.message) extras.push(`<span class="bg-pink-100 text-pink-700 text-xs px-2 py-0.5 rounded-full">📝 "${item.message}"</span>`);
+                if (item.customization) {
+                    const c = typeof item.customization === 'string' ? JSON.parse(item.customization) : item.customization;
+                    if (c.flavor) extras.push(`<span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full">Flavor: ${c.flavor}</span>`);
+                    if (c.shape)  extras.push(`<span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">Shape: ${c.shape}</span>`);
+                    if (c.icing)  extras.push(`<span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">Icing: ${c.icing}</span>`);
+                }
+                let includesHtml = '';
+                if (item.includes) {
+                    const inc = typeof item.includes === 'string' ? JSON.parse(item.includes) : item.includes;
+                    if (Array.isArray(inc) && inc.length) {
+                        includesHtml = `<p class="text-xs text-gray-400 mt-1 font-medium">Includes:</p>
+                            <ul class="list-disc ml-4 text-xs text-gray-500">${inc.map(i => `<li>${i}</li>`).join('')}</ul>`;
+                    }
+                }
+                itemsHtml += `
+                    <tr>
+                        <td class="border-b py-2 px-4">
+                            <div class="font-medium">${item.product.name}</div>
+                            ${extras.length ? `<div class="flex flex-wrap gap-1 mt-1">${extras.join('')}</div>` : ''}
+                            ${includesHtml}
+                        </td>
+                        <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.price).toFixed(2)}</td>
+                        <td class="border-b py-2 px-4 text-center">${item.qty}</td>
+                        <td class="border-b py-2 px-4 text-right">₱${parseFloat(item.subtotal).toFixed(2)}</td>
+                    </tr>`;
+            });
+
+            document.getElementById('order-content').innerHTML = `
+                <div class="grid grid-cols-3 gap-6 text-sm text-gray-700">
+                    <div class="col-span-2 border p-4 rounded-lg bg-white shadow-sm">
+                        <h4 class="font-semibold mb-3">Order Items</h4>
+                        <table class="w-full table-auto border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="text-left py-2 px-4 border-b">Product</th>
+                                    <th class="text-right py-2 px-4 border-b">Price</th>
+                                    <th class="text-center py-2 px-4 border-b">QTY</th>
+                                    <th class="text-right py-2 px-4 border-b">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                                <tr>
+                                    <td colspan="3" class="text-right font-semibold py-2 px-4">Total:</td>
+                                    <td class="text-right font-semibold py-2 px-4">₱${parseFloat(order.totalAmount).toFixed(2)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="border p-4 rounded-lg bg-white shadow-sm">
+                        <h4 class="font-semibold mb-3">Customer</h4>
+                        <p class="font-semibold">${order.customer.firstName} ${order.customer.lastName}</p>
+                        <p>${order.customer.address || 'N/A'}</p>
+                        <p>${order.customer.phone   || 'N/A'}</p>
+                        <p>${order.customer.email   || 'N/A'}</p>
+                    </div>
+                    <div class="col-span-3 border p-4 rounded-lg bg-white shadow-sm mt-6">
+                        <h4 class="font-semibold mb-3">Order Details</h4>
+                        <p><strong>Order Status:</strong> ${order.status}</p>
+                        <div class="mt-2 mb-2">
+                            <p class="font-semibold text-sm mb-1">Payment Breakdown:</p>
+                            <div class="border rounded-lg px-3 py-2 bg-gray-50">
+                                ${paymentsHtml || '<p class="text-xs text-gray-400">No payment records</p>'}
+                            </div>
+                        </div>
+                        <p><strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleString()}</p>
+                        <p><strong>Delivery Date:</strong> ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</p>
+                        <p><strong>Delivery Time:</strong> ${order.deliveryTime ? new Date('1970-01-01T' + order.deliveryTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:true}) : 'N/A'}</p>
+                        <p><strong>Delivery Address:</strong> ${order.deliveryAddress ?? 'N/A'}</p>
+                        <p><strong>Order Message:</strong> ${order.remarks ?? 'N/A'}</p>
+                    </div>
+                </div>`;
+            document.getElementById('view-order-modal').classList.remove('hidden');
+        });
+    };
 
     window.closeViewModal = function () {
         document.getElementById('view-order-modal').classList.add('hidden');
@@ -785,14 +839,48 @@ window.viewOrder = function (orderID) {
     document.getElementById('confirmModal').addEventListener('click', e => {
         if (e.target.id === 'confirmModal') closeConfirmModal();
     });
-
     document.addEventListener('click', e => {
         const insideTable = e.target.closest('table');
         const isCheckbox  = e.target.classList.contains('orderCheckbox') || e.target.id === 'selectAll';
         if (!insideTable && !isCheckbox) deselectAll();
     });
 
+    // ✅ 1. render() FIRST
     render();
-});
+
+    // ✅ 2. THEN highlight — runs after render() so rows are already visible
+    const storedIds = sessionStorage.getItem('highlight_order_ids');
+    if (storedIds) {
+        sessionStorage.removeItem('highlight_order_ids');
+        try {
+            highlightNewOrders(JSON.parse(storedIds));
+        } catch(e) {}
+    }
+
+    // ✅ 3. Also auto-scroll + fade for PHP-injected new order IDs (direct visit)
+    if (NEW_ORDER_IDS.length) {
+        setTimeout(() => {
+            const firstNew = document.querySelector(
+                NEW_ORDER_IDS.map(id => `tr[data-order-id="${id}"]`).join(',')
+            );
+            if (firstNew && firstNew.style.display !== 'none') {
+                firstNew.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            // Fade out after 6 seconds
+            setTimeout(() => {
+                document.querySelectorAll('.is-new-order').forEach(row => {
+                    row.style.transition = 'background-color 1.5s ease, box-shadow 1.5s ease';
+                    row.style.backgroundColor = '';
+                    row.style.boxShadow = '';
+                    setTimeout(() => {
+                        row.classList.remove('is-new-order');
+                        row.style.transition = '';
+                    }, 1500);
+                });
+            }, 6000);
+        }, 200);
+    }
+
+}); // end DOMContentLoaded
 </script>
 @endsection

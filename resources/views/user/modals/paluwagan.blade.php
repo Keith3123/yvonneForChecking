@@ -106,6 +106,63 @@
                 {{-- Legend rendered by JS (_renderDayGrid appends #day-legend here) --}}
             </div>
 
+            <!-- ── TIME PICKER ─────────────────────────────────────── -->
+            <div id="time-picker-section" class="hidden">
+                <div class="flex items-center gap-2 mb-2 mt-3">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">③ Preferred Delivery Time</p>
+                    <span id="selected-day-label"
+                        class="text-xs font-semibold text-pink-600 bg-pink-50 border border-pink-200
+                                px-2 py-0.5 rounded-full"></span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <select id="time-hour"
+                            class="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+                                focus:border-pink-400 focus:outline-none bg-white cursor-pointer">
+                        <option value="">Hour</option>
+                        <option value="08">8 AM</option>
+                        <option value="09">9 AM</option>
+                        <option value="10">10 AM</option>
+                        <option value="11">11 AM</option>
+                        <option value="12">12 PM</option>
+                        <option value="13">1 PM</option>
+                        <option value="14">2 PM</option>
+                        <option value="15">3 PM</option>
+                        <option value="16">4 PM</option>
+                        <option value="17">5 PM</option>
+                        <option value="18">6 PM</option>
+                    </select>
+
+                    <span class="text-gray-400 font-bold">:</span>
+
+                    <select id="time-minute"
+                            class="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+                                focus:border-pink-400 focus:outline-none bg-white cursor-pointer">
+                        <option value="">Min</option>
+                        <option value="00">00</option>
+                        <option value="05">05</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="25">25</option>
+                        <option value="30">30</option>
+                        <option value="35">35</option>
+                        <option value="40">40</option>
+                        <option value="45">45</option>
+                        <option value="50">50</option>
+                        <option value="55">55</option>
+                    </select>
+
+                    <span class="text-sm text-gray-400">— service hours only</span>
+                </div>
+
+                <p class="text-xs text-gray-400 mt-2">
+                    🕐 Available: <strong>8:00 AM – 6:00 PM</strong>
+                </p>
+            </div>
+
+            <input type="hidden" id="start-time" value="">
+
             <!-- Hidden inputs -->
             <input type="hidden" id="start-month" value="">
             <input type="hidden" id="start-day"   value="">
@@ -121,8 +178,9 @@
                 <ul class="list-disc list-inside text-gray-700 space-y-1 text-xs">
                     <li>Payments start from the <strong>first available month</strong> the admin opened.</li>
                     <li>Your selected date is your <strong>delivery deadline</strong>.</li>
+                    <li>5-day extension for late payment, then <strong>30 pesos penalty per day</strong>.</li>
                     <li>Full payment is required before delivery can be processed.</li>
-                    <li>All payments are non-refundable.</li>
+                    <li><strong>All payments are non-refundable.</strong></li>
                 </ul>
             </div>
 

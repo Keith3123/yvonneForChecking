@@ -23,8 +23,31 @@ class AdminOrdersController extends AdminBaseController
 
         $customers = Customer::whereHas('orders')->get();
 
-        return view('admin.orders', compact('orders', 'customers'));
+        // ✅ Grab unread IDs BEFORE marking them read (for highlight)
+        $newOrderIds = Order::where('is_admin_read', false)
+            ->pluck('orderID')
+            ->toArray();
+
+        // ✅ Now mark all as read
+        Order::where('is_admin_read', false)
+            ->update(['is_admin_read' => true]);
+
+        return view('admin.orders', compact('orders', 'customers', 'newOrderIds'));
     }
+
+    public function unreadCount()
+    {
+        return response()->json([
+            'count' => Order::where('is_admin_read', false)->count(),
+        ]);
+    }
+
+    public function markAllRead()
+    {
+        Order::where('is_admin_read', false)->update(['is_admin_read' => true]);
+        return response()->json(['status' => 'success']);
+    }
+
 
     public function viewOrder($orderID)
     {

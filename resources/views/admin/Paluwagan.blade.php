@@ -418,10 +418,6 @@ searchAllCustomers(query) {
                     <template x-if="replaceCustomers.length === 0 && replaceWaitingOnly && !replaceShowAll">
                         <div class="text-center py-6">
                             <p class="text-gray-400 text-sm">No customers in the waiting list for this slot.</p>
-                            <button @click="replaceShowAll = true; searchAllCustomers('')"
-                                    class="mt-2 text-blue-600 text-xs underline hover:text-blue-800">
-                                Assign to any customer instead
-                            </button>
                         </div>
                     </template>
 
@@ -1064,6 +1060,10 @@ searchAllCustomers(query) {
     <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
         <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Customer Subscriptions</h2>
         <div class="flex items-center gap-2">
+            <button onclick="openPenaltyModal()"
+                class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-semibold transition">
+                🔴 Apply Penalties Now
+            </button>
             <label class="text-xs text-gray-500 whitespace-nowrap">Rows per page</label>
             <select id="sub-per-page" class="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white">
                 <option value="5">5</option>
@@ -1090,6 +1090,13 @@ searchAllCustomers(query) {
             <option value="week">Due This Week</option>
             <option value="overdue">Overdue</option>
         </select>
+        <select id="scheduleStatusFilter" class="border px-3 py-2 rounded-lg w-full md:w-1/4 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+            <option value="">All Schedule Status</option>
+            <option value="late">Late</option>
+            <option value="pending">Pending</option>
+            <option value="paid">All Paid</option>
+            <option value="cancelled">Cancelled</option>
+        </select>
     </div>
 
     <div class="overflow-x-auto">
@@ -1104,8 +1111,9 @@ searchAllCustomers(query) {
                     <th class="py-2 px-3">Paid</th>
                     <th class="py-2 px-3">Remaining</th>
                     <th class="py-2 px-3">Next Due</th>
-                    <th class="py-2 px-3">Release Date</th>
+                    <th class="py-2 px-3">Release Date & Time</th>
                     <th class="py-2 px-3">Status</th>
+                    <th class="py-2 px-3">Payment Status</th>
                     <th class="py-2 px-3">Actions</th>
                 </tr>
             </thead>
@@ -1115,6 +1123,7 @@ searchAllCustomers(query) {
                     data-name="{{ strtolower($sub['customerName']) }}"
                     data-status="{{ $sub['status'] }}"
                     data-due="{{ $sub['nextDueDate'] }}"
+                    data-sched-status="{{ $sub['scheduleStatus'] ?? 'pending' }}"
                     data-sub-index="{{ $loop->index }}">
 
                     <td class="py-2 px-3">{{ $sub['entryID'] }}</td>
@@ -1143,7 +1152,7 @@ searchAllCustomers(query) {
                     <td class="py-2 px-3">₱{{ number_format($sub['monthlyPayment'], 2) }}</td>
                     <td class="py-2 px-3 text-green-600 font-semibold">₱{{ number_format($sub['totalPaid'], 2) }}</td>
                     <td class="py-2 px-3 text-red-500 font-semibold">
-                        ₱{{ number_format($sub['totalAmount'] - $sub['totalPaid'], 2) }}
+                        ₱{{ number_format(max(0, ($sub['totalAmount'] + ($sub['totalPenalty'] ?? 0)) - $sub['totalPaid']), 2) }}
                     </td>
                     <td class="py-2 px-3">
                         {{ $sub['nextDueDate']
@@ -1151,8 +1160,15 @@ searchAllCustomers(query) {
                             : '-' }}
                     </td>
 
-                    <td class="py-2 px-3 text-purple-700 font-medium text-xs">
-                        {{ $sub['releaseDate'] ?? '-' }}
+                    <td>
+                        @if(!empty($sub['releaseDate']))
+                            <span class="block font-medium text-gray-800">{{ $sub['releaseDate'] }}</span>
+                            @if(!empty($sub['releaseTime']))
+                                <span class="text-xs text-gray-500"> {{ $sub['releaseTime'] }}</span>
+                            @endif
+                        @else
+                            <span class="text-gray-400">-</span>
+                        @endif
                     </td>
 
                     <td class="py-2 px-3">
@@ -1179,6 +1195,19 @@ searchAllCustomers(query) {
                     </td>
 
                     <td class="py-2 px-3">
+                        @php $ss = $sub['scheduleStatus'] ?? 'pending'; @endphp
+                        <span class="px-2 py-1 text-xs rounded-full
+                            @switch($ss)
+                                @case('late')      bg-red-100    text-red-800    @break
+                                @case('pending')   bg-yellow-100 text-yellow-800 @break
+                                @case('paid')      bg-green-100  text-green-800  @break
+                                @case('cancelled') bg-gray-100   text-gray-800   @break
+                            @endswitch">
+                            {{ ucfirst($ss) }}
+                        </span>
+                    </td>   
+
+                    <td class="py-2 px-3">
                         <div class="flex gap-1 flex-wrap">
                             <button @click="openPaymentHistory(
                                         '{{ $sub['entryID'] }}',
@@ -1203,19 +1232,19 @@ searchAllCustomers(query) {
                                     Complete
                                 </button>
                             @endif
-                            @if($sub['status'] === 'cancelled')
-    <button @click="openReplaceModal(
-                '{{ $sub['entryID'] }}',
-                '{{ addslashes($sub['packageName']) }}',
-                {{ $sub['totalPaid'] }},
-                {{ $sub['monthsPaid'] }},
-                '{{ $sub['packageID'] ?? '' }}',
-                '{{ $sub['startMonth'] ?? '' }}',
-                '{{ $sub['startDay'] ?? '' }}')"
-        class="bg-blue-500 text-white px-2.5 py-1 rounded text-xs hover:bg-blue-600">
-        <i class="fas fa-user-plus"></i> Replace
-    </button>
-@endif
+                                                        @if($sub['status'] === 'cancelled')
+                                <button @click="openReplaceModal(
+                                            '{{ $sub['entryID'] }}',
+                                            '{{ addslashes($sub['packageName']) }}',
+                                            {{ $sub['totalPaid'] }},
+                                            {{ $sub['monthsPaid'] }},
+                                            '{{ $sub['packageID'] ?? '' }}',
+                                            '{{ $sub['startMonth'] ?? '' }}',
+                                            '{{ $sub['startDay'] ?? '' }}')"
+                                    class="bg-blue-500 text-white px-2.5 py-1 rounded text-xs hover:bg-blue-600">
+                                    <i class="fas fa-user-plus"></i> Replace
+                                </button>
+                            @endif
                         </div>
                     </td>
                 </tr>
@@ -1234,10 +1263,76 @@ searchAllCustomers(query) {
         <div class="flex items-center gap-1" id="sub-page-buttons"></div>
     </div>
 </div>
+<!-- Penalty Confirmation Modal -->
+<div id="penaltyModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+    <div class="relative p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <span class="text-red-600 text-xl">⚠️</span>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Confirm Action</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">
+                    Are you sure you want to apply penalties to all late payments? This cannot be undone.
+                </p>
+            </div>
+            <div class="items-center px-4 py-3 flex justify-center gap-3">
+                <button onclick="closePenaltyModal()" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300 focus:outline-none transition">
+                    Cancel
+                </button>
+                <button id="confirmPenaltyBtn" onclick="confirmRunPenalties()" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-600 focus:outline-none transition">
+                    Yes, Apply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
+function openPenaltyModal() {
+    document.getElementById('penaltyModal').classList.remove('hidden');
+}
+
+function closePenaltyModal() {
+    document.getElementById('penaltyModal').classList.add('hidden');
+}
+
+async function confirmRunPenalties() {
+    const btn = document.getElementById('confirmPenaltyBtn');
+    
+    // Disable ang button para malikayan ang double-click
+    btn.disabled = true;
+    btn.innerText = 'Processing...';
+
+    try {
+        const res = await fetch('/admin/paluwagan/apply-penalties', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await res.json();
+        closePenaltyModal(); // I-close ang modal pagkahuman
+
+        if (res.ok) {
+            showToast(data.message || 'Penalties applied.', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(data.error || 'Something went wrong.', 'error');
+        }
+    } catch (error) {
+        closePenaltyModal();
+        showToast('Network error. Please try again.', 'error');
+    } finally {
+        // I-reset ang button state
+        btn.disabled = false;
+        btn.innerText = 'Yes, Apply';
+    }
+}
 // =============================================
 // TOAST
 // =============================================
@@ -1530,55 +1625,32 @@ let subPage    = 1;
 let subPerPage = parseInt(subPerPageSel.value);
 
 function getVisibleSubs() {
-    const sq      = searchInput.value.toLowerCase();
-    const statusV = statusFilter.value;
-    const dueV    = dueFilter.value;
+    const sq          = searchInput.value.toLowerCase();
+    const statusV     = statusFilter.value;
+    const dueV        = dueFilter.value;
+    const schedStatV  = document.getElementById('scheduleStatusFilter').value;
 
-    // ── Use local date only, no time component ────────────────────
     const now       = new Date();
     const todayStr  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    const todayDate = new Date(todayStr); // local midnight
-
+    const todayDate = new Date(todayStr);
     const weekLater = new Date(todayDate);
     weekLater.setDate(weekLater.getDate() + 7);
 
     return subRows.filter(row => {
         let show = true;
-
-        // Search filter
         if (sq && !row.dataset.name.includes(sq)) show = false;
-
-        // Status filter
         if (statusV && row.dataset.status !== statusV) show = false;
-
-        // Due date filter — only apply if row has a due date
+        if (schedStatV && row.dataset.schedStatus !== schedStatV) show = false;
         if (dueV) {
             const rawDue = row.dataset.due;
-
-            if (!rawDue) {
-                // No due date — hide from all due date filters
-                show = show && false;
-            } else {
-                // Parse as local date by replacing - with / 
-                // "2026-06-15" → "2026/06/15" → parsed as local midnight
+            if (!rawDue) { show = show && false; }
+            else {
                 const dueDate = new Date(rawDue.replace(/-/g, '/'));
-
-                if (dueV === 'today') {
-                    show = show && (dueDate.toDateString() === todayDate.toDateString());
-                }
-
-                if (dueV === 'week') {
-                    // Due from today up to 7 days from now (inclusive)
-                    show = show && (dueDate >= todayDate && dueDate <= weekLater);
-                }
-
-                if (dueV === 'overdue') {
-                    // Strictly before today (not including today)
-                    show = show && (dueDate < todayDate);
-                }
+                if (dueV === 'today') show = show && (dueDate.toDateString() === todayDate.toDateString());
+                if (dueV === 'week')  show = show && (dueDate >= todayDate && dueDate <= weekLater);
+                if (dueV === 'overdue') show = show && (dueDate < todayDate);
             }
         }
-
         return show;
     });
 }
@@ -1630,7 +1702,7 @@ function renderSubscriptions() {
     }
     subPageBtns.appendChild(makeBtn('›', subPage + 1, false, subPage === totalPages));
 }
-
+document.getElementById('scheduleStatusFilter').addEventListener('change', () => { subPage = 1; renderSubscriptions(); });
 searchInput.addEventListener('input',   () => { subPage = 1; renderSubscriptions(); });
 statusFilter.addEventListener('change', () => { subPage = 1; renderSubscriptions(); });
 dueFilter.addEventListener('change',   () => { subPage = 1; renderSubscriptions(); });

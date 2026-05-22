@@ -47,22 +47,36 @@
 
                 <div class="relative group tooltip-wrapper">
                     <a href="{{ $enabled ? route($link['route']) : '#' }}"
-                       class="grid grid-cols-[40px_1fr] items-center py-3 rounded-lg
-                              text-gray-700 hover:text-pink-500 hover:bg-pink-50 transition
-                              {{ $enabled ? '' : 'pointer-events-none opacity-50 cursor-not-allowed' }}">
-                        <i class="{{ $link['icon'] }} text-pink-500 fa-fw justify-self-center"></i>
-                        <span
-                          class="font-semibold opacity-0 max-w-0 overflow-hidden
-                                 group-hover/sidebar:opacity-100
-                                 group-hover/sidebar:max-w-xs
-                                 transition-all duration-300 whitespace-nowrap">
+                    class="grid grid-cols-[40px_1fr] items-center py-3 rounded-lg
+                            text-gray-700 hover:text-pink-500 hover:bg-pink-50 transition
+                            {{ $enabled ? '' : 'pointer-events-none opacity-50 cursor-not-allowed' }}">
+
+                        {{-- Icon wrapper — needs relative for the badge --}}
+                        <span class="relative justify-self-center">
+                            <i class="{{ $link['icon'] }} text-pink-500 fa-fw"></i>
+
+                            {{-- ✅ Badge — only show on Orders link --}}
+                            @if($link['route'] === 'admin.orders')
+                                <span id="admin-order-badge"
+                                    class="hidden absolute -top-2 -right-2 bg-red-500 text-white 
+                                            text-[9px] font-bold rounded-full min-w-[16px] h-[16px] 
+                                            flex items-center justify-center px-1 leading-none shadow-md">
+                                    0
+                                </span>
+                            @endif
+                        </span>
+
+                        <span class="font-semibold opacity-0 max-w-0 overflow-hidden
+                                    group-hover/sidebar:opacity-100
+                                    group-hover/sidebar:max-w-xs
+                                    transition-all duration-300 whitespace-nowrap">
                             {{ $link['label'] }}
                         </span>
                     </a>
 
                     @unless($enabled)
-                        <span class="access-denied-tooltip absolute px-2 py-1 rounded bg-gray-800 text-white text-xs
-                                     opacity-0 pointer-events-none z-50">
+                        <span class="access-denied-tooltip absolute px-2 py-1 rounded bg-gray-800 
+                                    text-white text-xs opacity-0 pointer-events-none z-50">
                             {{ $link['label'] }} - Access Denied
                         </span>
                     @endunless

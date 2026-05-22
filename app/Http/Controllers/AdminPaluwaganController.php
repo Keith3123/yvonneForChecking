@@ -52,7 +52,8 @@ class AdminPaluwaganController extends AdminBaseController
             })->count();
  
             $monthsLeft = $totalMonths - $monthsPaid;
- 
+            
+        
             $nextSchedule = $schedules
                 ->filter(function($s) {
                     return in_array($s->status, ['pending', 'partial', 'late'])
@@ -65,24 +66,40 @@ class AdminPaluwaganController extends AdminBaseController
                 'entryID'              => $entry->paluwaganEntryID,
                 'customerID'           => $entry->customerID,
                 'packageName'          => $package?->packageName ?? 'N/A',
-                'packageID'            => $entry->packageID,       // ← ADD
-                'startMonth'           => $entry->startMonth,      // ← ADD
+                'packageID'            => $entry->packageID,
+                'startMonth'           => $entry->startMonth,
                 'totalMonths'          => $totalMonths,
                 'monthsPaid'           => $monthsPaid,
                 'monthsLeft'           => $monthsLeft,
+                'scheduleStatus'       => (function() use ($schedules) {
+                    if ($schedules->contains('status', 'late'))      return 'late';
+                    if ($schedules->contains('status', 'pending'))   return 'pending';
+                    if ($schedules->contains('status', 'cancelled')) return 'cancelled';
+                    return 'paid';
+                })(),
+                'totalPenalty'         => (float) $schedules->sum('penaltyAmount'),
                 'monthlyPayment'       => $package?->monthlyPayment ?? 0,
                 'totalPaid'            => $totalPaid,
                 'totalAmount'          => $package?->totalAmount ?? 0,
                 'nextDueDate'          => $nextSchedule?->dueDate,
                 'status'               => $entry->status,
                 'startDay'             => $entry->startDay,
-                'releaseDate'          => ($entry->startMonth && $entry->startDay)
-                                            ? \Carbon\Carbon::create(
-                                                $entry->startYear ?? now()->year,
-                                                $entry->startMonth,
-                                                $entry->startDay
-                                            )->format('M d, Y')
-                                            : null,
+                'releaseDate' => ($entry->startMonth && $entry->startDay)
+                    ? \Carbon\Carbon::create(
+                        $entry->startYear ?? now()->year,
+                        $entry->startMonth,
+                        $entry->startDay
+                    )->format('M d, Y')
+                    : null,
+                'releaseTime' => !empty($entry->startTime)
+                    ? (function($t) {
+                        try { return \Carbon\Carbon::createFromFormat('H:i:s', $t)->format('g:i A'); }
+                        catch (\Exception $e) {
+                            try { return \Carbon\Carbon::createFromFormat('H:i', $t)->format('g:i A'); }
+                            catch (\Exception $e2) { return $t; }
+                        }
+                    })($entry->startTime)
+                    : null,
                 'customerName'         => trim(
                     ($entry->customer->firstName ?? '') . ' ' . ($entry->customer->lastName ?? '')
                 ) ?: 'N/A',
@@ -96,24 +113,19 @@ class AdminPaluwaganController extends AdminBaseController
             ];
         });
 
-        // After the $subscriptions = PaluwaganEntry::with(...)->get()->map(...) block,
-// add this filter before returning the view:
+        $subscriptions = $subscriptions->filter(function($sub) use ($subscriptions) {
+            if ($sub['status'] !== 'waiting') return true;
 
-// After the $subscriptions ->map() block, before return view():
-
-$subscriptions = $subscriptions->filter(function($sub) use ($subscriptions) {
-    if ($sub['status'] !== 'waiting') return true;
-
-    // Only hide if THIS SAME customer already has an active entry
-    // for the exact same slot — means it's a stale orphan
-    return !$subscriptions->contains(function($other) use ($sub) {
-        return $other['status']     === 'active'
-            && $other['customerID'] == $sub['customerID']  // == not === (avoids type mismatch)
-            && $other['packageID']  == $sub['packageID']
-            && $other['startMonth'] == $sub['startMonth']
-            && $other['startDay']   == $sub['startDay'];
-    });
-})->values();
+            // Only hide if THIS SAME customer already has an active entry
+            // for the exact same slot — means it's a stale orphan
+            return !$subscriptions->contains(function($other) use ($sub) {
+                return $other['status']     === 'active'
+                    && $other['customerID'] == $sub['customerID']  // == not === (avoids type mismatch)
+                    && $other['packageID']  == $sub['packageID']
+                    && $other['startMonth'] == $sub['startMonth']
+                    && $other['startDay']   == $sub['startDay'];
+            });
+        })->values();
 
         $paluwaganItems = PaluwaganItem::where('isActive', 1)
         ->orderBy('category')
@@ -470,7 +482,8 @@ public function getPayments($entryID)
 
         $totalPaid   = (float) \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $entryID)
                         ->sum('amountPaid');
-        $totalAmount = (float) ($entry->package->totalAmount ?? 0);
+        $totalAmount = (float) \App\Models\PaluwaganSchedule::where('paluwaganEntryID', $entryID)
+        ->sum(\DB::raw('amountDue + penaltyAmount'));
 
         return response()->json([
             'success'     => true,

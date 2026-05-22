@@ -103,6 +103,30 @@
 
 {{-- ── ACTIVE / OTHER ENTRIES ────────────────────────────────── --}}
 @php
+    $releaseDate = $entry->startDay
+        ? \Carbon\Carbon::create(
+            $entry->startYear ?? now()->year,
+            $entry->startMonth,
+            $entry->startDay
+          )->format('F j, Y')
+        : \Carbon\Carbon::create()
+            ->month($entry->startMonth)
+            ->year($entry->startYear ?? now()->year)
+            ->format('F Y');
+
+    $timeLabel = '';
+    if (!empty($entry->startTime)) {
+        try {
+            $timeLabel = ' at ' . \Carbon\Carbon::createFromFormat('H:i:s', $entry->startTime)->format('g:i A');
+        } catch (\Exception $e) {
+            try {
+                $timeLabel = ' at ' . \Carbon\Carbon::createFromFormat('H:i', $entry->startTime)->format('g:i A');
+            } catch (\Exception $e2) {
+                $timeLabel = ' at ' . $entry->startTime;
+            }
+        }
+    }
+
     $totalPaid    = $schedules->sum('amountPaid');
     $totalMonths  = $schedules->count();
     $monthsPaid   = $schedules->filter(fn($s) =>
@@ -114,10 +138,6 @@
                            && (float)$s->amountPaid < (float)$s->amountDue)
         ->sortBy('dueDate')
         ->first();
-    $releaseDate  = $entry->startDay
-        ? \Carbon\Carbon::create($entry->startYear ?? now()->year, $entry->startMonth, $entry->startDay)->format('F j, Y')
-        : \Carbon\Carbon::create()->month($entry->startMonth)->year($entry->startYear ?? now()->year)->format('F Y');
-    // Monthly payment from actual schedules (recalculated)
     $actualMonthly = $schedules->count() > 0
         ? $schedules->sortBy('dueDate')->first()->amountDue
         : ($package?->monthlyPayment ?? 0);
@@ -143,7 +163,7 @@
                 @endforeach
             </ul>
             <p class="text-sm text-gray-600 mt-1">
-                📦 Delivery: <span class="font-semibold text-purple-700">{{ $releaseDate }}</span>
+                📦 Delivery: <span class="font-semibold text-purple-700">{{ $releaseDate }}{{ $timeLabel }}</span>
                 • Monthly: <span class="font-semibold">₱{{ number_format($actualMonthly, 2) }}</span>
             </p>
         </div>
@@ -497,58 +517,81 @@ async function openScheduleModal(entryID) {
         document.getElementById('sched-total-months').textContent = schedules.length;
 
         schedules.forEach((sched, i) => {
-            const isLate  = !sched.isPaid && new Date() > new Date(sched.dueDate);
-            const status  = sched.isPaid ? 'paid' : isLate ? 'late' : 'pending';
+    const penalty    = parseFloat(sched.penaltyAmount || 0);
+    const totalDue   = parseFloat(sched.totalDue || sched.amountDue);
+    const amountPaid = parseFloat(sched.amountPaid);
+    const remaining  = totalDue - amountPaid;
+    const isPastGrace = penalty > 0;
+    const inGrace     = sched.inGrace ?? false;
 
-            const dueFormatted = new Date(sched.dueDate).toLocaleDateString('en-US', {
-                month: 'short', day: 'numeric', year: 'numeric'
-            });
+    const status = sched.isPaid ? 'paid'
+        : (isPastGrace || sched.status === 'late') ? 'late'
+        : 'pending';
 
-            const amountDue  = parseFloat(sched.amountDue);
-            const amountPaid = parseFloat(sched.amountPaid);
-            const remaining  = amountDue - amountPaid;
+    const dueFormatted = new Date(sched.dueDate).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric'
+    });
 
-            let bgClass, badgeClass, badgeLabel, numberBg;
-            if (status === 'paid') {
-                bgClass = 'bg-green-50 border-green-200'; badgeClass = 'bg-green-100 text-green-700';
-                badgeLabel = 'Paid'; numberBg = 'bg-green-500';
-            } else if (status === 'late') {
-                bgClass = 'bg-red-50 border-red-200'; badgeClass = 'bg-red-100 text-red-700';
-                badgeLabel = 'Late'; numberBg = 'bg-red-500';
-            } else {
-                bgClass = 'bg-gray-50 border-gray-200'; badgeClass = 'bg-gray-100 text-gray-600';
-                badgeLabel = 'Pending'; numberBg = 'bg-pink-400';
-            }
+    let bgClass, badgeClass, badgeLabel, numberBg;
+    if (status === 'paid') {
+        bgClass = 'bg-green-50 border-green-200'; badgeClass = 'bg-green-100 text-green-700';
+        badgeLabel = 'Paid'; numberBg = 'bg-green-500';
+    } else if (status === 'late') {
+        bgClass = 'bg-red-50 border-red-200'; badgeClass = 'bg-red-100 text-red-700';
+        badgeLabel = 'Late'; numberBg = 'bg-red-500';
+    } else {
+        bgClass = 'bg-gray-50 border-gray-200'; badgeClass = 'bg-gray-100 text-gray-600';
+        badgeLabel = 'Pending'; numberBg = 'bg-pink-400';
+    }
 
-            const card = document.createElement('div');
-            card.className = `flex items-center justify-between p-3 rounded-xl border ${bgClass}`;
-            card.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center
-                                text-xs font-bold text-white flex-shrink-0 ${numberBg}">
-                        ${i + 1}
-                    </div>
-                    <div>
-                        <p class="font-semibold text-sm text-gray-800">${sched.monthName}</p>
-                        <p class="text-xs text-gray-500">Due: ${dueFormatted}</p>
-                        ${amountPaid > 0 && !sched.isPaid
-                            ? `<p class="text-xs text-yellow-600">Partial: ₱${amountPaid.toLocaleString('en-PH',{minimumFractionDigits:2})}</p>`
-                            : ''}
-                    </div>
-                </div>
-                <div class="text-right">
-                    <p class="font-bold text-sm ${status === 'paid' ? 'text-green-600' : status === 'late' ? 'text-red-600' : 'text-gray-700'}">
-                        ₱${amountDue.toLocaleString('en-PH', {minimumFractionDigits:2})}
-                    </p>
-                    ${!sched.isPaid && remaining < amountDue
-                        ? `<p class="text-[10px] text-gray-400">₱${remaining.toLocaleString('en-PH',{minimumFractionDigits:2})} left</p>`
-                        : ''}
-                    <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${badgeClass}">
-                        ${badgeLabel}
-                    </span>
-                </div>`;
-            cards.appendChild(card);
-        });
+    // Grace period notice
+    const graceHtml = inGrace
+        ? `<p class="text-xs text-yellow-600 mt-0.5">
+               ⚠️ Grace period: ${sched.graceDaysLeft} day(s) left (until ${sched.gracePeriodEnd})
+           </p>`
+        : '';
+
+    // Penalty notice
+    const penaltyHtml = penalty > 0
+        ? `<p class="text-xs text-red-500 mt-0.5 font-semibold">
+               🔴 Penalty: +₱${penalty.toLocaleString('en-PH', {minimumFractionDigits:2})}
+           </p>`
+        : '';
+
+    const card = document.createElement('div');
+    card.className = `flex items-center justify-between p-3 rounded-xl border ${bgClass}`;
+    card.innerHTML = `
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center
+                        text-xs font-bold text-white flex-shrink-0 ${numberBg}">
+                ${i + 1}
+            </div>
+            <div>
+                <p class="font-semibold text-sm text-gray-800">${sched.monthName}</p>
+                <p class="text-xs text-gray-500">Due: ${dueFormatted}</p>
+                ${graceHtml}
+                ${penaltyHtml}
+                ${amountPaid > 0 && !sched.isPaid
+                    ? `<p class="text-xs text-yellow-600">Partial: ₱${amountPaid.toLocaleString('en-PH',{minimumFractionDigits:2})}</p>`
+                    : ''}
+            </div>
+        </div>
+        <div class="text-right">
+            <p class="font-bold text-sm ${status === 'paid' ? 'text-green-600' : status === 'late' ? 'text-red-600' : 'text-gray-700'}">
+                ₱${totalDue.toLocaleString('en-PH', {minimumFractionDigits:2})}
+            </p>
+            ${penalty > 0
+                ? `<p class="text-[10px] text-gray-400 line-through">₱${parseFloat(sched.amountDue).toLocaleString('en-PH',{minimumFractionDigits:2})}</p>`
+                : ''}
+            ${!sched.isPaid && remaining < totalDue
+                ? `<p class="text-[10px] text-gray-400">₱${remaining.toLocaleString('en-PH',{minimumFractionDigits:2})} left</p>`
+                : ''}
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${badgeClass}">
+                ${badgeLabel}
+            </span>
+        </div>`;
+    cards.appendChild(card);
+});
 
         cards.classList.remove('hidden');
         reminders.classList.remove('hidden');
@@ -714,7 +757,7 @@ function openPaymentModal(entryID) {
 
             currentSchedules      = schedules.filter(s => !s.isPaid);
             currentTotalRemaining = currentSchedules.reduce((sum, s) =>
-                sum + (parseFloat(s.amountDue) - parseFloat(s.amountPaid)), 0);
+                sum + (parseFloat(s.totalDue || s.amountDue) - parseFloat(s.amountPaid)), 0);
 
             document.getElementById('payment-total-remaining').textContent =
                 '₱' + currentTotalRemaining.toLocaleString('en-PH', { minimumFractionDigits: 2 });
@@ -731,34 +774,41 @@ function openPaymentModal(entryID) {
             }
 
             listEl.innerHTML = currentSchedules.slice(0, 5).map((s, i) => {
-                const remaining = parseFloat(s.amountDue) - parseFloat(s.amountPaid);
-                const isLate    = s.status === 'late';
-                const dueDate   = new Date(s.dueDate).toLocaleDateString('en-PH', {
-                    month: 'short', day: 'numeric', year: 'numeric'
-                });
+    const totalDue  = parseFloat(s.totalDue || s.amountDue);
+    const penalty   = parseFloat(s.penaltyAmount || 0);
+    const remaining = totalDue - parseFloat(s.amountPaid);
+    const isLate    = s.status === 'late' || penalty > 0;
+    const dueDate   = new Date(s.dueDate).toLocaleDateString('en-PH', {
+        month: 'short', day: 'numeric', year: 'numeric'
+    });
 
-                return `
-                    <div class="flex items-center justify-between p-3 rounded-xl border
-                        ${isLate ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}">
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center
-                                         justify-center text-white
-                                         ${isLate ? 'bg-red-500' : 'bg-pink-500'}">
-                                ${i + 1}
-                            </span>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-700">${s.monthName}</p>
-                                <p class="text-xs text-gray-400">Due: ${dueDate}</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm font-bold ${isLate ? 'text-red-600' : 'text-gray-800'}">
-                                ₱${remaining.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                            </p>
-                            ${isLate ? '<span class="text-xs text-red-500 font-medium">LATE</span>' : ''}
-                        </div>
-                    </div>`;
-            }).join('');
+    return `
+        <div class="flex items-center justify-between p-3 rounded-xl border
+            ${isLate ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}">
+            <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center
+                             justify-center text-white ${isLate ? 'bg-red-500' : 'bg-pink-500'}">
+                    ${i + 1}
+                </span>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700">${s.monthName}</p>
+                    <p class="text-xs text-gray-400">Due: ${dueDate}</p>
+                    ${penalty > 0
+                        ? `<p class="text-xs text-red-500 font-semibold">🔴 Penalty: +₱${penalty.toLocaleString('en-PH',{minimumFractionDigits:2})}</p>`
+                        : ''}
+                    ${s.inGrace
+                        ? `<p class="text-xs text-yellow-600">⚠️ Grace: ${s.graceDaysLeft} day(s) left</p>`
+                        : ''}
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-sm font-bold ${isLate ? 'text-red-600' : 'text-gray-800'}">
+                    ₱${remaining.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                </p>
+                ${isLate ? '<span class="text-xs text-red-500 font-medium">LATE</span>' : ''}
+            </div>
+        </div>`;
+}).join('');
 
             if (currentSchedules.length > 5) {
                 listEl.innerHTML += `

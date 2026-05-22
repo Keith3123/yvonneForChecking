@@ -217,58 +217,155 @@
     </div>
 </div>
 
-{{-- ===================== T&C MODAL ===================== --}}
-    <div id="terms-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/10 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[80vh]">
+{{-- T&C MODAL --}}
+<div id="terms-modal" class="fixed inset-0 z-50 hidden items-center justify-center " style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl w-full max-w-lg mx-4 flex flex-col shadow-2xl" style="max-height: 88vh;">
 
-            {{-- Header --}}
-            <div class="flex items-center justify-between p-5 border-b border-gray-100">
-                <h2 class="text-base font-semibold text-gray-800 w-full text-center">Terms & Conditions</h2>
-                <button id="close-terms-modal" type="button"
-                    class="text-gray-400 hover:text-gray-600 transition text-xl leading-none">&times;</button>
+        {{-- Header --}}
+        <div class="flex items-start justify-between px-5 pt-5 pb-4 border-b border-gray-100 shrink-0">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900 text-left">Terms & Conditions</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Yvonne's Cakes & Pastries · {{ date('F Y') }}</p>
             </div>
+            <button id="close-terms-modal" type="button"
+                class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition text-base font-medium shrink-0 mt-0.5">
+                ✕
+            </button>
+        </div>
 
-            {{-- Body — text-left overrides the parent text-center --}}
-            <div class="overflow-y-auto p-5 text-sm text-gray-600 space-y-4 flex-1 text-left">
-                <p class="text-xs text-gray-400">Last updated: {{ date('F d, Y') }}</p>
+        {{-- Body --}}
+        <div class="overflow-y-auto flex-1 px-5 py-4 space-y-5 text-sm text-gray-600 text-left">
 
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">1. Acceptance of Terms</h3>
-                    <p>By creating an account on Yvonne's Cakes & Pastries, you agree to be bound by these Terms and Conditions. If you do not agree, please do not register or use our services.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">2. Account Responsibility</h3>
-                    <p>You are responsible for maintaining the confidentiality of your account credentials. You agree to notify us immediately of any unauthorized use of your account. One person may not hold more than five (5) accounts using the same phone number.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">3. Orders & Payments</h3>
-                    <p>All orders are subject to availability and confirmation. Prices are subject to change without prior notice. We reserve the right to cancel any order due to pricing errors or product unavailability. Payments via GCash are processed through PayMongo and are subject to their terms.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">4. Paluwagan Participation</h3>
-                    <p>Joining a Paluwagan package is a financial commitment. Cancellations and release requests are subject to admin approval and the schedule agreed upon at the time of enrollment. We reserve the right to reassign slots if payment obligations are not met.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">5. Privacy</h3>
-                    <p>We collect personal information (name, phone number, address, email) solely for order fulfillment and account management. We do not sell your data to third parties.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">6. Google Binding</h3>
-                    <p>To prevent fraudulent orders and ensure secure payment processing, all customers are required to link a verified Gmail account to their profile.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">7. Product Availability</h3>
-                    <p>All items are made to order. Availability of custom cakes, pastries, and food trays may vary depending on season and supply. We will contact you if any ordered item cannot be fulfilled.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">8. Modifications</h3>
-                    <p>Yvonne's Cakes & Pastries reserves the right to update these Terms at any time. Continued use of the platform after changes constitutes acceptance of the new terms.</p>
-                </section>
-                <section>
-                    <h3 class="font-semibold text-gray-700 mb-1">9. Contact</h3>
-                    <p>For any concerns regarding these terms, please reach out to us through our official channels.</p>
-                </section>
-            </div>
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">1. Acceptance of Terms</p>
+                <p class="text-xs leading-relaxed">By creating an account on Yvonne's Cakes &amp; Pastries, you confirm that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, please do not register or use our services.</p>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">2. Account Responsibility</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
+                    <li>You are solely responsible for keeping your account credentials confidential. Any activity that occurs under your account is your responsibility.</li>
+                    <li>If you suspect unauthorized access, notify us immediately.</li>
+                    <li>A single phone number may not be used to register more than <strong>5 accounts</strong>.</li>
+                </ul>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">3. Orders & Payments</p>
+                <p class="text-xs leading-relaxed mb-2">All orders are subject to availability and confirmation. Prices may change without notice.</p>
+                <p class="text-xs font-semibold text-gray-700 mb-1">GCash via PayMongo</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
+                    <li>You may pay in <strong>Full Payment</strong> or <strong>Downpayment</strong>. Downpayment charges partial via GCash; remaining is collected in cash on delivery.</li>
+                    <li>A failed payment means your order is <strong>not placed</strong>. Retry or switch to COD.</li>
+                    <li>For duplicate charges, contact us immediately via call <strong>0907 421 7589</strong> with your GCash transaction reference.</li>
+                    <li>We are not liable for failures caused by insufficient balance, network issues, or GCash downtime.</li>
+                </ul>
+                <p class="text-xs font-semibold text-gray-700 mb-1">Cash on Delivery (COD)</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
+                    <li>Full cash payment is required upon delivery. Prepare the <strong>exact amount</strong> when possible.</li>
+                    <li>Failure to pay upon delivery may result in your account being <strong>restricted</strong> from future orders.</li>
+                </ul>
+                <p class="text-xs font-semibold text-gray-700 mb-1">Cancellation & Refunds</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
+                    <li>Cancellations are only allowed while the order is still <strong>Pending</strong>. Once Confirmed, no cancellations are accepted.</li>
+                    <li>Refund requests for Pending GCash orders are processed within <strong>5–10 business days</strong> via phone call <strong>0907 421 7589</strong>.</li>
+                    <li>We reserve the right to deny refund requests outside the allowed window.</li>
+                </ul>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">4. Paluwagan Participation</p>
+                <p class="text-xs leading-relaxed mb-2">Enrolling in a Paluwagan package is a <strong>financial commitment</strong>. By joining, you agree to all terms below.</p>
+                <p class="text-xs font-semibold text-gray-700 mb-1">Enrollment & Slots</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
+                    <li>Each package has a maximum of <strong>20 active slots per month</strong>, each tied to a specific delivery date &amp; time.</li>
+                    <li>If your preferred date is full, you may join the <strong>waiting list</strong> and will be activated first-come, first-served when a slot opens.</li>
+                    <li>You may only hold <strong>one active entry per slot</strong> (package + month + day combination).</li>
+                </ul>
+                <p class="text-xs font-semibold text-gray-700 mb-1">Monthly Payments</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
+                    <li>Payments are calculated by dividing the total package price by the months remaining from enrollment to your delivery date.</li>
+                    <li>Payments must be made on or before each due date. There is a 5-day extension for late payments, then a ₱30/day penalty applies.</li>
+                    <li>All payments are via <strong>GCash</strong> and are <strong>non-refundable</strong> once processed.</li>
+                </ul>
+                <p class="text-xs font-semibold text-gray-700 mb-1">Early Release</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
+                    <li>You may request early release before your scheduled date, provided your <strong>full balance is paid</strong>.</li>
+                    <li>Requests require <strong>admin approval</strong> and are not guaranteed.</li>
+                    <li>Requests with any remaining balance will be <strong>automatically rejected</strong>.</li>
+                </ul>
+                <p class="text-xs font-semibold text-gray-700 mb-1">Cancellation & Slot Transfer</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
+                    <li>You may cancel at any time. Your slot transfers automatically to the <strong>next person on the waiting list</strong>.</li>
+                    <li>The new holder inherits your payments as credit. <strong>No refund</strong> is issued to the cancelling party.</li>
+                    <li>If no one is waiting, the slot is released and marked cancelled.</li>
+                </ul>
+                <p class="text-xs font-semibold text-gray-700 mb-1">Completion</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
+                    <li>A subscription is <strong>completed</strong> when all payments are settled and the product has been released.</li>
+                    <li>If your delivery date arrives with a fully paid balance, your subscription is <strong>automatically completed</strong>.</li>
+                    <li>We reserve the right to reassign slots if payment obligations are not met.</li>
+                </ul>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">5. Privacy & Your Data</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
+                    <li>We collect and store your full name, username, email address, contact number, and address solely for order fulfillment and account management.</li>
+                    <li>Passwords are encrypted and never stored in plain text.</li>
+                    <li>Your data is <strong>never sold or shared with third parties</strong>.</li>
+                </ul>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">6. Google Account Linking</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
+                    <li>Linking your Google account will <strong>replace your current email</strong> with the email from your Google account, which is then automatically verified.</li>
+                    <li>A Google account can only be linked to <strong>one Yvonne's account</strong>. Attempts to link an already-bound Google account will be blocked.</li>
+                    <li>Unlinking removes your Google ID and clears your verified email status.</li>
+                    <li>Make sure you have a <strong>password set</strong> before unlinking your Google account, or you may lose access.</li>
+                </ul>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">7. Product Availability</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
+                    <li>Products marked as <strong>Unavailable</strong> cannot be added to cart or ordered.</li>
+                    <li>We may update, discontinue, or modify any product — including its serving sizes, pricing, or ingredients — at any time without prior notice.</li>
+                    <li>Promotional discounts are applied at the time of order and are not guaranteed for future purchases.</li>
+                </ul>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">8. Changes to These Terms</p>
+                <p class="text-xs leading-relaxed">We may update these Terms and Conditions at any time. Continued use of the platform after changes are published constitutes your acceptance of the revised terms.</p>
+            </section>
+
+            <section>
+                <p class="font-semibold text-gray-800 mb-1.5">9. Contact Us</p>
+                <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
+                    <li>Phone call: <strong>0907 421 7589</strong></li>
+                    <li>Facebook: <strong>Yvonne's Cakes, Pastries &amp; Food Trays</strong> — <a href="https://www.facebook.com/erika.yvonne1008" class="text-pink-500 underline" target="_blank">facebook.com/erika.yvonne1008</a></li>
+                </ul>
+            </section>
+
+        </div>
+
+        {{-- Footer --}}
+        <div class="border-t border-gray-100 px-5 py-4 flex justify-end gap-2 shrink-0">
+            <button id="close-terms-modal-btn" type="button"
+                class="px-4 py-2 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition font-medium">
+                Close
+            </button>
+            <button id="accept-terms-btn" type="button"
+                class="px-4 py-2 text-xs rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-semibold transition flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                </svg>
+                I Agree
+            </button>
+        </div>
+
     </div>
 </div>
 

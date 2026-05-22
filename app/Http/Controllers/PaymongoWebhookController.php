@@ -178,10 +178,10 @@ class PaymongoWebhookController extends Controller
         foreach ($schedules as $sched) {
             if ($remaining <= 0) break;
 
-            $due     = floatval($sched->amountDue) - floatval($sched->amountPaid);
+            $due    = floatval($sched->amountDue) - floatval($sched->amountPaid);
             if ($due <= 0) continue;
 
-            $paying  = min($due, $remaining);
+            $paying    = min($due, $remaining);
             $remaining -= $paying;
 
             $sched->amountPaid = floatval($sched->amountPaid) + $paying;
@@ -197,56 +197,21 @@ class PaymongoWebhookController extends Controller
 
         Log::info("✅ PALUWAGAN ENTRY #{$entryID} PAYMENT PROCESSED");
 
-        // =========================
-        // AUTO-COMPLETE CHECK
-        // =========================
+        // ── No auto-complete — admin manually completes via admin panel ──
+        // Just log if fully paid so admin knows
         $entry = \App\Models\PaluwaganEntry::with(['schedules', 'package'])
             ->where('paluwaganEntryID', $entryID)
             ->first();
- 
-        if ($entry && in_array($entry->status, ['active', 'release_requested'])) {
+
+        if ($entry) {
             $totalPaid   = (float) $entry->schedules->sum('amountPaid');
             $totalAmount = (float) ($entry->package->totalAmount ?? 0);
- 
+
             if ($totalAmount > 0 && $totalPaid >= $totalAmount) {
- 
-                // Mark all schedules paid (safety net)
-                foreach ($entry->schedules as $sched) {
-                    if ($sched->status !== 'paid') {
-                        $sched->status     = 'paid';
-                        $sched->amountPaid = $sched->amountDue;
-                        $sched->save();
-                    }
-                }
- 
-                // Auto-complete — balance is zero, no need to wait for release date
-                // If release date already passed or today: complete + release now
-                // If release date is future: complete but releasedAt = release date
-                $releaseDate = $entry->startDay
-                    ? \Carbon\Carbon::create(
-                        $entry->startYear ?? now()->year,
-                        $entry->startMonth,
-                        $entry->startDay
-                    )
-                    : null;
- 
-                $entry->status = 'completed';
- 
-                if ($releaseDate && now()->lessThan($releaseDate)) {
-                    // Paid early — product released on their chosen date
-                    $entry->releasedAt = $releaseDate;
-                    Log::info("✅ Entry #{$entry->paluwaganEntryID} fully paid early. " .
-                              "Will release on " . $releaseDate->format('M d, Y'));
-                } else {
-                    // Release date reached or passed — release now
-                    $entry->releasedAt = now();
-                    Log::info("🎉 Auto-completed paluwagan entry #{$entry->paluwaganEntryID}");
-                }
- 
-                $entry->save();
+                Log::info("💰 Entry #{$entryID} is FULLY PAID. Awaiting admin to mark as complete.");
             }
         }
- 
+
         return response()->json(['message' => 'ok'], 200);
     }
 

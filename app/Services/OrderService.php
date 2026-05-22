@@ -6,6 +6,7 @@ use App\DTO\CreateOrderDTO;
 use App\Repositories\OrderRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Events\NewOrderPlaced;
 
 class OrderService
 {
@@ -30,7 +31,10 @@ public function createOrder(CreateOrderDTO $dto)
 
         $this->repo->addPayment($order->orderID, $dto);
 
-        return $order; // ✅ return model
+        $order->load('customer'); // make sure customer is loaded
+        event(new NewOrderPlaced($order));
+
+        return $order;
     });
 }
 
