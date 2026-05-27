@@ -647,7 +647,7 @@ searchAllCustomers(query) {
                     </p>
                     <div class="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
                         <span>Paid: <strong class="text-green-600">₱{{ number_format($sub['totalPaid'], 2) }}</strong></span>
-                        <span>Remaining: <strong class="text-red-500">₱{{ number_format($sub['totalAmount'] - $sub['totalPaid'], 2) }}</strong></span>
+                        <span>Remaining Balance: <strong class="text-red-500">₱{{ number_format($sub['totalAmount'] - $sub['totalPaid'], 2) }}</strong></span>
                         <span>Progress: <strong>{{ $sub['monthsPaid'] }}/{{ $sub['totalMonths'] }} months</strong></span>
                     </div>
                 </div>
@@ -1109,7 +1109,7 @@ searchAllCustomers(query) {
                     <th class="py-2 px-3 text-center">Progress</th>
                     <th class="py-2 px-3">Monthly</th>
                     <th class="py-2 px-3">Paid</th>
-                    <th class="py-2 px-3">Remaining</th>
+                    <th class="py-2 px-3">Balance</th>
                     <th class="py-2 px-3">Next Due</th>
                     <th class="py-2 px-3">Release Date & Time</th>
                     <th class="py-2 px-3">Status</th>

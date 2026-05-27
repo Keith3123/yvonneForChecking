@@ -253,7 +253,7 @@
             <section>
                 <p class="font-semibold text-gray-800 mb-1.5">3. Orders & Payments</p>
                 <p class="text-xs leading-relaxed mb-2">All orders are subject to availability and confirmation. Prices may change without notice.</p>
-                <p class="text-xs font-semibold text-gray-700 mb-1">GCash via PayMongo</p>
+                <p class="text-xs font-semibold text-gray-700 mb-1">GCash</p>
                 <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
                     <li>You may pay in <strong>Full Payment</strong> or <strong>Downpayment</strong>. Downpayment charges partial via GCash; remaining is collected in cash on delivery.</li>
                     <li>A failed payment means your order is <strong>not placed</strong>. Retry or switch to COD.</li>
@@ -285,7 +285,7 @@
                 <p class="text-xs font-semibold text-gray-700 mb-1">Monthly Payments</p>
                 <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
                     <li>Payments are calculated by dividing the total package price by the months remaining from enrollment to your delivery date.</li>
-                    <li>Payments must be made on or before each due date. There is a 5-day extension for late payments, then a ₱30/day penalty applies.</li>
+                    <li>Payments must be made on or before each due date. There is a 5-day extension for late payment, then ₱30 penalty per daywill be applied to your balance.</li>
                     <li>All payments are via <strong>GCash</strong> and are <strong>non-refundable</strong> once processed.</li>
                 </ul>
                 <p class="text-xs font-semibold text-gray-700 mb-1">Early Release</p>
@@ -302,8 +302,8 @@
                 </ul>
                 <p class="text-xs font-semibold text-gray-700 mb-1">Completion</p>
                 <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4">
-                    <li>A subscription is <strong>completed</strong> when all payments are settled and the product has been released.</li>
-                    <li>If your delivery date arrives with a fully paid balance, your subscription is <strong>automatically completed</strong>.</li>
+                    <li>A paluwagan enrollment is <strong>completed</strong> when all payments are settled and the product has been released.</li>
+                    <li>If your delivery date arrives with a fully paid balance, your paluwagan enrollment is <strong>automatically completed</strong>.</li>
                     <li>We reserve the right to reassign slots if payment obligations are not met.</li>
                 </ul>
             </section>

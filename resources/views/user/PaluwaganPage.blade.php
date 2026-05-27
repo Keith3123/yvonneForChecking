@@ -820,8 +820,8 @@ function openPaymentModal(entryID) {
             // Quick amount buttons
             const quickBtns = document.getElementById('quick-amount-btns');
             const options   = [
-                { label: '1 Month',  amount: currentMonthlyPayment },
-                { label: '3 Months', amount: currentMonthlyPayment * 3 },
+                { label: '1x',  amount: currentMonthlyPayment },
+                { label: '3x', amount: currentMonthlyPayment * 3 },
                 { label: 'All',      amount: currentTotalRemaining },
             ].filter(o => o.amount <= currentTotalRemaining && o.amount > 0);
 
