@@ -179,7 +179,6 @@
                     <li>Payments start from the <strong>first available month</strong> the admin opened.</li>
                     <li>Your selected date is your <strong>delivery deadline</strong>.</li>
                     <li>The payment schedule is <strong>every 15th day of the month</strong>.</li>
-                    <li>5-day extension for late payment, then <strong>30 pesos penalty per day</strong>.</li>
                     <li>Full payment is required before delivery can be processed.</li>
                     <li><strong>All payments are non-refundable.</strong></li>
                 </ul>

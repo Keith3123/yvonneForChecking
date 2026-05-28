@@ -173,10 +173,6 @@ public function join(Request $request)
     // ── viewSchedule — show release date ─────────────────────────
 public function viewSchedule($entryID)
 {   
-    // ── Auto-apply penalties before loading schedule ─────────
-    app(\App\Services\PaluwaganPenaltyService::class)
-        ->applyPenaltiesForEntry($entryID);
-
         
     $entry = PaluwaganEntry::with(['schedules.payment', 'package'])->find($entryID);
 

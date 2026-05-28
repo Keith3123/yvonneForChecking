@@ -994,6 +994,10 @@ searchAllCustomers(query) {
     <div class="border rounded-xl border-pink-200 p-5 bg-white shadow-sm mb-8">
         <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
             <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Month Availability per Package</h2>
+                <div class="mt-2 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 w-fit">
+                    <i class="fas fa-exclamation-circle text-amber-500"></i>
+                    <span><strong>Note:</strong> Toggle/Open a month if it is not past month or past 15th day of the month.</span>
+                </div>
             <div class="flex items-center gap-2">
                 <div class="relative">
                     <input type="text" id="searchPackage" placeholder="Search package..."
@@ -1061,8 +1065,8 @@ searchAllCustomers(query) {
         <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Customer Subscriptions</h2>
         <div class="flex items-center gap-2">
             <button onclick="openPenaltyModal()"
-                class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-semibold transition">
-                🔴 Apply Penalties Now
+                class="bg-white text-red-500 text-sm px-4 py-2 rounded-lg font-bold transition">
+                
             </button>
             <label class="text-xs text-gray-500 whitespace-nowrap">Rows per page</label>
             <select id="sub-per-page" class="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white">

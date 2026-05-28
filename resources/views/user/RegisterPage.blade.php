@@ -213,7 +213,7 @@
                 <p class="text-xs font-semibold text-gray-700 mb-1">Monthly Payments</p>
                 <ul class="text-xs leading-relaxed space-y-1 list-disc list-outside pl-4 mb-2">
                     <li>Payments are calculated by dividing the total package price by the months remaining from enrollment to your delivery date.</li>
-                    <li>Payments must be made on or before each due date. There is a 5-day extension for late payment, then ₱30 penalty per day will be applied to your balance.</li>
+                    <li>Payments must be made on or before each due date.</li>
                     <li>All payments are via <strong>GCash</strong> and are <strong>non-refundable</strong> once processed.</li>
                 </ul>
                 <p class="text-xs font-semibold text-gray-700 mb-1">Early Release</p>

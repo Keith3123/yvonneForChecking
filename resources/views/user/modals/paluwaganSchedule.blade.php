@@ -60,7 +60,6 @@
                 <p class="font-semibold mb-1 text-pink-700 text-xs">Important Reminders</p>
                 <ul class="list-disc list-inside space-y-0.5 text-xs text-gray-700">
                     <li>Payments are due on the 15th of each month.</li>
-                    <li>5-day extension for late payment, then ₱30 penalty per day.</li>
                     <li>No cancellation or refund once payment starts.</li>
                     <li>Full payment is required before delivery is processed.</li>
                 </ul>
