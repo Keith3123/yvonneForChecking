@@ -117,33 +117,66 @@ public function join(Request $request)
         ]);
     }
 
-    // ── Month cap check (20 active per month) ───────────────────
-    $activeCount = PaluwaganEntry::where('packageID',  $request->packageID)
-        ->where('startMonth', $request->startMonth)
-        ->where('status', 'active')
-        ->count();
+    // // ── Month cap check (20 active per month) ───────────────────
+    // $activeCount = PaluwaganEntry::where('packageID',  $request->packageID)
+    //     ->where('startMonth', $request->startMonth)
+    //     ->where('status', 'active')
+    //     ->count();
 
-    if ($activeCount >= 20) {
-        PaluwaganEntry::create([
-            'customerID' => $customerID,
-            'packageID'  => $request->packageID,
-            'startMonth' => $request->startMonth,
-            'startDay'   => $request->startDay,
-            'startTime'  => $startTime,
-            'startYear'  => now()->year,
-            'status'     => 'waiting',
-            'joinDate'   => now(),
-        ]);
+    // if ($activeCount >= 20) {
+    //     PaluwaganEntry::create([
+    //         'customerID' => $customerID,
+    //         'packageID'  => $request->packageID,
+    //         'startMonth' => $request->startMonth,
+    //         'startDay'   => $request->startDay,
+    //         'startTime'  => $startTime,
+    //         'startYear'  => now()->year,
+    //         'status'     => 'waiting',
+    //         'joinDate'   => now(),
+    //     ]);
 
-        $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
+    //     $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
 
-        return response()->json([
-            'success' => true,
-            'waiting' => true,
-            'message' => "{$monthName} is full (20/20). You've been added to the waiting list!",
-        ]);
-    }
+    //     return response()->json([
+    //         'success' => true,
+    //         'waiting' => true,
+    //         'message' => "{$monthName} is full (20/20). You've been added to the waiting list!",
+    //     ]);
+    // }
 
+    // ── Month cap check (dynamic slots from DB) ─────────────────
+$availability = \App\Models\PaluwaganMonthAvailability::where('packageID', $request->packageID)
+    ->where('month', $request->startMonth)
+    ->where('year', now()->year)
+    ->first();
+
+$slotCap = $availability?->slots ?? 20;
+
+$activeCount = PaluwaganEntry::where('packageID',  $request->packageID)
+    ->where('startMonth', $request->startMonth)
+    ->where('status', 'active')
+    ->count();
+
+if ($activeCount >= $slotCap) {
+    PaluwaganEntry::create([
+        'customerID' => $customerID,
+        'packageID'  => $request->packageID,
+        'startMonth' => $request->startMonth,
+        'startDay'   => $request->startDay,
+        'startTime'  => $startTime,
+        'startYear'  => now()->year,
+        'status'     => 'waiting',
+        'joinDate'   => now(),
+    ]);
+
+    $monthName = \Carbon\Carbon::create()->month($request->startMonth)->format('F');
+
+    return response()->json([
+        'success' => true,
+        'waiting' => true,
+        'message' => "{$monthName} is full ({$activeCount}/{$slotCap}). You've been added to the waiting list!",
+    ]);
+}
     // ── Join normally ────────────────────────────────────────────
     try {
         $this->paluwaganService->joinPaluwagan(
@@ -273,12 +306,18 @@ public function availableMonths($packageID)
             ->whereIn('status', ['active', 'waiting'])
             ->get();
  
-        $result = $activeMonthNums->map(function ($month) use ($entries, $currentCustomerID) {
+        $result = $activeMonthNums->map(function ($month) use ($entries, $currentCustomerID, $packageID, $year) {
             $monthEntries = $entries->where('startMonth', $month);
- 
+
+            $record = \App\Models\PaluwaganMonthAvailability::where('packageID', $packageID)
+                ->where('month', $month)
+                ->where('year', $year)
+                ->first();          
+            $slotCap = $record?->slots ?? 20; // default to 20 if no record found
+
             $activeCount  = $monthEntries->where('status', 'active')->count();
             $waitingCount = $monthEntries->where('status', 'waiting')->count();
-            $isFull       = $activeCount >= 20;
+            $isFull       = $activeCount >= $slotCap;
  
             // Check if current user already has an entry for this month
             $userEntry = $monthEntries->firstWhere('customerID', $currentCustomerID);
@@ -288,7 +327,8 @@ public function availableMonths($packageID)
                 'label'        => \Carbon\Carbon::create()->month($month)->format('F'),
                 'activeCount'  => $activeCount,          // how many joined
                 'waitingCount' => $waitingCount,          // how many on waitlist
-                'slotsLeft'    => max(0, 20 - $activeCount),
+                'slotCap'      => $slotCap,              // max active allowed
+                'slotsLeft'    => max(0, $slotCap - $activeCount),
                 'isFull'       => $isFull,
                 'userDay'      => $userEntry ? (int) $userEntry->startDay   : null,
                 'userStatus'   => $userEntry ? $userEntry->status           : null,

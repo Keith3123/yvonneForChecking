@@ -55,9 +55,10 @@ class AdminInventoryController extends AdminBaseController
         return $dr->details->map(function ($detail) use ($dr, $receivedByName) {
             return [
                 'date'       => $dr->drDate,
-                'type'       => 'in',
+                'type'    => ($detail->qtyDelivered < 0) ? 'out' : 'in',
+
                 'ingredient' => $detail->ingredient->name ?? '—',
-                'qty'        => $detail->qtyDelivered,
+'qty'     => abs($detail->qtyDelivered),
                 'by'         => $receivedByName,
                 'remarks'    => $dr->remarks ?? 'Supplier delivery',
             ];
@@ -174,9 +175,9 @@ class AdminInventoryController extends AdminBaseController
             'received_by'           => 'required|exists:user,userID',
             'items'                 => 'required|array|min:1',
             'items.*.ingredient_id' => 'required|exists:ingredient,ingredientID',
-            'items.*.qty'           => 'required|numeric|min:0.01',
+            'items.*.qty'           => $isManual ? 'required|numeric|not_in:0' : 'required|numeric|min:0.01',
             'items.*.unit_cost'     => 'required|numeric|min:0',
-            'items.*.expiry_date'   => 'required|date',
+            'items.*.expiry_date'   => $isManual ? 'nullable|date' : 'required|date',
         ];
 
         if (!$isManual) {
@@ -193,15 +194,28 @@ class AdminInventoryController extends AdminBaseController
         ]);
 
         foreach ($request->items as $item) {
+            $qty = (float) $item['qty'];
+
+            // Block negative adjustment that would go below zero
+    if ($isManual && $qty < 0) {
+        $ingredient = Ingredient::find($item['ingredient_id']);
+        if ($ingredient && $ingredient->currentStock + $qty < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot remove {$qty} from {$ingredient->name}. Available: {$ingredient->currentStock} {$ingredient->unit}"
+            ]);
+        }
+    }
+
             DeliveryReceiptDetail::create([
                 'drID'         => $dr->drID,
                 'ingredientID' => $item['ingredient_id'],
                 'qtyDelivered' => $item['qty'],
-                'unitCost'     => $item['unit_cost'],
-                'expiryDate'   => $item['expiry_date'],
+                'unitCost'     => $item['unit_cost'] ?? 0,
+                'expiryDate'   => $item['expiry_date'] ?? null,
             ]);
             Ingredient::where('ingredientID', $item['ingredient_id'])
-                ->increment('currentStock', $item['qty']);
+                ->increment('currentStock', $qty);
         }
 
         return response()->json(['success' => true]);

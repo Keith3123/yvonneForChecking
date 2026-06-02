@@ -188,7 +188,8 @@ export default class PaluwaganHandler {
         sorted.forEach(item => {
             const isFull     = item.isFull ?? false;
             const taken      = item.activeCount ?? 0;
-            const almostFull = !isFull && taken >= 15;
+            const slotCap    = item.slotCap ?? 20;
+            const almostFull = !isFull && taken >= Math.floor(slotCap * 0.75);
 
             const cardClass = isFull
                 ? 'border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer'
@@ -197,10 +198,10 @@ export default class PaluwaganHandler {
                     : 'border-green-200 bg-green-50 hover:bg-green-100 cursor-pointer';
 
             const badge = isFull
-                ? `<span class="text-[10px] font-bold text-red-600 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded-full">Full 20/20</span>`
+                ? `<span class="text-[10px] font-bold text-red-600 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded-full">Full ${taken}/${slotCap}</span>`
                 : almostFull
-                    ? `<span class="text-[10px] font-bold text-yellow-700 bg-yellow-100 border border-yellow-300 px-1.5 py-0.5 rounded-full">${taken}/20 slots taken</span>`
-                    : `<span class="text-[10px] font-bold text-green-700 bg-green-100 border border-green-300 px-1.5 py-0.5 rounded-full">${taken}/20 slots taken</span>`;
+                    ? `<span class="text-[10px] font-bold text-yellow-700 bg-yellow-100 border border-yellow-300 px-1.5 py-0.5 rounded-full">${taken}/${slotCap} slots taken</span>`
+                    : `<span class="text-[10px] font-bold text-green-700 bg-green-100 border border-green-300 px-1.5 py-0.5 rounded-full">${taken}/${slotCap} slots taken</span>`;
 
             const waitlistNote = isFull
                 ? `<p class="text-[9px] text-red-500 mt-0.5">Tap to join waitlist</p>` : '';
@@ -252,8 +253,9 @@ export default class PaluwaganHandler {
         if (this._isSelectedMonthFull) {
             notice.classList.remove('hidden');
             const waitPos = (item.waitingCount ?? 0) + 1;
+            const slotCap = item.slotCap ?? 20;
             noticeText.textContent =
-                `${item.label} is full (20/20). Pick your preferred day and time — ` +
+                `${item.label} is full (${slotCap}/${slotCap}). Pick your preferred day and time — ` +
                 `you'll join the waiting list as position #${waitPos}.`;
         } else {
             notice.classList.add('hidden');
@@ -436,7 +438,7 @@ export default class PaluwaganHandler {
             notice.classList.remove('hidden');
             const waitPos = (this._selectedMonth?.waitingCount ?? 0) + 1;
             noticeText.textContent =
-                `${monthLabel} is full (20/20). You'll join the waiting list as position #${waitPos}.`;
+                `${monthLabel} is full (${slotCap}/${slotCap}). You'll join the waiting list as position #${waitPos}.`;
             confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
             confirm.disabled    = false;
         } else if (dayItem.isTaken) {
@@ -474,7 +476,7 @@ export default class PaluwaganHandler {
         notice.classList.remove('hidden');
         const waitPos = (this._selectedMonth?.waitingCount ?? 0) + 1;
         noticeText.textContent =
-            `${monthLabel} is full (20/20). You'll join the waiting list as position #${waitPos}.`;
+            `${monthLabel} is full (${slotCap}/${slotCap}). You'll join the waiting list as position #${waitPos}.`;
         confirm.textContent = `Join Waiting List — ${monthLabel} ${dayItem.day}, ${timeLabel}`;
         confirm.disabled    = false;
     } else if (dayItem.isTaken) {

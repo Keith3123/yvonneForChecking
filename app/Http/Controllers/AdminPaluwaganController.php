@@ -280,6 +280,7 @@ class AdminPaluwaganController extends AdminBaseController
                 'packageID' => 'required|integer|exists:paluwaganpackage,packageID',
                 'month' => 'required|integer|min:1|max:12',
                 'status' => 'required|in:active,inactive',
+                'slots' => 'nullable|integer|min:1|max:999',
             ]);
 
             $packageID = $request->packageID; // 🔥 FIX: define this
@@ -289,19 +290,21 @@ class AdminPaluwaganController extends AdminBaseController
 
             $record = PaluwaganMonthAvailability::updateOrCreate(
                 [
-                    'packageID' => $packageID,
+                    'packageID' => $request->packageID,
                     'month' => $request->month,
-                    'year' => $year
+                    'year' => $year,
                 ],
                 [
-                    'status' => $request->status
+                    'status' => $request->status,
+                    'slots' => $request->slots ?? 20,
                 ]
             );
 
             return response()->json([
                 'success' => true,
                 'month' => $record->month,
-                'status' => $record->status
+                'status' => $record->status,
+                'slots' => $record->slots,
             ]);
 
         } catch (\Exception $e) {

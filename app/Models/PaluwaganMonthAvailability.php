@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 class PaluwaganMonthAvailability extends Model
 {
     protected $table = 'paluwagan_month_availability';
-    protected $fillable = ['packageID','year','month','status'];
+    protected $fillable = ['packageID','year','month','status', 'slots'];
 
     // Link to package
     public function package()

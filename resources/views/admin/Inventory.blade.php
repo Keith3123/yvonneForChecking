@@ -474,7 +474,10 @@
                 {{-- Column headers --}}
                 <div class="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-2 mb-1 px-1">
                     <span class="text-xs text-gray-400 font-medium">Ingredient</span>
-                    <span class="text-xs text-gray-400 font-medium">Qty</span>
+                    <span class="text-xs text-gray-400 font-medium">Qty
+                        <span x-show="receiveForm.receive_type === 'Manual Adjustment'" 
+          class="text-orange-400">(+ add / - remove)</span>
+                    </span>  
                     <span class="text-xs text-gray-400 font-medium">Unit Cost (₱)</span>
                     <span class="text-xs text-gray-400 font-medium">Expiry Date</span>
                     <span></span>
@@ -491,8 +494,10 @@
                                 </option>
                             @endforeach
                         </select>
-                        <input type="number" x-model="item.qty" min="0.01" step="0.01" placeholder="0"
-                            class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <input type="number" x-model="item.qty" 
+    :min="receiveForm.receive_type === 'Manual Adjustment' ? null : '0.01'"
+    step="0.01" placeholder="0"
+    class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                         <input type="number" x-model="item.unit_cost" min="0" step="0.01" placeholder="0.00"
                             class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                         <input type="date" x-model="item.expiry_date"
@@ -564,6 +569,7 @@
                         <option>Preparation</option>
                         <option>Damage</option>
                         <option>Expired</option>
+                        <option>Loss</option>
                     </select>
                 </div>
             </div>

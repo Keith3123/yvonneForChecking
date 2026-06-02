@@ -1037,13 +1037,26 @@ searchAllCustomers(query) {
                         @php
                             $record   = $package->monthAvailability->firstWhere('month', $month);
                             $isActive = $record ? $record->status === 'active' : false;
+                            $slots = $record ? $record->slots : 20;
                         @endphp
                         <div data-month="{{ $month }}" data-package="{{ $package->packageID }}"
+                             data-slots="{{ $slots }}"
                             class="month-box p-2 border rounded cursor-pointer transition {{ $isActive ? 'bg-pink-100 border-pink-400' : '' }}">
-                            <div class="flex justify-between items-center">
+                            <div class="flex justify-between items-center mb-1">
                                 <span class="text-sm">{{ \Carbon\Carbon::create()->month($month)->format('F') }}</span>
                                 <input type="checkbox" class="toggle-month" {{ $isActive ? 'checked' : '' }}>
                             </div>
+                            <div class="flex items-center gap-1 mt-1">
+                                <input type="number"
+    class="slots-input w-full text-xs border rounded px-1.5 py-0.5
+           focus:outline-none focus:ring-1 focus:ring-pink-400
+           {{ $isActive ? 'border-pink-300' : 'border-gray-200' }}"
+    value="{{ $slots }}"
+    min="1" max="999"
+    placeholder="Slots"
+    title="Max slots for this month">
+                                <span class="text-[10px] text-gray-400 whitespace-nowrap">slots</span>
+                        </div>
                         </div>
                     @endforeach
                 </div>
@@ -1355,11 +1368,11 @@ function showToast(message, type = 'success') {
 // =============================================
 // MONTH AVAILABILITY
 // =============================================
-function updateMonth(packageID, month, status, parent, checkbox) {
+function updateMonth(packageID, month, status, slots, parent, checkbox) {
     fetch('/admin/paluwagan/month/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ packageID, month, status })
+        body: JSON.stringify({ packageID, month, status, slots })
     })
     .then(res => res.json())
     .then(res => {
@@ -1373,16 +1386,31 @@ function updateMonth(packageID, month, status, parent, checkbox) {
 document.addEventListener('change', function (e) {
     if (e.target.classList.contains('toggle-month')) {
         const parent = e.target.closest('.month-box');
+        const slots = parseInt(parent.querySelector('.slots-input').value) || 20;
         updateMonth(parent.dataset.package, parent.dataset.month,
-            e.target.checked ? 'active' : 'inactive', parent, e.target);
+            e.target.checked ? 'active' : 'inactive', slots, parent, e.target);
     }
+
+    // Slots input change — save immediately
+document.addEventListener('blur', function (e) {
+    if (e.target.classList.contains('slots-input')) {
+        const parent   = e.target.closest('.month-box');
+        const checkbox = parent.querySelector('.toggle-month');
+        const status   = checkbox.checked ? 'active' : 'inactive';
+        const slots    = parseInt(e.target.value) || 20;
+        parent.dataset.slots = slots;
+        updateMonth(parent.dataset.package, parent.dataset.month, status, slots, parent, checkbox);
+        showToast(`Slots updated to ${slots}`, 'success');
+    }
+}, true);
 });
 
 function bulkAction(packageID, activate) {
     document.querySelectorAll(`.month-box[data-package="${packageID}"]`).forEach(box => {
         const checkbox = box.querySelector('.toggle-month');
+        const slots = parseInt(box.querySelector('.slots-input').value) || 20;
         checkbox.checked = activate;
-        updateMonth(packageID, box.dataset.month, activate ? 'active' : 'inactive', box, checkbox);
+        updateMonth(packageID, box.dataset.month, activate ? 'active' : 'inactive', slots, box, checkbox);
     });
 }
 
